@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
         },
         body: JSON.stringify({ username, email, password }),
         mode: 'cors',
-        credentials: 'true'
+        credentials: 'include'
       });
 
       if (!response.ok) {
