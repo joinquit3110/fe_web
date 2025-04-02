@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const AuthContext = createContext(null);
 
 // Thay API_URL thành đường dẫn tương đối
-const API_URL = "https://fe-web-rugm.onrender.com/api";
+const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

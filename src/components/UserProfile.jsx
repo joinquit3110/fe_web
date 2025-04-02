@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const API_URL = "https://fe-web-rugm.onrender.com/api";
+const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 const UserProfile = () => {
   const { user, logout, updateProfile, updatePassword } = useAuth();
