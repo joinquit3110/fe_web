@@ -1,18 +1,18 @@
 /* Root variables and initial setup */
 :root {
   --sky-bg-color: #1a1a2e;
-  --moon-color: #f0f0f0;
+  --moon-color: #ffd700;
   --moon-color-2: #e0e0e0;
   --moonlight-1: rgba(139, 69, 19, 0.2);
   --moonlight-2: rgba(139, 69, 19, 0.3);
   --moonlight-3: rgba(139, 69, 19, 0.4);
   --moonlight-4: rgba(139, 69, 19, 0.5);
-  --star-color: #ffd700;
+  --star-color: #ffffff;
   --star-glow: rgba(255,215,0,0.8);
   --moon-shadow: rgba(0,0,0,0.2);
-  --panel-bg: rgba(255, 255, 255, 0.85);
-  --panel-border: #8b4513;
-  --panel-shadow: 0 0 20px rgba(139, 69, 19, 0.3);
+  --panel-bg: rgba(255, 255, 255, 0.95);
+  --panel-border: 2px solid #ffd700;
+  --panel-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
   --text-color: #2c1810;
   --accent-color: #8b4513;
   --button-bg: #8b4513;
@@ -21,6 +21,10 @@
   --error-color: #f44336;
   --warning-color: #ff9800;
   --info-color: #2196F3;
+  --text-glow: 0 0 10px rgba(255, 215, 0, 0.8);
+  --magic-glow: 0 0 15px rgba(255, 215, 0, 0.5);
+  --hover-transform: scale(1.02);
+  --transition-speed: 0.3s;
 }
 
 /* Mobile-first styles */
@@ -185,11 +189,9 @@ h1 {
 }
 
 .farm-header h1 {
-  color: #ffd700;
+  color: var(--moon-color);
   font-family: 'Cinzel', serif;
-  text-shadow: 0 0 10px rgba(255,215,0,0.5),
-               0 0 20px rgba(255,215,0,0.3),
-               0 0 30px rgba(255,215,0,0.2);
+  text-shadow: var(--text-glow);
   margin: 0;
   font-size: 3rem;
   letter-spacing: 2px;
@@ -1539,18 +1541,19 @@ button {
   background: var(--button-bg);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 10px 24px;
+  border-radius: 25px;
   cursor: pointer;
-  font-family: 'Cinzel', serif;
+  font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
 }
 
 button:hover {
-  background: var(--button-hover);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(139, 69, 19, 0.3);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+  background: linear-gradient(135deg, #ffa500 0%, #ffd700 100%);
 }
 
 button:hover::after {
@@ -2340,4 +2343,31 @@ button:hover::after {
   .magical-decoration {
     animation: none;
   }
+}
+
+/* Magical Background */
+.magical-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  overflow: hidden;
+}
+
+.magical-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+  animation: magicalPulse 8s infinite alternate;
+}
+
+@keyframes magicalPulse {
+  0% { opacity: 0.3; transform: scale(1); }
+  100% { opacity: 0.7; transform: scale(1.1); }
 }
