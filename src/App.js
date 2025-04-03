@@ -4,9 +4,6 @@ import CoordinatePlane from "./components/CoordinatePlane";
 import './styles/App.css';
 
 // Import images
-import treeImage from './assets/tree.png';
-import sunImage from './assets/sun.png';
-import farmerImage from './assets/farmer.png';
 import chickenImage from './assets/chicken.png';
 import cowImage from './assets/cow.png';
 
@@ -41,7 +38,13 @@ const AppContent = () => {
   }, []);
 
   const handleAddInequality = (newInequality) => {
-    setInequalities(prev => [...prev, newInequality]);
+    const lastIndex = inequalities.length > 0 ? parseInt(inequalities[inequalities.length - 1].label.replace('d_', ''), 10) : 0;
+    const newIndex = lastIndex + 1;
+    const labeledInequality = {
+      ...newInequality,
+      label: `d_${newIndex}`
+    };
+    setInequalities(prev => [...prev, labeledInequality]);
     return true;
   };
 
@@ -57,7 +60,15 @@ const AppContent = () => {
 
   const handleDelete = (e, inequality) => {
     e.stopPropagation();
-    setInequalities(prev => prev.filter(item => item.label !== inequality.label));
+    const filteredInequalities = inequalities.filter(item => item.label !== inequality.label);
+    
+    // Rename all inequalities to ensure sequential numbering
+    const renamedInequalities = filteredInequalities.map((ineq, index) => ({
+      ...ineq,
+      label: `d_${index + 1}`
+    }));
+    
+    setInequalities(renamedInequalities);
     setQuizMessage('');
   };
   
@@ -65,7 +76,7 @@ const AppContent = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <h2 className="loading-text">Preparing Magical Experience...</h2>
+        <h2 className="loading-text">Đang tải...</h2>
       </div>
     );
   }
@@ -76,8 +87,7 @@ const AppContent = () => {
 
   return (
     <div className="app-container">
-      <div className="magical-background">
-        <div className="magical-particles"></div>
+      <div className="background-container">
         <div className="stars">
           <div className="small-stars">
             {[...Array(24)].map((_, i) => (
@@ -101,9 +111,6 @@ const AppContent = () => {
           </div>
         </div>
         <div className="moon"></div>
-        <div className="sun" style={{ position: 'absolute', top: '20px', left: '20px' }}>
-          <img src={sunImage} alt="Sun" style={{ width: '80px', height: '80px' }} />
-        </div>
       </div>
 
       <UserProfile />
@@ -116,7 +123,6 @@ const AppContent = () => {
 
       <main className="farm-content">
         <div className="control-panel farm-panel">
-          <h3>Magical Controls</h3>
           <div className="control-panel-content">
             <div className="magical-decoration book" style={{ top: '10px', right: '10px' }}></div>
             <InequalityInput 
@@ -151,7 +157,6 @@ const AppContent = () => {
 
         <div className="coordinate-container farm-panel">
           <div className="magical-decoration potion" style={{ bottom: '10px', left: '10px' }}></div>
-          <h3>Magical Graph</h3>
           <CoordinatePlane
             ref={coordinatePlaneRef}
             inequalities={inequalities}
@@ -159,6 +164,7 @@ const AppContent = () => {
             setQuizMessage={setQuizMessage}
             hoveredEq={hoveredEq}
             setHoveredEq={setHoveredEq}
+            isMobile={isMobile}
           />
         </div>
 
@@ -195,7 +201,7 @@ const AppContent = () => {
       </main>
 
       <footer className="farm-footer">
-        <p>© 2024 Magical Inequality Farm - Where Math Meets Magic</p>
+        <p>© 2024 - Bất phương trình</p>
       </footer>
     </div>
   );
