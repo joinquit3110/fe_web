@@ -469,7 +469,7 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Improve inequality list styling */
+/* Inequalities list styles inspired by the attachment */
 .inequalities-list h3 {
   font-family: 'Cinzel', serif;
   color: #3a1078;
@@ -486,6 +486,153 @@ body {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
 }
 
+.inequalities-list h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Improved user profile styles */
+.user-profile {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 100;
+  padding: 8px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(58, 16, 120, 0.9), rgba(78, 49, 170, 0.85));
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+  overflow: hidden;
+}
+
+.user-profile:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4), 
+              0 0 20px rgba(58, 16, 120, 0.4),
+              0 0 30px rgba(78, 49, 170, 0.2);
+}
+
+.user-profile:active {
+  transform: scale(0.95);
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: white;
+  padding: 4px 8px;
+  transition: all 0.3s;
+  gap: 10px;
+  position: relative;
+}
+
+.user-trigger::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 10%;
+  width: 80%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  transform: scaleX(0);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.user-profile:hover .user-trigger::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.avatar-container {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  animation: pulse-glow 3s infinite alternate;
+  position: relative;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2); }
+  100% { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4), 0 0 15px rgba(255, 193, 7, 0.4); }
+}
+
+.wizard-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--header-color);
+}
+
+.avatar-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+}
+
+.user-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.username {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  animation: text-glow 3s infinite alternate;
+  letter-spacing: 0.5px;
+}
+
+@keyframes text-glow {
+  0% { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+  100% { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 8px rgba(255, 255, 255, 0.5); }
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  width: 320px;
+  background: var(--panel-bg);
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(58, 16, 120, 0.2);
+  padding: 20px;
+  z-index: 1000;
+  animation: dropdown-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-origin: top left;
+  border: 2px solid rgba(71, 58, 131, 0.6);
+  overflow: hidden;
+}
+
+@keyframes dropdown-appear {
+  0% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Inequality item styles */
 .inequality-item {
   padding: 12px 18px;
   margin-bottom: 12px;
@@ -499,7 +646,7 @@ body {
   animation-delay: calc(var(--index) * 0.1s);
   opacity: 0;
   animation-fill-mode: forwards;
-  background: var(--panel-bg);
+  background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
@@ -508,7 +655,34 @@ body {
 .inequality-item:hover {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   transform: translateY(-3px) scale(1.02);
-  background: rgba(58, 16, 120, 0.05);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.inequality-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.inequality-item:hover::before {
+  transform: translateX(100%);
+}
+
+@keyframes slideIn {
+  0% { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% { 
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Fix delete icon animation */

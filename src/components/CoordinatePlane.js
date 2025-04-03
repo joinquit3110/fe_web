@@ -145,6 +145,7 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.2) => {
       : hex;
   };
   
+  // Use the same color as the boundary but with transparency
   ctx.fillStyle = hexToRgba(fillColor);
   ctx.beginPath();
   
