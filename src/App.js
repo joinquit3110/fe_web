@@ -20,16 +20,19 @@ const mathJaxConfig = {
     fontCache: 'global',
     scale: 1.3,
   },
+  options: {
+    enableMenu: false
+  },
   startup: {
     typeset: true,
-  },
-  options: {
-    enableMenu: false,
-    renderActions: {
-      addMenu: [],
-      checkLoading: []
+    ready: () => {
+      MathJax.startup.defaultReady();
+      MathJax.startup.promise.then(() => {
+        // Force typeset all math after MathJax is fully loaded
+        MathJax.typeset();
+      });
     }
-  },
+  }
 };
 
 const AppContent = () => {
@@ -153,39 +156,145 @@ const AppContent = () => {
     setHoveredEq(null);
   };
 
+  // Add state for drawing mode and intersection points
+  const [drawingMode, setDrawingMode] = useState(false); // Drawing boundaries
+  const [regionMode, setRegionMode] = useState(false); // Selecting solution regions
+  const [intersectionPoints, setIntersectionPoints] = useState([]);
+  const [showIntersectionForm, setShowIntersectionForm] = useState(false);
+  const [newPoint, setNewPoint] = useState({ x: "", y: "" });
+
+  // Function to toggle drawing mode
+  const toggleDrawingMode = () => {
+    setDrawingMode(!drawingMode);
+    if (regionMode) setRegionMode(false);
+  };
+
+  // Function to toggle region selection mode
+  const toggleRegionMode = () => {
+    setRegionMode(!regionMode);
+    if (drawingMode) setDrawingMode(false);
+  };
+
+  // Function to show the intersection points input form
+  const showAddIntersectionPoint = () => {
+    setShowIntersectionForm(true);
+  };
+
+  // Function to add a new intersection point
+  const addIntersectionPoint = () => {
+    if (newPoint.x && newPoint.y) {
+      setIntersectionPoints([...intersectionPoints, { x: parseFloat(newPoint.x), y: parseFloat(newPoint.y) }]);
+      setNewPoint({ x: "", y: "" });
+      setShowIntersectionForm(false);
+    }
+  };
+
+  // Function to remove an intersection point
+  const removeIntersectionPoint = (index) => {
+    const newPoints = [...intersectionPoints];
+    newPoints.splice(index, 1);
+    setIntersectionPoints(newPoints);
+  };
+
   if (!user) {
     return <Login />;
   }
+
+  // Add these to the app content JSX
+  const toolbarContent = (
+    <div className="drawing-toolbar">
+      <button 
+        className={`tool-btn ${drawingMode ? 'active' : ''}`} 
+        onClick={toggleDrawingMode}
+        title="Vẽ biên"
+      >
+        <i className="material-icons">create</i>
+      </button>
+      <button 
+        className={`tool-btn ${regionMode ? 'active' : ''}`} 
+        onClick={toggleRegionMode}
+        title="Chọn miền nghiệm"
+      >
+        <i className="material-icons">format_color_fill</i>
+      </button>
+      <button 
+        className="tool-btn" 
+        onClick={showAddIntersectionPoint}
+        title="Thêm giao điểm"
+      >
+        <i className="material-icons">add_location</i>
+      </button>
+    </div>
+  );
+
+  // Intersection points display and input form
+  const intersectionPointsContent = (
+    <div className="intersection-points-container">
+      <h4>Giao điểm</h4>
+      {intersectionPoints.map((point, index) => (
+        <div key={index} className="intersection-point">
+          <span>({point.x}, {point.y})</span>
+          <button className="remove-point" onClick={() => removeIntersectionPoint(index)}>
+            <i className="material-icons">clear</i>
+          </button>
+        </div>
+      ))}
+      {showIntersectionForm && (
+        <div className="intersection-form">
+          <input 
+            type="number" 
+            placeholder="x" 
+            value={newPoint.x} 
+            onChange={(e) => setNewPoint({...newPoint, x: e.target.value})} 
+          />
+          <input 
+            type="number" 
+            placeholder="y" 
+            value={newPoint.y} 
+            onChange={(e) => setNewPoint({...newPoint, y: e.target.value})} 
+          />
+          <button onClick={addIntersectionPoint}>
+            <i className="material-icons">check</i>
+          </button>
+          <button onClick={() => setShowIntersectionForm(false)}>
+            <i className="material-icons">close</i>
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <MathJaxContext config={mathJaxConfig}>
       <div className="app-container">
         <div className="background-container">
-          <div className="stars">
-            <div className="small-stars">
-              {[...Array(40)].map((_, i) => (
-                <div key={i} className="star" style={{
+          <div className="stars small-stars">
+            {Array.from({ length: 80 }).map((_, i) => (
+              <div
+                key={`small-star-${i}`}
+                className="star"
+                style={{
                   left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`
-                }} />
-              ))}
-            </div>
-            <div className="medium-stars">
-              {[...Array(20)].map((_, i) => (
-                <div key={i} className="star" style={{
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="stars medium-stars">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <div
+                key={`medium-star-${i}`}
+                className="star"
+                style={{
                   left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`
-                }} />
-              ))}
-            </div>
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                }}
+              />
+            ))}
           </div>
-          <div className="moon"></div>
-          <div className="hogwarts-castle"></div>
-          <div className="flying-broom">
-            <div className="broom-stick"></div>
-            <div className="broom-bristles"></div>
-            <div className="broom-rider"></div>
-          </div>
+          <div className="moon" />
         </div>
 
         <UserProfile />
@@ -237,16 +346,19 @@ const AppContent = () => {
             )}
           </div>
 
-          <div className="coordinate-container farm-panel">
-            <h3>Biểu diễn hệ toạ độ</h3>
-            <div className="magical-decoration potion" style={{ bottom: '10px', left: '10px' }}></div>
-            <CoordinatePlane
+          <div className="coordinate-section">
+            {toolbarContent}
+            <CoordinatePlane 
               ref={coordinatePlaneRef}
               inequalities={inequalities}
               setQuizMessage={setQuizMessage}
               hoveredEq={hoveredEq}
+              drawingMode={drawingMode}
+              regionMode={regionMode}
+              intersectionPoints={intersectionPoints}
               isMobile={isMobile}
             />
+            {intersectionPointsContent}
           </div>
 
           <div className="inequalities-list farm-panel">

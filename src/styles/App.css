@@ -73,7 +73,7 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* Magical Background */
+/* Background elements - keep only moon and stars */
 .background-container {
   position: fixed;
   top: 0;
@@ -381,11 +381,10 @@ body {
 }
 
 .coordinate-container {
-  grid-column: 1;
-  grid-row: 3;
-  min-height: 0;
-  aspect-ratio: 1 / 1;
   position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 20px;
 }
 
 .inequalities-list {
@@ -470,31 +469,21 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Inequality list styles */
+/* Improve inequality list styling */
 .inequalities-list h3 {
   font-family: 'Cinzel', serif;
-  color: var(--header-color);
+  color: #3a1078;
   margin-bottom: 15px;
   text-align: center;
   border-bottom: 1px solid rgba(71, 58, 131, 0.3);
   padding-bottom: 8px;
   position: relative;
-}
-
-.inequalities-list h3::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 25%;
-  width: 50%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--highlight-color), transparent);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  background: linear-gradient(135deg, #3a1078, #4e31aa);
+  color: white;
+  padding: 10px;
+  border-radius: 8px 8px 0 0;
+  margin-top: 0;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
 }
 
 .inequality-item {
@@ -516,33 +505,17 @@ body {
   overflow: hidden;
 }
 
-.inequality-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
-  pointer-events: none;
-}
-
 .inequality-item:hover {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   transform: translateY(-3px) scale(1.02);
+  background: rgba(58, 16, 120, 0.05);
 }
 
-.inequality-item span {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  overflow: hidden;
-}
-
+/* Fix delete icon animation */
 .delete-icon {
   cursor: pointer;
   color: #999;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,48 +523,34 @@ body {
   height: 32px;
   border-radius: 50%;
   margin-left: 10px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
-  position: relative;
-  overflow: hidden;
-}
-
-.delete-icon::before {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(220, 53, 69, 0), rgba(220, 53, 69, 0));
-  transition: all 0.3s;
-  border-radius: 50%;
-  transform: scale(0);
 }
 
 .delete-icon:hover {
   color: var(--error-color);
-  transform: rotate(90deg);
-}
-
-.delete-icon:hover::before {
-  background: radial-gradient(circle, rgba(220, 53, 69, 0.2), rgba(220, 53, 69, 0));
-  transform: scale(1.5);
+  transform: rotate(0deg) scale(1.2);
+  background: rgba(220, 53, 69, 0.1);
 }
 
 .delete-icon:active {
-  transform: scale(0.8) rotate(90deg);
+  transform: scale(0.9);
 }
 
-@keyframes slideIn {
-  0% { 
-    opacity: 0; 
-    transform: translateX(-30px) scale(0.9); 
-  }
-  50% {
-    transform: translateX(5px) scale(1.02);
-  }
-  100% { 
-    opacity: 1; 
-    transform: translateX(0) scale(1); 
-  }
+/* Fix LaTeX preview container */
+.preview-container {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(71, 58, 131, 0.3);
+  border-radius: 5px;
+  padding: 10px 15px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.latex-preview {
+  font-size: 1.2em;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Improved decorations */
@@ -725,16 +684,23 @@ input:focus, select:focus {
 .coordinate-plane-container {
   width: 100%;
   height: 100%;
-  min-height: 400px;
-  overflow: hidden;
   border-radius: 8px;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: #fff;
 }
 
 .coordinate-plane-canvas {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  cursor: move;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  cursor: grab;
   touch-action: none;
+}
+
+.coordinate-plane-canvas:active {
+  cursor: grabbing;
 }
 
 .reset-view-button {
@@ -752,23 +718,17 @@ input:focus, select:focus {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  z-index: 100;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 10;
+  transition: all 0.3s ease;
 }
 
 .reset-view-button:hover {
   transform: scale(1.1) rotate(180deg);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 193, 7, 0.3);
+  background: linear-gradient(135deg, #4e31aa, #3a1078);
 }
 
 .reset-view-button:active {
-  transform: scale(0.95) rotate(180deg);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-.reset-view-button i {
-  font-size: 20px;
-  transition: all 0.3s;
+  transform: scale(0.95);
 }
 
 .mobile-control-hint {
@@ -780,15 +740,13 @@ input:focus, select:focus {
   padding: 8px 12px;
   border-radius: 20px;
   font-size: 0.8rem;
-  backdrop-filter: blur(2px);
-  animation: hint-fade 3s forwards;
-  opacity: 0.9;
+  animation: fade-in 0.3s ease-in-out;
+  opacity: 0.8;
 }
 
-@keyframes hint-fade {
-  0% { opacity: 0.9; }
-  80% { opacity: 0.9; }
-  100% { opacity: 0; pointer-events: none; }
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 0.8; }
 }
 
 /* Styling for axis labels */
@@ -1521,4 +1479,135 @@ input:focus, select:focus {
   0% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
   100% { transform: translateY(0); }
+}
+
+/* Drawing toolbar styles */
+.coordinate-section {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 4px 8px var(--panel-shadow);
+}
+
+.drawing-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(58, 16, 120, 0.05);
+  border-radius: 8px;
+  justify-content: center;
+}
+
+.tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3a1078, #4e31aa);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.tool-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tool-btn:active {
+  transform: scale(0.95);
+}
+
+.tool-btn.active {
+  background: linear-gradient(135deg, #ff9800, #f44336);
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+}
+
+.tool-btn i {
+  font-size: 20px;
+}
+
+/* Intersection points styles */
+.intersection-points-container {
+  margin-top: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid rgba(71, 58, 131, 0.3);
+}
+
+.intersection-points-container h4 {
+  color: var(--header-color);
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.intersection-point {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(58, 16, 120, 0.05);
+  border-radius: 5px;
+  margin-bottom: 8px;
+}
+
+.remove-point {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.remove-point:hover {
+  color: var(--error-color);
+}
+
+.intersection-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.intersection-form input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid rgba(71, 58, 131, 0.3);
+  border-radius: 5px;
+}
+
+.intersection-form button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 5px;
+  background: var(--btn-primary);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intersection-form button:hover {
+  background: var(--btn-hover);
+}
+
+.intersection-form button:first-of-type {
+  background: var(--success-color);
+}
+
+.intersection-form button:last-of-type {
+  background: var(--error-color);
 } 

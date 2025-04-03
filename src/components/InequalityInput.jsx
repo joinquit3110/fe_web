@@ -137,7 +137,7 @@ const InequalityInput = ({
         {inputValue && (
           <div className="preview-container">
             <div className="latex-preview">
-              <MathJax inline>{`$${latexPreview}$`}</MathJax>
+              <span dangerouslySetInnerHTML={{ __html: `$$${latexPreview}$$` }} />
             </div>
           </div>
         )}

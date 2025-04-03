@@ -1,7 +1,17 @@
-import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import './CoordinatePlane.css';
 
-const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq, isMobile }, ref) => {
+const CoordinatePlane = forwardRef(({ 
+  inequalities, 
+  setInequalities, 
+  setQuizMessage, 
+  hoveredEq, 
+  setHoveredEq, 
+  isMobile, 
+  drawingMode = false,
+  regionMode = false,
+  intersectionPoints = []
+}, ref) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
@@ -9,6 +19,12 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [touchDistance, setTouchDistance] = useState(null);
+  const [boundaries, setBoundaries] = useState([]);
+  const [currentPath, setCurrentPath] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [lastX, setLastX] = useState(0);
+  const [lastY, setLastY] = useState(0);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -313,11 +329,83 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         ctx.setLineDash([]);
       }
     });
+
+    // Draw custom boundaries
+    if (boundaries.length > 0 || currentPath.length > 0) {
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ff9800';
+      
+      // Draw completed boundaries
+      boundaries.forEach(path => {
+        if (path.length < 2) return;
+        
+        ctx.beginPath();
+        const startPoint = canvasToScreen(path[0].x, path[0].y);
+        ctx.moveTo(startPoint.x, startPoint.y);
+        
+        for (let i = 1; i < path.length; i++) {
+          const point = canvasToScreen(path[i].x, path[i].y);
+          ctx.lineTo(point.x, point.y);
+        }
+        
+        ctx.stroke();
+      });
+      
+      // Draw current path while drawing
+      if (currentPath.length > 1) {
+        ctx.beginPath();
+        const startPoint = canvasToScreen(currentPath[0].x, currentPath[0].y);
+        ctx.moveTo(startPoint.x, startPoint.y);
+        
+        for (let i = 1; i < currentPath.length; i++) {
+          const point = canvasToScreen(currentPath[i].x, currentPath[i].y);
+          ctx.lineTo(point.x, point.y);
+        }
+        
+        ctx.stroke();
+      }
+    }
+    
+    // Draw selected regions
+    if (regions.length > 0) {
+      ctx.fillStyle = 'rgba(255, 152, 0, 0.2)';
+      
+      regions.forEach(region => {
+        const screenPoint = canvasToScreen(region.x, region.y);
+        ctx.beginPath();
+        ctx.arc(screenPoint.x, screenPoint.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    
+    // Draw intersection points
+    if (intersectionPoints.length > 0) {
+      ctx.fillStyle = '#f44336';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      
+      intersectionPoints.forEach(point => {
+        const screenPoint = canvasToScreen(point.x, point.y);
+        
+        // Draw circle for point
+        ctx.beginPath();
+        ctx.arc(screenPoint.x, screenPoint.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw label
+        ctx.fillStyle = '#000000';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`(${point.x}, ${point.y})`, screenPoint.x, screenPoint.y - 8);
+      });
+    }
   };
 
   useEffect(() => {
     renderCanvas();
-  }, [inequalities, hoveredEq, offset, scale]);
+  }, [inequalities, hoveredEq, offset, scale, boundaries, currentPath, regions, intersectionPoints, drawingMode, regionMode, isDrawing]);
 
   const handleWheel = (e) => {
     e.preventDefault();
@@ -329,23 +417,46 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   };
 
   const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - offset.x,
-      y: e.clientY - offset.y
-    });
+    const { clientX, clientY } = e;
+    
+    if (drawingMode) {
+      startDrawing(clientX, clientY);
+    } else if (regionMode) {
+      selectRegion(clientX, clientY);
+    } else {
+      // Original panning functionality
+      setIsDragging(true);
+      setLastX(clientX);
+      setLastY(clientY);
+    }
   };
 
   const handleMouseMove = (e) => {
-    if (isDragging) {
+    const { clientX, clientY } = e;
+    
+    if (drawingMode && isDrawing) {
+      continueDrawing(clientX, clientY);
+    } else if (isDragging) {
+      // Original panning functionality
+      const dx = clientX - lastX;
+      const dy = clientY - lastY;
+      
       setOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        x: offset.x + dx,
+        y: offset.y + dy
       });
+      
+      setLastX(clientX);
+      setLastY(clientY);
     }
   };
 
   const handleMouseUp = () => {
+    if (drawingMode && isDrawing) {
+      finishDrawing();
+    }
+    
+    // Original panning functionality
     setIsDragging(false);
   };
 
@@ -403,28 +514,95 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     setScale(1);
   };
 
+  // Add drawing functionality
+  const startDrawing = (x, y) => {
+    if (drawingMode) {
+      setIsDrawing(true);
+      const canvasPoint = screenToCanvas(x, y);
+      setCurrentPath([canvasPoint]);
+    }
+  };
+  
+  const continueDrawing = (x, y) => {
+    if (drawingMode && isDrawing) {
+      const canvasPoint = screenToCanvas(x, y);
+      setCurrentPath(prev => [...prev, canvasPoint]);
+    }
+  };
+  
+  const finishDrawing = () => {
+    if (drawingMode && isDrawing && currentPath.length > 1) {
+      setBoundaries(prev => [...prev, currentPath]);
+      setCurrentPath([]);
+      setIsDrawing(false);
+    }
+  };
+  
+  // Add region selection functionality
+  const selectRegion = (x, y) => {
+    if (regionMode) {
+      const canvasPoint = screenToCanvas(x, y);
+      // Check if point is inside any existing region to avoid duplicates
+      const isInsideExisting = regions.some(region => 
+        pointInPolygon(canvasPoint.x, canvasPoint.y, region));
+        
+      if (!isInsideExisting) {
+        setRegions(prev => [...prev, { x: canvasPoint.x, y: canvasPoint.y }]);
+      }
+    }
+  };
+  
+  // Helper function to check if a point is inside a polygon
+  const pointInPolygon = (x, y, polygon) => {
+    // Implementation of point-in-polygon algorithm
+    // For this example, we'll use a simple distance check
+    const dx = x - polygon.x;
+    const dy = y - polygon.y;
+    return Math.sqrt(dx * dx + dy * dy) < 0.5; // Within 0.5 units
+  };
+  
+  // Convert screen coordinates to canvas coordinates
+  const screenToCanvas = (screenX, screenY) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (screenX - rect.left - offset.x) / gridSize;
+    const y = (offset.y - (screenY - rect.top)) / gridSize;
+    return { x, y };
+  };
+  
+  // Convert canvas coordinates to screen coordinates
+  const canvasToScreen = (canvasX, canvasY) => {
+    const x = canvasX * gridSize + offset.x;
+    const y = offset.y - canvasY * gridSize;
+    return { x, y };
+  };
+
   return (
-    <div className="coordinate-plane-container" ref={containerRef}>
-      <canvas
-        ref={canvasRef}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        className="coordinate-plane-canvas"
-      />
-      {isMobile && (
-        <div className="mobile-control-hint">
-          Vuốt để di chuyển • Hai ngón tay để zoom
-        </div>
-      )}
-      <button onClick={resetView} className="reset-view-button">
-        <i className="material-icons">refresh</i>
-      </button>
+    <div className="coordinate-container">
+      <div className="coordinate-plane-container">
+        <canvas
+          className="coordinate-plane-canvas"
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        />
+        <button
+          className="reset-view-button"
+          onClick={resetView}
+          title="Đặt lại góc nhìn"
+        >
+          <i className="material-icons">restart_alt</i>
+        </button>
+        {isMobile && (
+          <div className="mobile-control-hint">
+            Kéo để di chuyển, chụm để phóng to
+          </div>
+        )}
+      </div>
     </div>
   );
 });
