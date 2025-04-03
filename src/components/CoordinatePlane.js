@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState, useRef, forwardRef, useImperativeHandle, useMemo } from 'react';
-import './CoordinatePlane.css';
+import '../styles/App.css';
 
 // Constants
 const CANVAS_CONFIG = {
-  width: 600,
-  height: 600,
+  width: 500,
+  height: 500,
   minZoom: 20,
   defaultZoom: 40
 };
@@ -176,9 +176,6 @@ const CoordinatePlane = forwardRef(({
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [zoom, setZoom] = useState(CANVAS_CONFIG.defaultZoom);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [solutionButtons, setSolutionButtons] = useState([]);
   const [touchDistance, setTouchDistance] = useState(null);
 
@@ -358,9 +355,9 @@ const CoordinatePlane = forwardRef(({
 
   // Draw grid with enhanced axis labels
   const drawGridAndAxes = useCallback((ctx, width, height) => {
-    // Calculate grid offset based on center and pan offset
-    const offsetX = origin.x + offset.x;
-    const offsetY = origin.y + offset.y;
+    // Calculate grid offset based on center (no panning)
+    const offsetX = origin.x;
+    const offsetY = origin.y;
     
     // Draw grid
     ctx.strokeStyle = "#eee";
@@ -474,7 +471,7 @@ const CoordinatePlane = forwardRef(({
         ctx.fillText(i.toString(), offsetX - 10, y);
       }
     }
-  }, [origin, offset, zoom]);
+  }, [origin, zoom]);
 
   // Main render function
   const renderCanvas = useCallback(() => {
@@ -510,6 +507,7 @@ const CoordinatePlane = forwardRef(({
   useEffect(() => {
     const resizeCanvas = () => {
       if (canvasRef.current) {
+        // Set fixed dimensions for the canvas
         canvasRef.current.width = CANVAS_CONFIG.width;
         canvasRef.current.height = CANVAS_CONFIG.height;
         renderCanvas();
@@ -525,34 +523,10 @@ const CoordinatePlane = forwardRef(({
   // Update canvas when dependencies change
   useEffect(() => {
     renderCanvas();
-  }, [renderCanvas, inequalities, hoveredEq, offset, zoom]);
+  }, [renderCanvas, inequalities, hoveredEq, zoom]);
 
-  // Handle mouse events
-  const handleMouseDown = useCallback((e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    setIsDragging(true);
-    setLastPos({
-      x: e.clientX,
-      y: e.clientY
-    });
-  }, []);
-
+  // Handle mouse events - now only for hover effects and button clicks
   const handleMouseMove = useCallback((e) => {
-    if (isDragging) {
-      const dx = e.clientX - lastPos.x;
-      const dy = e.clientY - lastPos.y;
-      
-      setOffset(prev => ({
-        x: prev.x + dx,
-        y: prev.y + dy
-      }));
-      
-      setLastPos({
-        x: e.clientX,
-        y: e.clientY
-      });
-    }
-    
     // Handle hover effects
     const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -585,11 +559,7 @@ const CoordinatePlane = forwardRef(({
     
     setHoveredEq(foundEq);
     canvasRef.current.style.cursor = isOverButton || foundEq ? 'pointer' : 'default';
-  }, [isDragging, lastPos, solutionButtons, inequalities, toMathCoords, zoom, setHoveredEq]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+  }, [solutionButtons, inequalities, toMathCoords, zoom, setHoveredEq]);
 
   const handleCanvasClick = useCallback((e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -638,6 +608,7 @@ const CoordinatePlane = forwardRef(({
     }
   }, [solutionButtons, setQuizMessage, setInequalities]);
 
+  // Keep wheel event for zooming
   const handleWheel = useCallback((e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1; // Zoom factor
@@ -646,16 +617,9 @@ const CoordinatePlane = forwardRef(({
     });
   }, []);
 
-  // Handle touch events for mobile
+  // Handle touch events for mobile (only for zooming, no panning)
   const handleTouchStart = useCallback((e) => {
-    if (e.touches.length === 1) {
-      // Single touch for panning
-      setIsDragging(true);
-      setLastPos({
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      });
-    } else if (e.touches.length === 2) {
+    if (e.touches.length === 2) {
       // Pinch to zoom - calculate initial distance
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -664,23 +628,9 @@ const CoordinatePlane = forwardRef(({
   }, []);
 
   const handleTouchMove = useCallback((e) => {
-    e.preventDefault(); // Prevent scrolling
-    
-    if (e.touches.length === 1 && isDragging) {
-      // Pan with one finger
-      const dx = e.touches[0].clientX - lastPos.x;
-      const dy = e.touches[0].clientY - lastPos.y;
+    if (e.touches.length === 2 && touchDistance) {
+      e.preventDefault(); // Prevent scrolling only during pinch zoom
       
-      setOffset(prev => ({
-        x: prev.x + dx,
-        y: prev.y + dy
-      }));
-      
-      setLastPos({
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      });
-    } else if (e.touches.length === 2 && touchDistance) {
       // Pinch to zoom
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -694,15 +644,13 @@ const CoordinatePlane = forwardRef(({
       
       setTouchDistance(newDistance);
     }
-  }, [isDragging, lastPos, touchDistance]);
+  }, [touchDistance]);
 
   const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
     setTouchDistance(null);
   }, []);
 
   const resetView = useCallback(() => {
-    setOffset({ x: 0, y: 0 });
     setZoom(CANVAS_CONFIG.defaultZoom);
   }, []);
 
@@ -711,22 +659,19 @@ const CoordinatePlane = forwardRef(({
       <canvas
         ref={canvasRef}
         onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
         onClick={handleCanvasClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className="coordinate-plane-canvas"
       />
-      <button onClick={resetView} className="reset-view-button" title="Đặt lại góc nhìn">
+      <button onClick={resetView} className="reset-view-button" title="Đặt lại kích thước">
         <i className="material-icons">refresh</i>
       </button>
       {isMobile && (
         <div className="mobile-control-hint">
-          Vuốt để di chuyển • Hai ngón tay để zoom
+          Hai ngón tay để zoom
         </div>
       )}
     </div>
