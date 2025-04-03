@@ -1,5 +1,4 @@
 ﻿import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
 import { MathJax } from "better-react-mathjax";
 import 'katex/dist/katex.min.css';
 import { parseInequality } from '../utils/parser';
@@ -24,8 +23,14 @@ const InequalityInput = ({
 
   // Format input for LaTeX preview
   const formatLatex = (input) => {
-    // Basic formatting - could be expanded for more complex inequalities
-    return input.replace(/</g, "<").replace(/>/g, ">");
+    if (!input) return '';
+    return input
+      .replace(/<=>/g, '\\Leftrightarrow')
+      .replace(/<=/g, '\\leq')
+      .replace(/>=/g, '\\geq')
+      .replace(/</g, '<')
+      .replace(/>/g, '>')
+      .replace(/\*/g, '\\cdot');
   };
 
   // Update LaTeX preview whenever input changes
@@ -36,7 +41,7 @@ const InequalityInput = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!inputValue.trim()) {
-      setQuizMessage('Please enter an inequality');
+      setQuizMessage('Vui lòng nhập bất phương trình');
       return;
     }
 
@@ -44,27 +49,34 @@ const InequalityInput = ({
     setError(null);
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/inequality`, {
-        inequality: inputValue,
+      const trimmedInput = inputValue.trim();
+      
+      const parsed = parseInequality(trimmedInput);
+      
+      if (parsed.error) {
+        setQuizMessage('Định dạng không hợp lệ!');
+        setIsLoading(false);
+        return;
+      }
+
+      const success = addInequality({
+        ...parsed,
+        solved: false,
+        latex: parsed.latex
       });
 
-      if (response.data.success) {
-        addInequality(response.data.inequality);
+      if (success) {
         setInputValue("");
         setQuizMessage({
-          text: "Inequality added successfully!",
+          text: "Thêm bất phương trình thành công!",
           type: "success",
         });
         setTimeout(() => setQuizMessage(null), 3000);
-      } else {
-        setError(response.data.message || "Failed to add inequality");
+        inputRef.current?.focus();
       }
     } catch (err) {
       console.error("Error adding inequality:", err);
-      setQuizMessage(
-        err.response?.data?.message ||
-          "Failed to add inequality. Please check your input and try again."
-      );
+      setQuizMessage('Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +86,7 @@ const InequalityInput = ({
     <div className="inequality-input-container">
       <form onSubmit={handleSubmit} className="inequality-form">
         <div className="form-header">
-          <h3>Add a New Spell (Inequality)</h3>
+          <h3>Thêm Phép Thuật (Bất Phương Trình)</h3>
           <div className="magical-icon wand"></div>
         </div>
         
@@ -85,9 +97,9 @@ const InequalityInput = ({
             value={inputValue}
             onChange={(e) => {
               setInputValue(e.target.value);
-              setError('');
+              setError(null);
             }}
-            placeholder="Enter your inequality (e.g., x > 0)"
+            placeholder="Nhập bất phương trình (vd: x + y + 1 > 0)"
             disabled={isLoading}
             className="inequality-input"
           />
@@ -97,28 +109,39 @@ const InequalityInput = ({
             className="submit-btn"
           >
             {isLoading ? (
-              <span className="loading-dots">Casting<span>.</span><span>.</span><span>.</span></span>
+              <span className="loading-dots">Đang tạo<span>.</span><span>.</span><span>.</span></span>
             ) : (
-              "Cast Spell"
+              "Tạo phép thuật"
             )}
           </button>
         </div>
         
         {inputValue && (
           <div className="preview-container">
-            <div className="preview-label">Preview:</div>
+            <div className="preview-label">Xem trước:</div>
             <div className="latex-preview">
-              <MathJax>{"\\(" + latexPreview + "\\)"}</MathJax>
+              <MathJax>{`\\(${latexPreview}\\)`}</MathJax>
             </div>
           </div>
         )}
         
         {error && (
           <div className="error-message">
-            <i className="fas fa-exclamation-circle"></i>
+            <i className="material-icons">error</i>
             {error}
           </div>
         )}
+        
+        <div className="buttons-container">
+          <button
+            type="button"
+            className="reset-button"
+            onClick={resetAll}
+          >
+            <i className="material-icons" style={{color: '#ffd700'}}>delete_sweep</i>
+            Reset
+          </button>
+        </div>
         
         <div className="magical-footer">
           <div className="scroll-decoration"></div>
