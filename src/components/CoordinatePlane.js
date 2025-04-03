@@ -111,22 +111,44 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     ctx.fill();
 
     // Draw origin point
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Add a highlight circle around the origin
+    ctx.beginPath();
+    ctx.arc(offsetX, offsetY, 8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 193, 7, 0.4)'; // Highlight color
+    ctx.fill();
+    
+    // Draw origin point on top of highlight
     ctx.beginPath();
     ctx.arc(offsetX, offsetY, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
     ctx.fill();
-
-    // Draw "O" at origin
-    ctx.fillStyle = '#000000';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    
     ctx.fillText("O", offsetX - 15, offsetY + 15);
 
-    // Draw axis labels
-    // X-axis label
+    // Draw axis labels with enhanced style
+    ctx.font = 'bold 16px Arial';
+    
+    // X-axis label with highlight
+    ctx.fillStyle = 'rgba(255, 193, 7, 0.4)';
+    ctx.beginPath();
+    ctx.arc(width - 10, offsetY + 20, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#000000';
     ctx.fillText("x", width - 10, offsetY + 20);
-    // Y-axis label
+    
+    // Y-axis label with highlight
+    ctx.fillStyle = 'rgba(255, 193, 7, 0.4)';
+    ctx.beginPath();
+    ctx.arc(offsetX - 20, 10, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#000000';
     ctx.fillText("y", offsetX - 20, 10);
 
     // Draw axis numbers

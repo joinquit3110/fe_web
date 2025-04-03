@@ -19,6 +19,17 @@ const InequalityInput = ({
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    
+    // Add meta viewport tag to prevent zoom on input focus
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
+    viewportMeta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+    document.head.appendChild(viewportMeta);
+    
+    return () => {
+      // Restore normal viewport behavior when component unmounts
+      document.head.removeChild(viewportMeta);
+    };
   }, []);
 
   // Format input for LaTeX preview

@@ -110,7 +110,9 @@ const UserProfile = () => {
             </div>
           )}
         </div>
-        <span className="username">{user?.username}</span>
+        <span className="username" title={user?.username}>
+          {user?.username?.length > 8 ? `${user.username.substring(0, 8)}...` : user?.username}
+        </span>
       </div>
 
       {isOpen && (

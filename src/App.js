@@ -8,6 +8,19 @@ import './styles/App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 
+// Configure MathJax
+const mathJaxConfig = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']],
+    processEscapes: true,
+  },
+  svg: {
+    fontCache: 'global'
+  },
+  loader: { load: ['input/tex', 'output/svg'] }
+};
+
 const AppContent = () => {
   const { user } = useAuth();
   const [inequalities, setInequalities] = useState([]);
@@ -40,14 +53,36 @@ const AppContent = () => {
       }, 300);
     };
     
+    const handleNameTouch = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Same logic as click but for touch events
+      clickCountRef.current += 1;
+      
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+      
+      clickTimerRef.current = setTimeout(() => {
+        if (clickCountRef.current >= 2) {
+          // Easter egg: Toggle teacher name on double tap
+          setTeacherName(prev => prev === "Vĩ" ? "Hưng" : "Vĩ");
+        }
+        clickCountRef.current = 0;
+      }, 300);
+    };
+    
     const nameElement = teacherNameRef.current;
     if (nameElement) {
       nameElement.addEventListener('click', handleNameClick);
+      nameElement.addEventListener('touchend', handleNameTouch);
     }
     
     return () => {
       if (nameElement) {
         nameElement.removeEventListener('click', handleNameClick);
+        nameElement.removeEventListener('touchend', handleNameTouch);
       }
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current);
@@ -98,7 +133,7 @@ const AppContent = () => {
   }
 
   return (
-    <MathJaxContext>
+    <MathJaxContext config={mathJaxConfig}>
       <div className="app-container">
         <div className="background-container">
           <div className="stars">
