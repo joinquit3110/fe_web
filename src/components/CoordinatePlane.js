@@ -25,6 +25,7 @@ const CoordinatePlane = forwardRef(({
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastX, setLastX] = useState(0);
   const [lastY, setLastY] = useState(0);
+  const gridSizeBase = 40; // Base grid size
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -60,7 +61,7 @@ const CoordinatePlane = forwardRef(({
     const height = canvas.height;
     const centerX = width / 2;
     const centerY = height / 2;
-    const gridSize = 40 * scale; // Adjust grid size based on scale
+    const gridSize = gridSizeBase * scale; // Adjust grid size based on scale
 
     // Clear canvas with white background
     ctx.fillStyle = '#FFFFFF';
@@ -152,38 +153,7 @@ const CoordinatePlane = forwardRef(({
     ctx.fillText("y", offsetX - 20, 10);
 
     // Draw axis numbers
-    ctx.font = '16px Arial';
-    const unitSize = gridSize; // One unit equals one grid cell
-    
-    // Calculate visible range based on canvas size, offset, and scale
-    const viewportLeft = -offsetX / unitSize;
-    const viewportRight = (width - offsetX) / unitSize;
-    const viewportTop = -offsetY / unitSize;
-    const viewportBottom = (height - offsetY) / unitSize;
-    
-    // X-axis numbers - only show within visible range
-    for (let x = Math.ceil(viewportLeft); x <= Math.floor(viewportRight); x++) {
-      if (x !== 0) { // Skip zero since origin is labeled with "O"
-        const screenX = offsetX + x * unitSize;
-        ctx.fillText(x.toString(), screenX, offsetY + 20);
-      }
-    }
-
-    // Y-axis numbers - only show within visible range
-    for (let y = Math.ceil(viewportTop); y <= Math.floor(viewportBottom); y++) {
-      if (y !== 0) { // Skip zero
-        const screenY = offsetY - y * unitSize;
-        // Add background to ensure visibility during panning
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.roundRect(offsetX - 35, screenY - 10, 30, 20, 4);
-        ctx.fill();
-        
-        // Draw text on top of background
-        ctx.fillStyle = '#000000';
-        ctx.fillText(y.toString(), offsetX - 20, screenY);
-      }
-    }
+    drawAxisNumbers(ctx, width, height, offsetX, offsetY, gridSize);
 
     // Draw inequalities
     inequalities.forEach((ineq, index) => {
@@ -199,7 +169,7 @@ const CoordinatePlane = forwardRef(({
         
         // Vertical line x = -c/a
         const x = -ineq.c / ineq.a;
-        const screenX = offsetX + x * unitSize;
+        const screenX = offsetX + x * gridSize;
         
         ctx.beginPath();
         ctx.moveTo(screenX, 0);
@@ -232,15 +202,15 @@ const CoordinatePlane = forwardRef(({
         const getY = (x) => (-ineq.a * x - ineq.c) / ineq.b;
         
         // Calculate left and right bounds of the canvas in coordinate space
-        const leftX = (0 - offsetX) / unitSize;
-        const rightX = (width - offsetX) / unitSize;
+        const leftX = (0 - offsetX) / gridSize;
+        const rightX = (width - offsetX) / gridSize;
         
         // Draw the line
         ctx.beginPath();
         for (let screenX = 0; screenX <= width; screenX += 2) {
-          const x = (screenX - offsetX) / unitSize;
+          const x = (screenX - offsetX) / gridSize;
           const y = getY(x);
-          const screenY = offsetY - y * unitSize;
+          const screenY = offsetY - y * gridSize;
           
           if (screenX === 0) {
             ctx.moveTo(screenX, screenY);
@@ -267,14 +237,14 @@ const CoordinatePlane = forwardRef(({
           
           // Left point
           const leftY = getY(leftX);
-          const leftScreenY = offsetY - leftY * unitSize;
+          const leftScreenY = offsetY - leftY * gridSize;
           ctx.moveTo(0, leftScreenY);
           
           // Draw the line
           for (let screenX = 0; screenX <= width; screenX += 2) {
-            const x = (screenX - offsetX) / unitSize;
+            const x = (screenX - offsetX) / gridSize;
             const y = getY(x);
-            const screenY = offsetY - y * unitSize;
+            const screenY = offsetY - y * gridSize;
             ctx.lineTo(screenX, screenY);
           }
           
@@ -301,7 +271,7 @@ const CoordinatePlane = forwardRef(({
         if (ineq.b === 0) {
           // Vertical line
           const x = -ineq.c / ineq.a;
-          const screenX = offsetX + x * unitSize;
+          const screenX = offsetX + x * gridSize;
           
           ctx.beginPath();
           ctx.moveTo(screenX, 0);
@@ -313,9 +283,9 @@ const CoordinatePlane = forwardRef(({
           
           ctx.beginPath();
           for (let screenX = 0; screenX <= width; screenX += 2) {
-            const x = (screenX - offsetX) / unitSize;
+            const x = (screenX - offsetX) / gridSize;
             const y = getY(x);
-            const screenY = offsetY - y * unitSize;
+            const screenY = offsetY - y * gridSize;
             
             if (screenX === 0) {
               ctx.moveTo(screenX, screenY);
@@ -564,6 +534,7 @@ const CoordinatePlane = forwardRef(({
   // Convert screen coordinates to canvas coordinates
   const screenToCanvas = (screenX, screenY) => {
     const rect = canvasRef.current.getBoundingClientRect();
+    const gridSize = gridSizeBase * scale;
     const x = (screenX - rect.left - offset.x) / gridSize;
     const y = (offset.y - (screenY - rect.top)) / gridSize;
     return { x, y };
@@ -571,9 +542,52 @@ const CoordinatePlane = forwardRef(({
   
   // Convert canvas coordinates to screen coordinates
   const canvasToScreen = (canvasX, canvasY) => {
+    const gridSize = gridSizeBase * scale;
     const x = canvasX * gridSize + offset.x;
     const y = offset.y - canvasY * gridSize;
     return { x, y };
+  };
+
+  // Fix for Y-axis numbers visibility
+  const drawAxisNumbers = (ctx, width, height, offsetX, offsetY, gridSize) => {
+    ctx.font = '16px Arial';
+    const unitSize = gridSize;
+    
+    // Calculate visible range
+    const viewportLeft = -offsetX / unitSize;
+    const viewportRight = (width - offsetX) / unitSize;
+    const viewportTop = -offsetY / unitSize;
+    const viewportBottom = (height - offsetY) / unitSize;
+    
+    // X-axis numbers
+    for (let x = Math.ceil(viewportLeft); x <= Math.floor(viewportRight); x++) {
+      if (x !== 0) { // Skip zero
+        const screenX = offsetX + x * unitSize;
+        ctx.fillStyle = '#000000';
+        ctx.fillText(x.toString(), screenX, offsetY + 20);
+      }
+    }
+
+    // Y-axis numbers with better visibility
+    for (let y = Math.ceil(viewportTop); y <= Math.floor(viewportBottom); y++) {
+      if (y !== 0) { // Skip zero
+        const screenY = offsetY - y * unitSize;
+        
+        // Always add background for Y-axis numbers
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.beginPath();
+        // Use a fixed width background that's aligned with the Y-axis
+        ctx.rect(offsetX - 40, screenY - 10, 40, 20);
+        ctx.fill();
+        
+        // Draw text on top of background
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'right';
+        ctx.fillText(y.toString(), offsetX - 10, screenY + 5);
+        // Reset alignment for other text
+        ctx.textAlign = 'center';
+      }
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MathJaxContext } from "better-react-mathjax";
+import { MathJaxContext, MathJax } from "better-react-mathjax";
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import UserProfile from "./components/UserProfile";
@@ -24,14 +24,7 @@ const mathJaxConfig = {
     enableMenu: false
   },
   startup: {
-    typeset: true,
-    ready: () => {
-      MathJax.startup.defaultReady();
-      MathJax.startup.promise.then(() => {
-        // Force typeset all math after MathJax is fully loaded
-        MathJax.typeset();
-      });
-    }
+    typeset: true
   }
 };
 
