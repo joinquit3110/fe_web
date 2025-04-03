@@ -4,11 +4,10 @@ import CoordinatePlane from "./components/CoordinatePlane";
 import './styles/App.css';
 
 // Import images
-import sunImage from './assets/sun.png';
-import farmerImage from './assets/farmer.png';
-import cowImage from './assets/cow.png';
-import treeImage from './assets/tree.png';
-import chickenImage from './assets/chicken.png';
+import wandImage from './assets/wand.png';
+import hatImage from './assets/hat.png';
+import bookImage from './assets/book.png';
+import potionImage from './assets/potion.png';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
@@ -20,7 +19,16 @@ const AppContent = () => {
   const [quizMessage, setQuizMessage] = useState('');
   const [hoveredEq, setHoveredEq] = useState(null);
   const coordinatePlaneRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleAddInequality = (newInequality) => {
     return coordinatePlaneRef.current?.handleAddInequality(newInequality);
   };
@@ -83,12 +91,15 @@ const AppContent = () => {
       </div>
       
       <header className="farm-header">
+        <img src={hatImage} alt="Wizard Hat" className="magical-decoration hat" />
         <h1>Học cùng thầy Vĩ <span className="highlight">chỉ điểm 10!</span></h1>
+        <img src={wandImage} alt="Magic Wand" className="magical-decoration wand" />
       </header>
       
       <div className="farm-content">
         <div className="control-panel farm-panel">
           <div className="control-panel-content">
+            <img src={bookImage} alt="Spell Book" className="magical-decoration book" />
             <InequalityInput 
               addInequality={handleAddInequality}
               setQuizMessage={setQuizMessage}
@@ -120,7 +131,7 @@ const AppContent = () => {
         </div>
 
         <div className="coordinate-container farm-panel">
-          <div className="tree-decoration"></div>
+          <img src={potionImage} alt="Magic Potion" className="magical-decoration potion" />
           <div className="coordinate-plane">
             <CoordinatePlane
               ref={coordinatePlaneRef}
@@ -142,8 +153,8 @@ const AppContent = () => {
               className="inequality-item"
               style={{ 
                 borderLeftColor: ineq.color,
-                background: hoveredEq?.label === ineq.label ? '#fff3e0' : '#fff',
-                '--index': index // Add animation delay index
+                background: hoveredEq?.label === ineq.label ? 'rgba(139, 69, 19, 0.1)' : 'var(--panel-bg)',
+                '--index': index
               }}
               onMouseEnter={() => handleListItemHover(ineq)}
               onMouseLeave={() => handleListItemHover(null)}
