@@ -4,19 +4,15 @@ import CoordinatePlane from "./components/CoordinatePlane";
 import './styles/App.css';
 
 // Import images
-import wandImage from './assets/wand.png';
-import hatImage from './assets/hat.png';
-import bookImage from './assets/book.png';
-import potionImage from './assets/potion.png';
-
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
-import UserProfile from './components/UserProfile';
 import treeImage from './assets/tree.png';
 import sunImage from './assets/sun.png';
 import farmerImage from './assets/farmer.png';
 import chickenImage from './assets/chicken.png';
 import cowImage from './assets/cow.png';
+
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
+import UserProfile from './components/UserProfile';
 
 const AppContent = () => {
   const { user } = useAuth();
