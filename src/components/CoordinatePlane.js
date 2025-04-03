@@ -1,12 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import './CoordinatePlane.css';
 
-const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq }) => {
+const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq }, ref) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    handleAddInequality: (newInequality) => {
+      setInequalities(prev => [...prev, newInequality]);
+      return true;
+    }
+  }));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -55,13 +63,43 @@ const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, h
     ctx.lineTo(centerX + offset.x, height);
     ctx.stroke();
 
-    // Draw axis labels
+    // Draw axis arrows
+    // X-axis arrow
+    ctx.beginPath();
+    ctx.moveTo(width - 15, centerY + offset.y - 8);
+    ctx.lineTo(width, centerY + offset.y);
+    ctx.lineTo(width - 15, centerY + offset.y + 8);
+    ctx.fillStyle = '#ffd700';
+    ctx.fill();
+
+    // Y-axis arrow
+    ctx.beginPath();
+    ctx.moveTo(centerX + offset.x - 8, 15);
+    ctx.lineTo(centerX + offset.x, 0);
+    ctx.lineTo(centerX + offset.x + 8, 15);
+    ctx.fill();
+
+    // Draw origin point
+    ctx.beginPath();
+    ctx.arc(centerX + offset.x, centerY + offset.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd700';
+    ctx.fill();
+
+    // Draw "O" at origin
     ctx.fillStyle = '#ffd700';
     ctx.font = '14px Cinzel';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.fillText("O", centerX + offset.x - 15, centerY + offset.y + 15);
 
-    // X-axis labels
+    // Draw axis labels
+    // X-axis label
+    ctx.fillText("x", width - 10, centerY + offset.y + 20);
+    // Y-axis label
+    ctx.fillText("y", centerX + offset.x - 20, 10);
+
+    // Draw axis labels
+    // X-axis numbers
     for (let x = -10; x <= 10; x++) {
       if (x !== 0) {
         const screenX = centerX + (x * 50) + offset.x;
@@ -69,7 +107,7 @@ const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, h
       }
     }
 
-    // Y-axis labels
+    // Y-axis numbers
     for (let y = -10; y <= 10; y++) {
       if (y !== 0) {
         const screenY = centerY - (y * 50) + offset.y;
@@ -98,22 +136,51 @@ const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, h
       ctx.stroke();
 
       // Fill the solution region
-      if (ineq.type === '>=' || ineq.type === '<=') {
+      if (ineq.type === '>=' || ineq.type === '>' || ineq.type === '<=' || ineq.type === '<') {
         ctx.fillStyle = `${ineq.color}20`;
+        
+        // Determine which way to fill based on inequality type
+        let fillDirection = 1; // 1 for up, -1 for down
+        if (ineq.type === '>=' || ineq.type === '>') {
+          if (ineq.b > 0) fillDirection = -1;
+          else fillDirection = 1;
+        } else {
+          if (ineq.b > 0) fillDirection = 1;
+          else fillDirection = -1;
+        }
+
         ctx.beginPath();
+        
+        // Start at one end of the line
+        let startX = -10;
+        let startY = (ineq.a * startX + ineq.c) / -ineq.b;
+        let startScreenX = centerX + (startX * 50) + offset.x;
+        let startScreenY = centerY - (startY * 50) + offset.y;
+        
+        ctx.moveTo(startScreenX, startScreenY);
+        
+        // Draw the line
         for (let x = -10; x <= 10; x += 0.1) {
           const y = (ineq.a * x + ineq.c) / -ineq.b;
           const screenX = centerX + (x * 50) + offset.x;
           const screenY = centerY - (y * 50) + offset.y;
-          
-          if (x === -10) {
-            ctx.moveTo(screenX, screenY);
-          } else {
-            ctx.lineTo(screenX, screenY);
-          }
+          ctx.lineTo(screenX, screenY);
         }
-        ctx.lineTo(width, 0);
-        ctx.lineTo(0, 0);
+        
+        // Complete the region
+        let endX = 10;
+        let endY = (ineq.a * endX + ineq.c) / -ineq.b;
+        let endScreenX = centerX + (endX * 50) + offset.x;
+        let endScreenY = centerY - (endY * 50) + offset.y;
+        
+        if (fillDirection === 1) {
+          ctx.lineTo(endScreenX, height);
+          ctx.lineTo(startScreenX, height);
+        } else {
+          ctx.lineTo(endScreenX, 0);
+          ctx.lineTo(startScreenX, 0);
+        }
+        
         ctx.closePath();
         ctx.fill();
       }
@@ -139,7 +206,7 @@ const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, h
       ctx.stroke();
       ctx.setLineDash([]);
     }
-  }, [inequalities, hoveredEq, offset]);
+  }, [inequalities, hoveredEq, offset, scale]);
 
   const handleWheel = (e) => {
     e.preventDefault();
@@ -172,8 +239,8 @@ const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, h
     <div className="coordinate-plane-container">
       <canvas
         ref={canvasRef}
-        width={800}
-        height={800}
+        width={600}
+        height={600}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -187,6 +254,6 @@ const CoordinatePlane = ({ ref, inequalities, setInequalities, setQuizMessage, h
       </div>
     </div>
   );
-};
+});
 
 export default CoordinatePlane; 

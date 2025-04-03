@@ -41,7 +41,8 @@ const AppContent = () => {
   }, []);
 
   const handleAddInequality = (newInequality) => {
-    return coordinatePlaneRef.current?.handleAddInequality(newInequality);
+    setInequalities(prev => [...prev, newInequality]);
+    return true;
   };
 
   const resetAll = () => {
@@ -100,33 +101,56 @@ const AppContent = () => {
           </div>
         </div>
         <div className="moon"></div>
+        <div className="sun" style={{ position: 'absolute', top: '20px', left: '20px' }}>
+          <img src={sunImage} alt="Sun" style={{ width: '80px', height: '80px' }} />
+        </div>
       </div>
 
+      <UserProfile />
+
       <header className="farm-header">
-        <h1>Magical Inequality Farm</h1>
+        <h1>Học cùng thầy Vĩ <span className="highlight">chỉ điểm 10!</span></h1>
         <div className="magical-decoration hat" style={{ top: '10%', left: '5%' }}></div>
         <div className="magical-decoration wand" style={{ top: '20%', right: '5%' }}></div>
       </header>
 
       <main className="farm-content">
-        <div className="farm-panel">
-          <h2>Welcome to the Magical Farm</h2>
-          <p>Explore the wonders of mathematical inequalities in a magical setting!</p>
-        </div>
-
         <div className="control-panel farm-panel">
           <h3>Magical Controls</h3>
-          <div className="input-group">
-            <input type="text" placeholder="Enter your magical equation..." />
-            <button>Cast Spell</button>
+          <div className="control-panel-content">
+            <div className="magical-decoration book" style={{ top: '10px', right: '10px' }}></div>
+            <InequalityInput 
+              addInequality={handleAddInequality}
+              setQuizMessage={setQuizMessage}
+              resetAll={resetAll}
+            />
           </div>
         </div>
 
-        <div className="inequality-list">
-          {/* Inequality items will be rendered here */}
+        <div className="message-box">
+          {quizMessage && (
+            <div className={`message ${
+              quizMessage.includes('Chính xác') ? 'success' :
+              quizMessage.includes('Sai') || quizMessage.includes('sai') ? 'error' :
+              quizMessage.includes('tồn tại') ? 'warning' :
+              quizMessage.includes('Định dạng') ? 'error' :
+              quizMessage.includes('Vui lòng nhập') ? 'info' :
+              quizMessage.includes('Nhập tọa độ') ? 'info' :
+              quizMessage.includes('đúng') ? 'success' : ''
+            }`}>
+              {quizMessage.includes('Chính xác') && <i className="material-icons">check_circle</i>}
+              {quizMessage.includes('Sai') && <i className="material-icons">error</i>}
+              {quizMessage.includes('tồn tại') && <i className="material-icons">warning</i>}
+              {quizMessage.includes('Định dạng') && <i className="material-icons">format_clear</i>}
+              {(quizMessage.includes('Vui lòng nhập') || quizMessage.includes('Nhập tọa độ')) && 
+                <i className="material-icons">info</i>}
+              {quizMessage}
+            </div>
+          )}
         </div>
 
-        <div className="coordinate-plane">
+        <div className="coordinate-container farm-panel">
+          <div className="magical-decoration potion" style={{ bottom: '10px', left: '10px' }}></div>
           <h3>Magical Graph</h3>
           <CoordinatePlane
             ref={coordinatePlaneRef}
@@ -136,6 +160,37 @@ const AppContent = () => {
             hoveredEq={hoveredEq}
             setHoveredEq={setHoveredEq}
           />
+        </div>
+
+        <div className="inequalities-list farm-panel">
+          <div className="cow-decoration"></div>
+          <div className="chicken-decoration"></div>
+          <h3>Danh sách bất phương trình</h3>
+          {inequalities.map((ineq, index) => (
+            <div
+              key={index}
+              className="inequality-item"
+              style={{ 
+                borderLeftColor: ineq.color,
+                background: hoveredEq?.label === ineq.label ? 'rgba(139, 69, 19, 0.1)' : 'var(--panel-bg)',
+                '--index': index
+              }}
+              onMouseEnter={() => handleListItemHover(ineq)}
+              onMouseLeave={() => handleListItemHover(null)}
+            >
+              <span 
+                dangerouslySetInnerHTML={{ 
+                  __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
+                }}
+              />
+              <span 
+                className="delete-icon material-icons"
+                onClick={(e) => handleDelete(e, ineq)}
+              >
+                delete
+              </span>
+            </div>
+          ))}
         </div>
       </main>
 
