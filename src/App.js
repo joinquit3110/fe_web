@@ -16,9 +16,19 @@ const mathJaxConfig = {
     processEscapes: true,
   },
   svg: {
-    fontCache: 'global'
+    fontCache: 'global',
+    scale: 1.1,
   },
-  loader: { load: ['input/tex', 'output/svg'] }
+  startup: {
+    typeset: true,
+  },
+  options: {
+    enableMenu: false,
+    renderActions: {
+      addMenu: [],
+      checkLoading: []
+    }
+  },
 };
 
 const AppContent = () => {

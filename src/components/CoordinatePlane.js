@@ -172,6 +172,14 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     for (let y = Math.ceil(viewportTop); y <= Math.floor(viewportBottom); y++) {
       if (y !== 0) { // Skip zero
         const screenY = offsetY - y * unitSize;
+        // Add background for better visibility
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.roundRect(offsetX - 35, screenY - 10, 30, 20, 4);
+        ctx.fill();
+        
+        // Draw text on top of background
+        ctx.fillStyle = '#000000';
         ctx.fillText(y.toString(), offsetX - 20, screenY);
       }
     }

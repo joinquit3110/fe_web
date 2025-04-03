@@ -96,6 +96,14 @@ const InequalityInput = ({
         <div className="form-header">
           <h3>Thêm Phép Thuật (Bất Phương Trình)</h3>
           <div className="magical-icon wand"></div>
+          <button
+            type="button"
+            className="reset-button"
+            onClick={resetAll}
+            title="Xóa tất cả bất phương trình"
+          >
+            <i className="material-icons">delete_sweep</i>
+          </button>
         </div>
         
         <div className="input-wrapper">
@@ -126,6 +134,7 @@ const InequalityInput = ({
         
         {inputValue && (
           <div className="preview-container">
+            <div className="preview-label">Xem trước:</div>
             <div className="latex-preview">
               <MathJax>{`\\(${latexPreview}\\)`}</MathJax>
             </div>
@@ -138,17 +147,6 @@ const InequalityInput = ({
             {error}
           </div>
         )}
-        
-        <div className="buttons-container">
-          <button
-            type="button"
-            className="reset-button"
-            onClick={resetAll}
-          >
-            <i className="material-icons" style={{color: '#ffd700'}}>delete_sweep</i>
-            Reset
-          </button>
-        </div>
         
         <div className="magical-footer">
           <div className="scroll-decoration"></div>
