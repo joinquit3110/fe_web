@@ -112,17 +112,11 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
 
     // Draw origin point
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 16px Arial';
+    ctx.font = 'bold italic 20px Times New Roman';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
-    // Add a highlight circle around the origin
-    ctx.beginPath();
-    ctx.arc(offsetX, offsetY, 8, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 193, 7, 0.4)'; // Highlight color
-    ctx.fill();
-    
-    // Draw origin point on top of highlight
+    // Draw origin point without highlight
     ctx.beginPath();
     ctx.arc(offsetX, offsetY, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
@@ -131,27 +125,18 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     ctx.fillText("O", offsetX - 15, offsetY + 15);
 
     // Draw axis labels with enhanced style
-    ctx.font = 'bold 16px Arial';
+    ctx.font = 'bold italic 20px Times New Roman';
     
-    // X-axis label with highlight
-    ctx.fillStyle = 'rgba(255, 193, 7, 0.4)';
-    ctx.beginPath();
-    ctx.arc(width - 10, offsetY + 20, 12, 0, Math.PI * 2);
-    ctx.fill();
-    
+    // X-axis label without highlight
     ctx.fillStyle = '#000000';
     ctx.fillText("x", width - 10, offsetY + 20);
     
-    // Y-axis label with highlight
-    ctx.fillStyle = 'rgba(255, 193, 7, 0.4)';
-    ctx.beginPath();
-    ctx.arc(offsetX - 20, 10, 12, 0, Math.PI * 2);
-    ctx.fill();
-    
+    // Y-axis label without highlight
     ctx.fillStyle = '#000000';
     ctx.fillText("y", offsetX - 20, 10);
 
     // Draw axis numbers
+    ctx.font = '16px Arial';
     const unitSize = gridSize; // One unit equals one grid cell
     
     // Calculate visible range based on canvas size, offset, and scale
@@ -172,8 +157,8 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     for (let y = Math.ceil(viewportTop); y <= Math.floor(viewportBottom); y++) {
       if (y !== 0) { // Skip zero
         const screenY = offsetY - y * unitSize;
-        // Add background for better visibility
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        // Add background to ensure visibility during panning
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.beginPath();
         ctx.roundRect(offsetX - 35, screenY - 10, 30, 20, 4);
         ctx.fill();

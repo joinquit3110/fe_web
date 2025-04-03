@@ -41,7 +41,9 @@ const InequalityInput = ({
       .replace(/>=/g, '\\geq')
       .replace(/</g, '<')
       .replace(/>/g, '>')
-      .replace(/\*/g, '\\cdot');
+      .replace(/\*/g, '\\cdot')
+      .replace(/\+/g, '+')
+      .replace(/-/g, '-');
   };
 
   // Update LaTeX preview whenever input changes
@@ -134,9 +136,8 @@ const InequalityInput = ({
         
         {inputValue && (
           <div className="preview-container">
-            <div className="preview-label">Xem trước:</div>
             <div className="latex-preview">
-              <MathJax>{`\\(${latexPreview}\\)`}</MathJax>
+              <MathJax inline>{`$${latexPreview}$`}</MathJax>
             </div>
           </div>
         )}

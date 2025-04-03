@@ -11,13 +11,14 @@ import Login from './components/Login';
 // Configure MathJax
 const mathJaxConfig = {
   tex: {
-    inlineMath: [['\\(', '\\)']],
-    displayMath: [['\\[', '\\]']],
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
     processEscapes: true,
+    processEnvironments: true
   },
   svg: {
     fontCache: 'global',
-    scale: 1.1,
+    scale: 1.3,
   },
   startup: {
     typeset: true,
@@ -56,8 +57,15 @@ const AppContent = () => {
       
       clickTimerRef.current = setTimeout(() => {
         if (clickCountRef.current >= 2) {
-          // Easter egg: Toggle teacher name on double click
-          setTeacherName(prev => prev === "Vĩ" ? "Hưng" : "Vĩ");
+          // Easter egg: Toggle teacher name on double click with visual feedback
+          const nameElement = teacherNameRef.current;
+          if (nameElement) {
+            nameElement.classList.add('name-toggle');
+            setTimeout(() => {
+              setTeacherName(prev => prev === "Vĩ" ? "Hưng" : "Vĩ");
+              nameElement.classList.remove('name-toggle');
+            }, 300);
+          }
         }
         clickCountRef.current = 0;
       }, 300);
@@ -76,8 +84,15 @@ const AppContent = () => {
       
       clickTimerRef.current = setTimeout(() => {
         if (clickCountRef.current >= 2) {
-          // Easter egg: Toggle teacher name on double tap
-          setTeacherName(prev => prev === "Vĩ" ? "Hưng" : "Vĩ");
+          // Easter egg: Toggle teacher name on double tap with visual feedback
+          const nameElement = teacherNameRef.current;
+          if (nameElement) {
+            nameElement.classList.add('name-toggle');
+            setTimeout(() => {
+              setTeacherName(prev => prev === "Vĩ" ? "Hưng" : "Vĩ");
+              nameElement.classList.remove('name-toggle');
+            }, 300);
+          }
         }
         clickCountRef.current = 0;
       }, 300);
@@ -242,13 +257,14 @@ const AppContent = () => {
                 className="inequality-item"
                 style={{ 
                   borderLeftColor: ineq.color,
-                  background: hoveredEq?.label === ineq.label ? 'rgba(139, 69, 19, 0.1)' : 'var(--panel-bg)',
+                  background: hoveredEq?.label === ineq.label ? 'rgba(71, 58, 131, 0.1)' : 'var(--panel-bg)',
                   '--index': index
                 }}
                 onMouseEnter={() => handleListItemHover(ineq)}
                 onMouseLeave={() => handleListItemHover(null)}
               >
                 <span 
+                  className="inequality-latex"
                   dangerouslySetInnerHTML={{ 
                     __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
                   }}
@@ -256,6 +272,7 @@ const AppContent = () => {
                 <span 
                   className="delete-icon material-icons"
                   onClick={(e) => handleDelete(e, ineq)}
+                  title="Xóa bất phương trình"
                 >
                   delete
                 </span>
