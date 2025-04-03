@@ -19,6 +19,12 @@ const AppContent = () => {
   const coordinatePlaneRef = useRef(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isLoading, setIsLoading] = useState(true);
+  const [teacherName, setTeacherName] = useState("Vĩ");
+  
+  // Track clicks for Easter egg
+  const headerRef = useRef(null);
+  const clickTimerRef = useRef(null);
+  const clickCountRef = useRef(0);
   
   useEffect(() => {
     const handleResize = () => {
@@ -35,6 +41,38 @@ const AppContent = () => {
     }, 1500);
 
     return () => clearTimeout(timer);
+  }, []);
+  
+  // Easter egg effect
+  useEffect(() => {
+    const handleEasterEgg = () => {
+      clickCountRef.current += 1;
+      
+      clearTimeout(clickTimerRef.current);
+      
+      if (clickCountRef.current >= 2) {
+        // Double click detected
+        setTeacherName(prev => prev === "Vĩ" ? "Hưng" : "Vĩ");
+        clickCountRef.current = 0;
+      } else {
+        // Single click - wait to see if there's a second click
+        clickTimerRef.current = setTimeout(() => {
+          clickCountRef.current = 0;
+        }, 300);
+      }
+    };
+    
+    const headerElement = headerRef.current;
+    if (headerElement) {
+      headerElement.addEventListener('click', handleEasterEgg);
+    }
+    
+    return () => {
+      if (headerElement) {
+        headerElement.removeEventListener('click', handleEasterEgg);
+      }
+      clearTimeout(clickTimerRef.current);
+    };
   }, []);
 
   const handleAddInequality = (newInequality) => {
@@ -111,12 +149,22 @@ const AppContent = () => {
           </div>
         </div>
         <div className="moon"></div>
+        
+        {/* Flying broom animation */}
+        <div className="flying-broom">
+          <div className="broom-stick"></div>
+          <div className="broom-bristles"></div>
+          <div className="broom-rider"></div>
+        </div>
+        
+        {/* Hogwarts castle silhouette */}
+        <div className="hogwarts-castle"></div>
       </div>
 
       <UserProfile />
 
-      <header className="farm-header">
-        <h1>Học cùng thầy Vĩ <span className="highlight">chỉ điểm 10!</span></h1>
+      <header className="farm-header" ref={headerRef}>
+        <h1>Học cùng thầy {teacherName} <span className="highlight">chỉ điểm 10!</span></h1>
         <div className="magical-decoration hat" style={{ top: '10%', left: '5%' }}></div>
         <div className="magical-decoration wand" style={{ top: '20%', right: '5%' }}></div>
       </header>

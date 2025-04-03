@@ -45,11 +45,11 @@ const UserProfile = () => {
         if (response.ok) {
           const { avatarUrl } = await response.json();
           setAvatar(avatarUrl);
-          setSuccess('Cập nhật ảnh đại diện thành công!');
+          setSuccess('Avatar updated successfully!');
           updateProfile({ ...user, avatar: avatarUrl });
         }
       } catch (err) {
-        setError('Không thể cập nhật ảnh đại diện');
+        setError('Could not update avatar');
       } finally {
         URL.revokeObjectURL(previewUrl);
       }
@@ -72,7 +72,7 @@ const UserProfile = () => {
         school: form.school,
         grade: form.grade
       });
-      setSuccess('Cập nhật thông tin thành công!');
+      setSuccess('Profile updated successfully!');
     } catch (err) {
       setError(err.message);
     }
@@ -81,12 +81,12 @@ const UserProfile = () => {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (form.newPassword !== form.confirmPassword) {
-      setError('Mật khẩu mới không khớp!');
+      setError('New passwords do not match!');
       return;
     }
     try {
       await updatePassword(form.currentPassword, form.newPassword);
-      setSuccess('Đổi mật khẩu thành công!');
+      setSuccess('Password changed successfully!');
       setForm({ ...form, currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       setError(err.message);
@@ -105,16 +105,19 @@ const UserProfile = () => {
               onError={() => setAvatar(null)} 
             />
           ) : (
-            <i className="material-icons avatar-icon">account_circle</i>
+            <div className="wizard-avatar">
+              <i className="material-icons avatar-icon">account_circle</i>
+            </div>
           )}
         </div>
         <span className="username">{user?.username}</span>
       </div>
 
       {isOpen && (
-        <div className="profile-dropdown">
+        <div className="profile-dropdown wizard-parchment">
           <div className="profile-header">
-            <h3>Thông tin tài khoản</h3>
+            <h3>Wizard Information</h3>
+            <div className="magical-decoration wand"></div>
             <button className="close-btn" onClick={() => setIsOpen(false)}>
               <i className="material-icons">close</i>
             </button>
@@ -125,7 +128,7 @@ const UserProfile = () => {
 
           <div className="avatar-upload-container">
             <div 
-              className="avatar-upload" 
+              className="avatar-upload wizard-frame" 
               onClick={handleAvatarClick}
               style={{
                 backgroundImage: imagePreview || avatar ? `url(${imagePreview || avatar})` : 'none',
@@ -136,7 +139,7 @@ const UserProfile = () => {
               {!imagePreview && !avatar && (
                 <div className="avatar-placeholder">
                   <i className="material-icons">add_a_photo</i>
-                  <span>Tải ảnh lên</span>
+                  <span>Upload Photo</span>
                 </div>
               )}
               <input
@@ -151,69 +154,76 @@ const UserProfile = () => {
                 <i className="material-icons">photo_camera</i>
               </div>
             </div>
-            <small className="upload-hint">Bấm để thay đổi ảnh đại diện</small>
+            <small className="upload-hint">Click to change your wizard portrait</small>
           </div>
 
           <form onSubmit={handleProfileUpdate} className="profile-form">
             <div className="form-group">
-              <label>Họ và tên</label>
+              <label>Full Name</label>
               <input
                 type="text"
                 value={form.fullName}
                 onChange={(e) => setForm({...form, fullName: e.target.value})}
+                className="wizard-input"
               />
             </div>
             <div className="form-group">
-              <label>Trường</label>
+              <label>Wizarding School</label>
               <input
                 type="text"
                 value={form.school}
                 onChange={(e) => setForm({...form, school: e.target.value})}
+                className="wizard-input"
               />
             </div>
             <div className="form-group">
-              <label>Lớp</label>
+              <label>Year</label>
               <input
                 type="text"
                 value={form.grade}
                 onChange={(e) => setForm({...form, grade: e.target.value})}
+                className="wizard-input"
               />
             </div>
-            <button type="submit" className="update-btn">Cập nhật thông tin</button>
+            <button type="submit" className="update-btn hogwarts-btn">Update Information</button>
           </form>
 
           <form onSubmit={handlePasswordChange} className="password-form">
-            <h4>Đổi mật khẩu</h4>
+            <h4>Change Your Secret Spell (Password)</h4>
+            <div className="magical-decoration book"></div>
             <div className="form-group">
-              <label>Mật khẩu hiện tại</label>
+              <label>Current Password</label>
               <input
                 type="password"
                 value={form.currentPassword}
                 onChange={(e) => setForm({...form, currentPassword: e.target.value})}
+                className="wizard-input"
               />
             </div>
             <div className="form-group">
-              <label>Mật khẩu mới</label>
+              <label>New Password</label>
               <input
                 type="password"
                 value={form.newPassword}
                 onChange={(e) => setForm({...form, newPassword: e.target.value})}
+                className="wizard-input"
               />
             </div>
             <div className="form-group">
-              <label>Xác nhận mật khẩu mới</label>
+              <label>Confirm New Password</label>
               <input
                 type="password"
                 value={form.confirmPassword}
                 onChange={(e) => setForm({...form, confirmPassword: e.target.value})}
+                className="wizard-input"
               />
             </div>
-            <button type="submit" className="change-password-btn">Đổi mật khẩu</button>
+            <button type="submit" className="change-password-btn hogwarts-btn">Change Password</button>
           </form>
 
           <button onClick={logout} className="logout-btn">
             <i className="material-icons">logout</i>
-            Đăng xuất
+            Leave Hogwarts
           </button>
         </div>
       )}

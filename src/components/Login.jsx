@@ -40,21 +40,41 @@ const Login = () => {
 
   return (
     <div className="login-container">
-      <div className="stars">
-        <div className="small-stars">
-          {[...Array(24)].map((_, i) => (
-            <div key={i} className="star" style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`
-            }} />
-          ))}
+      <div className="hogwarts-login-bg">
+        <div className="stars">
+          <div className="small-stars">
+            {[...Array(24)].map((_, i) => (
+              <div key={i} className="star" style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`
+              }} />
+            ))}
+          </div>
+          <div className="medium-stars">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="star" style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`
+              }} />
+            ))}
+          </div>
         </div>
+        
+        <div className="flying-broom">
+          <div className="broom-stick"></div>
+          <div className="broom-bristles"></div>
+          <div className="broom-rider"></div>
+        </div>
+        
+        <div className="hogwarts-castle"></div>
+        <div className="moon"></div>
       </div>
       
       <div className="login-box">
         <div className="login-header">
-          <h2>{isLogin ? 'Chào mừng trở lại!' : 'Tạo tài khoản mới'}</h2>
-          <p className="subtitle">{isLogin ? 'Rất vui được gặp lại bạn' : 'Bắt đầu hành trình học tập của bạn'}</p>
+          <h2>{isLogin ? 'Welcome to Hogwarts' : 'Join the Wizarding World'}</h2>
+          <p className="subtitle">{isLogin ? 'Enter your credentials to continue your magical journey' : 'Register to begin learning the art of inequalities'}</p>
+          <div className="magical-icon hat"></div>
         </div>
 
         {error && (
@@ -69,9 +89,10 @@ const Login = () => {
             <i className="material-icons">person</i>
             <input
               type="text"
-              placeholder="Tên đăng nhập"
+              placeholder="Username"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
+              className="wizard-input"
             />
           </div>
           
@@ -83,6 +104,7 @@ const Login = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="wizard-input"
               />
             </div>
           )}
@@ -91,25 +113,28 @@ const Login = () => {
             <i className="material-icons">lock</i>
             <input
               type="password"
-              placeholder="Mật khẩu"
+              placeholder="Password"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
+              className="wizard-input"
             />
           </div>
           
-          <button type="submit" className="submit-btn">
-            <span>{isLogin ? 'Đăng nhập' : 'Đăng ký'}</span>
+          <button type="submit" className="hogwarts-submit-btn">
+            <span>{isLogin ? 'Enter the Great Hall' : 'Get Sorted'}</span>
             <i className="material-icons">arrow_forward</i>
           </button>
         </form>
         
         <div className="login-footer">
+          <div className="magical-decoration book"></div>
           <p onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
+            {isLogin ? 'First year at Hogwarts?' : 'Already a student?'}
             <span className="switch-btn">
-              {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+              {isLogin ? 'Sign up for classes' : 'Return to your studies'}
             </span>
           </p>
+          <div className="magical-decoration potion"></div>
         </div>
       </div>
     </div>

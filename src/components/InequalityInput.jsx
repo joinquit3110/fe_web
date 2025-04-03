@@ -1,5 +1,6 @@
-﻿import React, { useState, useRef } from 'react';
-import Latex from 'react-latex-next';
+﻿import React, { useState, useRef, useEffect } from "react";
+import axios from "axios";
+import { MathJax } from "better-react-mathjax";
 import 'katex/dist/katex.min.css';
 import { parseInequality } from '../utils/parser';
 
@@ -8,99 +9,122 @@ const InequalityInput = ({
   setQuizMessage,
   resetAll 
 }) => {
-  const [input, setInput] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [latexPreview, setLatexPreview] = useState("");
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    // Focus the input field when component mounts
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  // Format input for LaTeX preview
+  const formatLatex = (input) => {
+    // Basic formatting - could be expanded for more complex inequalities
+    return input.replace(/</g, "<").replace(/>/g, ">");
+  };
+
+  // Update LaTeX preview whenever input changes
+  useEffect(() => {
+    setLatexPreview(formatLatex(inputValue));
+  }, [inputValue]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    if (!inputValue.trim()) {
+      setQuizMessage('Please enter an inequality');
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
 
     try {
-      const trimmedInput = input.trim();
-      
-      if (!trimmedInput) {
-        setQuizMessage('Vui lòng nhập bất phương trình');
-        return;
-      }
-
-      const parsed = parseInequality(trimmedInput);
-      
-      if (parsed.error) {
-        setQuizMessage('Định dạng không hợp lệ!');
-        setIsLoading(false);
-        return;
-      }
-
-      const success = addInequality({
-        ...parsed,
-        solved: false,
-        latex: parsed.latex
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/inequality`, {
+        inequality: inputValue,
       });
 
-      if (success) {
-        setInput('');
-        inputRef.current?.focus();
+      if (response.data.success) {
+        addInequality(response.data.inequality);
+        setInputValue("");
+        setQuizMessage({
+          text: "Inequality added successfully!",
+          type: "success",
+        });
+        setTimeout(() => setQuizMessage(null), 3000);
+      } else {
+        setError(response.data.message || "Failed to add inequality");
       }
     } catch (err) {
-      setQuizMessage('Có lỗi xảy ra, vui lòng thử lại');
+      console.error("Error adding inequality:", err);
+      setQuizMessage(
+        err.response?.data?.message ||
+          "Failed to add inequality. Please check your input and try again."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const formatLatex = (input) => {
-    if (!input) return '';
-    return `$${input
-      .replace(/<=>/g, '\\Leftrightarrow')
-      .replace(/<=/g, '\\leq')
-      .replace(/>=/g, '\\geq')
-      .replace(/</g, '<')
-      .replace(/>/g, '>')
-      .replace(/\*/g, '\\cdot') // Thêm xử lý ký tự nhân
-      .trim()}$`;
-  };
-
   return (
     <div className="inequality-input-container">
-      <form onSubmit={handleSubmit}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setError('');
-          }}
-          placeholder="Nhập bất phương trình (vd: x + y + 1 > 0)"
-          className={`inequality-input ${error ? 'error' : ''}`}
-          disabled={isLoading}
-        />
-        <div className="buttons-container">
-          <button
-            type="button"
-            className="reset-button"
-            onClick={resetAll}
+      <form onSubmit={handleSubmit} className="inequality-form">
+        <div className="form-header">
+          <h3>Add a New Spell (Inequality)</h3>
+          <div className="magical-icon wand"></div>
+        </div>
+        
+        <div className="input-wrapper">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              setError('');
+            }}
+            placeholder="Enter your inequality (e.g., x > 0)"
+            disabled={isLoading}
+            className="inequality-input"
+          />
+          <button 
+            type="submit" 
+            disabled={isLoading} 
+            className="submit-btn"
           >
-            <i className="material-icons" style={{color: '#ffd700'}}>delete_sweep</i>
-            Reset
+            {isLoading ? (
+              <span className="loading-dots">Casting<span>.</span><span>.</span><span>.</span></span>
+            ) : (
+              "Cast Spell"
+            )}
           </button>
         </div>
+        
+        {inputValue && (
+          <div className="preview-container">
+            <div className="preview-label">Preview:</div>
+            <div className="latex-preview">
+              <MathJax>{"\\(" + latexPreview + "\\)"}</MathJax>
+            </div>
+          </div>
+        )}
+        
+        {error && (
+          <div className="error-message">
+            <i className="fas fa-exclamation-circle"></i>
+            {error}
+          </div>
+        )}
+        
+        <div className="magical-footer">
+          <div className="scroll-decoration"></div>
+          <div className="quill-decoration"></div>
+        </div>
       </form>
-
-      {error && (
-        <div className="error-message" role="alert">
-          {error}
-        </div>
-      )}
-
-      {input && !error && (
-        <div className="latex-preview">
-          <Latex>{formatLatex(input)}</Latex>
-        </div>
-      )}
     </div>
   );
 };
