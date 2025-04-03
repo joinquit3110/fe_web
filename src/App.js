@@ -5,10 +5,6 @@ import CoordinatePlane from "./components/CoordinatePlane";
 import UserProfile from "./components/UserProfile";
 import './styles/App.css';
 
-// Import images
-import cowImage from './assets/cow.png';
-import chickenImage from './assets/chicken.png';
-
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 
@@ -159,7 +155,7 @@ const AppContent = () => {
                 quizMessage.includes('Định dạng') ? 'error' :
                 quizMessage.includes('Vui lòng nhập') ? 'info' :
                 quizMessage.includes('Nhập tọa độ') ? 'info' :
-                quizMessage.includes('đúng') ? 'success' : ''
+                quizMessage.includes('đúng') || quizMessage.includes('thành công') ? 'success' : ''
               }`}>
                 {quizMessage.includes('Chính xác') && <i className="material-icons">check_circle</i>}
                 {quizMessage.includes('Sai') && <i className="material-icons">error</i>}
@@ -167,6 +163,7 @@ const AppContent = () => {
                 {quizMessage.includes('Định dạng') && <i className="material-icons">format_clear</i>}
                 {(quizMessage.includes('Vui lòng nhập') || quizMessage.includes('Nhập tọa độ')) && 
                   <i className="material-icons">info</i>}
+                {quizMessage.includes('thành công') && <i className="material-icons">check_circle</i>}
                 {quizMessage}
               </div>
             )}
@@ -184,8 +181,6 @@ const AppContent = () => {
           </div>
 
           <div className="inequalities-list farm-panel">
-            <div className="cow-decoration" style={{ backgroundImage: `url(${cowImage})` }}></div>
-            <div className="chicken-decoration" style={{ backgroundImage: `url(${chickenImage})` }}></div>
             <h3>Danh sách bất phương trình</h3>
             {inequalities.map((ineq, index) => (
               <div
@@ -226,9 +221,7 @@ const AppContent = () => {
 const App = () => {
   return (
     <AuthProvider>
-      <MathJaxContext>
-        <AppContent />
-      </MathJaxContext>
+      <AppContent />
     </AuthProvider>
   );
 };

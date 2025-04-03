@@ -67,10 +67,7 @@ const InequalityInput = ({
 
       if (success) {
         setInputValue("");
-        setQuizMessage({
-          text: "Thêm bất phương trình thành công!",
-          type: "success",
-        });
+        setQuizMessage("Thêm bất phương trình thành công!");
         setTimeout(() => setQuizMessage(null), 3000);
         inputRef.current?.focus();
       }
@@ -118,9 +115,8 @@ const InequalityInput = ({
         
         {inputValue && (
           <div className="preview-container">
-            <div className="preview-label">Xem trước:</div>
             <div className="latex-preview">
-              <MathJax>{`\\(${latexPreview}\\)`}</MathJax>
+              {latexPreview}
             </div>
           </div>
         )}
