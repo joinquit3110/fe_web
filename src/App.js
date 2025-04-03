@@ -32,6 +32,7 @@ const AppContent = () => {
   const { user } = useAuth();
   const [inequalities, setInequalities] = useState([]);
   const [quizMessage, setQuizMessage] = useState('');
+  const [messageType, setMessageType] = useState('info');
   const [hoveredEq, setHoveredEq] = useState(null);
   const coordinatePlaneRef = useRef(null);
   const [teacherName, setTeacherName] = useState("Vĩ");
@@ -39,8 +40,37 @@ const AppContent = () => {
   const teacherNameRef = useRef(null);
   const clickTimerRef = useRef(null);
   const clickCountRef = useRef(0);
-  const isMobile = window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   
+  // Detect mobile devices
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    // Check if running as installed PWA
+    const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                               window.navigator.standalone;
+    setIsStandalone(isRunningStandalone);
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Reset message after 5 seconds
+  useEffect(() => {
+    if (quizMessage) {
+      const timer = setTimeout(() => {
+        setQuizMessage('');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [quizMessage]);
+
   // Easter egg effect
   useEffect(() => {
     const handleNameClick = (e) => {
@@ -145,8 +175,8 @@ const AppContent = () => {
 
   const resetAll = () => {
     setInequalities([]);
-    setQuizMessage('');
-    setHoveredEq(null);
+    setQuizMessage('Đã xóa tất cả bất phương trình!');
+    setMessageType('info');
   };
 
   if (!user) {
@@ -155,7 +185,7 @@ const AppContent = () => {
 
   return (
     <MathJaxContext config={mathJaxConfig}>
-      <div className="app-container">
+      <div className={`app-container ${isStandalone ? 'standalone-mode' : ''}`}>
         <div className="background-container">
           <div className="stars small-stars">
             {Array.from({ length: 80 }).map((_, i) => (
@@ -204,28 +234,19 @@ const AppContent = () => {
                 addInequality={handleAddInequality}
                 setQuizMessage={setQuizMessage}
                 resetAll={resetAll}
+                isMobile={isMobile}
               />
             </div>
           </div>
 
           <div className="message-box">
             {quizMessage && (
-              <div className={`message ${
-                quizMessage.includes('Chính xác') ? 'success' :
-                quizMessage.includes('Sai') || quizMessage.includes('sai') ? 'error' :
-                quizMessage.includes('tồn tại') ? 'warning' :
-                quizMessage.includes('Định dạng') ? 'error' :
-                quizMessage.includes('Vui lòng nhập') ? 'info' :
-                quizMessage.includes('Nhập tọa độ') ? 'info' :
-                quizMessage.includes('đúng') || quizMessage.includes('thành công') ? 'success' : ''
-              }`}>
-                {quizMessage.includes('Chính xác') && <i className="material-icons">check_circle</i>}
-                {quizMessage.includes('Sai') && <i className="material-icons">error</i>}
-                {quizMessage.includes('tồn tại') && <i className="material-icons">warning</i>}
-                {quizMessage.includes('Định dạng') && <i className="material-icons">format_clear</i>}
-                {(quizMessage.includes('Vui lòng nhập') || quizMessage.includes('Nhập tọa độ')) && 
-                  <i className="material-icons">info</i>}
-                {quizMessage.includes('thành công') && <i className="material-icons">check_circle</i>}
+              <div className={`message ${messageType}`}>
+                <i className="material-icons">
+                  {messageType === 'success' ? 'check_circle' : 
+                   messageType === 'error' ? 'error' :
+                   messageType === 'warning' ? 'warning' : 'info'}
+                </i>
                 {quizMessage}
               </div>
             )}
@@ -236,7 +257,10 @@ const AppContent = () => {
               ref={coordinatePlaneRef}
               inequalities={inequalities}
               setInequalities={setInequalities}
-              setQuizMessage={setQuizMessage}
+              setQuizMessage={(message, type = 'info') => {
+                setQuizMessage(message);
+                setMessageType(type);
+              }}
               hoveredEq={hoveredEq}
               setHoveredEq={setHoveredEq}
               isMobile={isMobile}

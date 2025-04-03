@@ -17,6 +17,20 @@
   --success-color: #28a745;
   --error-color: #dc3545;
   --info-color: #17a2b8;
+  
+  /* Mobile optimized variables */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --border-radius-sm: 6px;
+  --border-radius-md: 10px;
+  --border-radius-lg: 20px;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --touch-target-size: 44px;
 }
 
 /* Base styles */
@@ -24,6 +38,11 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  touch-action: manipulation;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
@@ -32,6 +51,7 @@ body {
   color: var(--text-color);
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app-container {
@@ -40,6 +60,28 @@ body {
   min-height: 100vh;
   position: relative;
   z-index: 1;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Safe area support for notches */
+@supports (padding: max(0px)) {
+  body, .app-container {
+    padding-left: max(var(--spacing-sm), env(safe-area-inset-left));
+    padding-right: max(var(--spacing-sm), env(safe-area-inset-right));
+    padding-top: max(var(--spacing-sm), env(safe-area-inset-top));
+    padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+  }
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: var(--font-size-md);
+}
+
+button {
+  cursor: pointer;
+  min-height: var(--touch-target-size);
+  min-width: var(--touch-target-size);
 }
 
 /* Loading screen */
@@ -923,18 +965,24 @@ body {
   justify-content: center;
 }
 
-/* Mobile responsive styles */
+/* Mobile responsive styles - improved */
 @media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+  
   .farm-content {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    padding: 0 10px 15px;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-lg);
+    width: 100%;
   }
   
   .coordinate-section {
-    padding: 10px;
+    padding: var(--spacing-md);
     max-width: 100%;
+    margin: 0 auto var(--spacing-lg);
   }
   
   .coordinate-plane-container {
@@ -969,15 +1017,35 @@ body {
     top: 30px;
     right: 30px;
   }
+  
+  /* Improve touch targets */
+  .delete-icon, .reset-view-button, .submit-btn, .tool-btn {
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
+  }
+  
+  .inequality-input {
+    height: var(--touch-target-size);
+    font-size: var(--font-size-md);
+  }
+  
+  .user-profile {
+    top: 10px;
+    left: 10px;
+  }
 }
 
 @media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
   body {
     overflow-x: hidden;
   }
 
   .farm-content {
-    padding: 0 8px 12px;
+    padding: 0 var(--spacing-sm) var(--spacing-md);
   }
 
   .farm-header h1 {
@@ -985,30 +1053,32 @@ body {
   }
   
   .coordinate-section {
-    padding: 8px;
+    padding: var(--spacing-sm);
   }
   
   button {
-    padding: 6px 12px;
-    font-size: 0.9rem;
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: var(--font-size-sm);
   }
   
   input, select {
-    padding: 6px 10px;
-    font-size: 0.9rem;
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: var(--font-size-sm);
   }
   
   .message {
-    padding: 10px;
-    font-size: 0.9rem;
+    padding: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    max-width: 95%;
   }
   
   .inequality-item {
-    padding: 10px 12px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
   }
   
   .user-profile {
-    padding: 4px 8px;
+    padding: var(--spacing-xs) var(--spacing-sm);
   }
   
   .moon {
@@ -1017,22 +1087,87 @@ body {
     top: 20px;
     right: 20px;
   }
+  
+  .profile-dropdown {
+    width: calc(100vw - 40px);
+    max-width: 320px;
+    left: 5px;
+  }
+  
+  /* Full width buttons for better touch experience */
+  .hogwarts-submit-btn, .update-btn, .change-password-btn {
+    width: 100%;
+    padding: var(--spacing-md);
+  }
+  
+  /* Vertical inequality input for smaller screens */
+  .input-container {
+    flex-direction: column;
+  }
+  
+  .submit-btn {
+    align-self: center;
+    margin-top: var(--spacing-sm);
+  }
 }
 
-/* Touch device optimizations */
-@media (hover: none) {
+/* PWA and hybrid app support */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior: none;
+  }
+  
+  /* Extra padding for status bar in standalone mode */
+  .app-container {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+  
+  /* Adjust user profile position in standalone mode */
+  .user-profile {
+    top: calc(10px + env(safe-area-inset-top, 20px));
+  }
+}
+
+/* Touch optimization */
+@media (hover: none) and (pointer: coarse) {
   .farm-panel:hover, .inequality-item:hover, button:hover {
     transform: none;
     box-shadow: initial;
   }
   
+  .inequality-item:active, button:active {
+    transform: scale(0.98);
+  }
+  
   .delete-icon {
-    padding: 5px 8px;
+    padding: var(--spacing-sm);
   }
   
   input, select, button {
-    font-size: 1rem;
-    padding: 10px 15px;
+    font-size: var(--font-size-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+  
+  /* Increase spacing between clickable elements */
+  .form-group {
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  /* Prevent text selection */
+  .user-trigger, .delete-icon, button, .inequality-item {
+    user-select: none;
+  }
+  
+  /* Adjust scrolling behavior */
+  .inequalities-list {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    max-height: 50vh;
+  }
+  
+  /* Add subtle feedback for touch */
+  button:active, .user-trigger:active, .inequality-item:active, .delete-icon:active {
+    opacity: 0.8;
   }
 }
 
