@@ -16,13 +16,15 @@ const AppContent = () => {
   const coordinatePlaneRef = useRef(null);
   const [teacherName, setTeacherName] = useState("Vĩ");
   const headerRef = useRef(null);
+  const teacherNameRef = useRef(null);
   const clickTimerRef = useRef(null);
   const clickCountRef = useRef(0);
   const isMobile = window.innerWidth < 768;
   
   // Easter egg effect
   useEffect(() => {
-    const handleHeaderClick = () => {
+    const handleNameClick = (e) => {
+      e.stopPropagation(); // Prevent parent's click from triggering
       clickCountRef.current += 1;
       
       if (clickTimerRef.current) {
@@ -38,14 +40,14 @@ const AppContent = () => {
       }, 300);
     };
     
-    const headerElement = headerRef.current;
-    if (headerElement) {
-      headerElement.addEventListener('click', handleHeaderClick);
+    const nameElement = teacherNameRef.current;
+    if (nameElement) {
+      nameElement.addEventListener('click', handleNameClick);
     }
     
     return () => {
-      if (headerElement) {
-        headerElement.removeEventListener('click', handleHeaderClick);
+      if (nameElement) {
+        nameElement.removeEventListener('click', handleNameClick);
       }
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current);
@@ -129,7 +131,13 @@ const AppContent = () => {
         <UserProfile />
 
         <header className="farm-header" ref={headerRef}>
-          <h1>Học cùng thầy {teacherName} <span className="highlight">chỉ điểm 10!</span></h1>
+          <div className="header-content">
+            <h1>
+              Học cùng thầy <span ref={teacherNameRef} className="teacher-name">{teacherName}</span> 
+              <span className="highlight"> chỉ điểm 10!</span>
+            </h1>
+            <div className="header-decoration"></div>
+          </div>
           <div className="magical-decoration hat" style={{ top: '10%', left: '5%' }}></div>
           <div className="magical-decoration wand" style={{ top: '20%', right: '5%' }}></div>
         </header>
@@ -170,6 +178,7 @@ const AppContent = () => {
           </div>
 
           <div className="coordinate-container farm-panel">
+            <h3>Biểu diễn hệ toạ độ</h3>
             <div className="magical-decoration potion" style={{ bottom: '10px', left: '10px' }}></div>
             <CoordinatePlane
               ref={coordinatePlaneRef}

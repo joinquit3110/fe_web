@@ -116,7 +116,7 @@ const InequalityInput = ({
         {inputValue && (
           <div className="preview-container">
             <div className="latex-preview">
-              {latexPreview}
+              <MathJax>{`\\(${latexPreview}\\)`}</MathJax>
             </div>
           </div>
         )}
