@@ -170,7 +170,7 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
 };
 
 // Sửa lại hàm fillHalfPlane
-const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.2) => {
+const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   const [p1, p2] = getBoundaryPoints(eq);
   const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   
@@ -198,60 +198,53 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.2) => {
       y: (val > 0) !== isGreaterType ? normalY : -normalY
     };
   } else {
-    // Logic for > and >=
-    if (Math.abs(eq.a) > EPSILON && Math.abs(eq.b) > EPSILON) {
-      // Case with both x and y terms: invert the fill direction
-      fillDir = {
-        x: (val > 0) !== isGreaterType ? normalX : -normalX,
-        y: (val > 0) !== isGreaterType ? normalY : -normalY
-      };
-    } else {
-      // Case with only x or y: keep original logic
-      fillDir = {
-        x: (val > 0) !== isGreaterType ? normalX : -normalX,
-        y: (val > 0) !== isGreaterType ? normalY : -normalY
-      };
-    }
+    // For > and >=
+    fillDir = {
+      x: (val > 0) === isGreaterType ? normalX : -normalX,
+      y: (val > 0) === isGreaterType ? normalY : -normalY
+    };
   }
-
-  // Rest of drawing code remains the same
+  
+  // Create a region to fill by extending far in the direction of the inequality
   const big = 10000;
-  const ext1 = { 
-    x: p1.x + fillDir.x * big, 
-    y: p1.y + fillDir.y * big 
+  const farPoint = {
+    x: mid.x + fillDir.x * big,
+    y: mid.y + fillDir.y * big
   };
-  const ext2 = { 
-    x: p2.x + fillDir.x * big, 
-    y: p2.y + fillDir.y * big 
-  };
-
-  // Draw the filled region
-  ctx.save();
+  
   const hexToRgba = (hex, a = alpha) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? 
-      `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${a})` 
-      : hex;
+    let r = 0, g = 0, b = 0;
+    
+    // Parse hex color code
+    if (hex.length === 4) {
+      r = parseInt(hex[1] + hex[1], 16);
+      g = parseInt(hex[2] + hex[2], 16);
+      b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+      r = parseInt(hex.substring(1, 3), 16);
+      g = parseInt(hex.substring(3, 5), 16);
+      b = parseInt(hex.substring(5, 7), 16);
+    }
+    
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
   };
   
-  ctx.fillStyle = hexToRgba(fillColor);
+  // Convert the boundary points to canvas coordinates for drawing
+  const canvasP1 = toCanvasCoords(p1);
+  const canvasP2 = toCanvasCoords(p2);
+  const canvasMid = toCanvasCoords(mid);
+  const canvasFar = toCanvasCoords(farPoint);
+  
+  // Draw a filled triangle to represent the half-plane
   ctx.beginPath();
-  
-  const points = [
-    toCanvasCoords(p1.x, p1.y),
-    toCanvasCoords(p2.x, p2.y),
-    toCanvasCoords(ext2.x, ext2.y),
-    toCanvasCoords(ext1.x, ext1.y)
-  ];
-  
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) {
-    ctx.lineTo(points[i].x, points[i].y);
-  }
-  
+  ctx.moveTo(canvasP1.x, canvasP1.y);
+  ctx.lineTo(canvasP2.x, canvasP2.y);
+  ctx.lineTo(canvasFar.x, canvasFar.y);
   ctx.closePath();
+  
+  // Fill with a lighter version of the line color
+  ctx.fillStyle = hexToRgba(fillColor);
   ctx.fill();
-  ctx.restore();
 };
 
 // Define a simple color function for backward compatibility

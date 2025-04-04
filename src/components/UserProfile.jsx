@@ -6,6 +6,7 @@ const API_URL = "https://be-web-6c4k.onrender.com/api";
 const UserProfile = () => {
   const { user, logout, updateProfile, updatePassword } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
   const [avatar, setAvatar] = useState(user?.avatar || null);
   const fileInputRef = useRef(null);
   const [form, setForm] = useState({
@@ -28,10 +29,25 @@ const UserProfile = () => {
     };
   }, [imagePreview]);
 
+  useEffect(() => {
+    if (user) {
+      setForm({
+        ...form,
+        fullName: user.fullName || '',
+        school: user.school || '',
+        grade: user.grade || ''
+      });
+      setAvatar(user.avatar || null);
+    }
+  }, [user]);
+
   if (!user) return null;
   
   const toggleMenu = () => {
     setShowMenu(!showMenu);
+    // Reset error and success messages when toggling menu
+    setError('');
+    setSuccess('');
   };
   
   const handleLogout = () => {
@@ -68,7 +84,7 @@ const UserProfile = () => {
         const formData = new FormData();
         formData.append('avatar', file);
         
-        const response = await fetch(`${API_URL}/api/auth/avatar`, {
+        const response = await fetch(`${API_URL}/auth/avatar`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -79,15 +95,23 @@ const UserProfile = () => {
         if (response.ok) {
           const { avatarUrl } = await response.json();
           setAvatar(avatarUrl);
-          setSuccess('Cập nhật ảnh đại diện thành công!');
+          setSuccess('Avatar updated successfully!');
           updateProfile({ ...user, avatar: avatarUrl });
         }
       } catch (err) {
-        setError('Không thể cập nhật ảnh đại diện');
+        setError('Failed to update avatar');
       } finally {
         URL.revokeObjectURL(previewUrl);
       }
     }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm({
+      ...form,
+      [name]: value
+    });
   };
 
   const handleProfileUpdate = async (e) => {
@@ -98,50 +122,172 @@ const UserProfile = () => {
         school: form.school,
         grade: form.grade
       });
-      setSuccess('Cập nhật thông tin thành công!');
+      setSuccess('Profile updated successfully!');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to update profile');
     }
   };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (form.newPassword !== form.confirmPassword) {
-      setError('Mật khẩu mới không khớp!');
+      setError('New passwords do not match!');
       return;
     }
     try {
       await updatePassword(form.currentPassword, form.newPassword);
-      setSuccess('Đổi mật khẩu thành công!');
+      setSuccess('Password changed successfully!');
       setForm({ ...form, currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to change password');
     }
   };
 
   return (
     <div className="profile-container">
       <div className={`profile-icon ${userHouse}`} onClick={toggleMenu} title={`${user.username}'s profile`}>
-        {getInitials(user.username)}
+        {avatar ? (
+          <img src={avatar} alt={user.username} className="avatar-img" />
+        ) : (
+          getInitials(user.fullName || user.username)
+        )}
       </div>
       
       {showMenu && (
         <div className="profile-menu">
-          <div className="menu-user-info">
-            <span className="menu-username">{user.username}</span>
-            <span className="menu-email">{user.email}</span>
-            <span className="menu-house">House of {userHouse.charAt(0).toUpperCase() + userHouse.slice(1)}</span>
+          <div className="menu-header">
+            <div className="avatar-section">
+              <div 
+                className={`avatar-container ${userHouse}`} 
+                onClick={handleAvatarClick}
+                title="Change avatar"
+              >
+                {avatar ? (
+                  <img src={avatar} alt={user.username} className="profile-avatar" />
+                ) : (
+                  <div className="default-avatar">{getInitials(user.fullName || user.username)}</div>
+                )}
+                <div className="avatar-overlay">
+                  <i className="material-icons">photo_camera</i>
+                </div>
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleAvatarChange} 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+              />
+            </div>
+            
+            <div className="menu-user-info">
+              <span className="menu-username">{user.username}</span>
+              <span className="menu-email">{user.email}</span>
+              <span className="menu-house">House of {userHouse.charAt(0).toUpperCase() + userHouse.slice(1)}</span>
+            </div>
           </div>
           
-          <button onClick={toggleMenu} title="View your wizarding achievements">
-            <i className="material-icons">emoji_events</i>
-            Achievements
-          </button>
+          <div className="menu-tabs">
+            <button 
+              className={activeTab === 'profile' ? 'active' : ''} 
+              onClick={() => setActiveTab('profile')}
+            >
+              Profile
+            </button>
+            <button 
+              className={activeTab === 'password' ? 'active' : ''} 
+              onClick={() => setActiveTab('password')}
+            >
+              Password
+            </button>
+          </div>
           
-          <button onClick={toggleMenu} title="View your spell history">
-            <i className="material-icons">history</i>
-            Spell History
-          </button>
+          {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
+          
+          {activeTab === 'profile' && (
+            <form onSubmit={handleProfileUpdate} className="profile-form">
+              <div className="form-group">
+                <label htmlFor="fullName">Full Name</label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={form.fullName}
+                  onChange={handleInputChange}
+                  placeholder="Your wizard name"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="school">School</label>
+                <input
+                  type="text"
+                  id="school"
+                  name="school"
+                  value={form.school}
+                  onChange={handleInputChange}
+                  placeholder="Your magical school"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="grade">Class/Grade</label>
+                <input
+                  type="text"
+                  id="grade"
+                  name="grade"
+                  value={form.grade}
+                  onChange={handleInputChange}
+                  placeholder="Your class or grade"
+                />
+              </div>
+              
+              <button type="submit" className="update-btn">Update Profile</button>
+            </form>
+          )}
+          
+          {activeTab === 'password' && (
+            <form onSubmit={handlePasswordChange} className="password-form">
+              <div className="form-group">
+                <label htmlFor="currentPassword">Current Password</label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  name="currentPassword"
+                  value={form.currentPassword}
+                  onChange={handleInputChange}
+                  placeholder="Enter current password"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="newPassword">New Password</label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={form.newPassword}
+                  onChange={handleInputChange}
+                  placeholder="Enter new password"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm Password</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Confirm new password"
+                />
+              </div>
+              
+              <button type="submit" className="update-btn">Change Password</button>
+            </form>
+          )}
           
           <button className="logout-btn" onClick={handleLogout} title="Leave Hogwarts">
             <i className="material-icons">exit_to_app</i>

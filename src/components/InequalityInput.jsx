@@ -39,9 +39,8 @@ const InequalityInput = ({ onSpellCast }) => {
       // Add the inequality to the parent component
       onSpellCast(inputValue);
       
-      // Reset the input field and LaTeX preview
+      // Reset the input field
       setInputValue('');
-      setLatexPreview('');
     } catch (error) {
       console.error('Error casting spell:', error);
     }
@@ -61,10 +60,14 @@ const InequalityInput = ({ onSpellCast }) => {
             className="styled-input"
           />
           
-          {/* LaTeX Preview */}
-          {latexPreview && (
-            <div className="latex-preview" dangerouslySetInnerHTML={{ __html: latexPreview }}></div>
-          )}
+          {/* LaTeX Preview Box */}
+          <div className="latex-preview-container">
+            {latexPreview ? (
+              <div className="latex-preview" dangerouslySetInnerHTML={{ __html: latexPreview }}></div>
+            ) : (
+              <div className="latex-preview empty">LaTeX preview will appear here</div>
+            )}
+          </div>
           
           <button 
             type="submit" 
