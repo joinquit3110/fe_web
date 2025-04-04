@@ -32,13 +32,30 @@ const fValue = (eq, point) => eq.a * point.x + eq.b * point.y + eq.c;
 // Update pointInInequality function
 const checkPointInInequality = (eq, point) => {
   const val = eq.a * point.x + eq.b * point.y + eq.c;
-  const isGreaterType = eq.operator === ">" || eq.operator === ">=";
   
-  // Points on the boundary line are always accepted
-  if (Math.abs(val) < EPSILON) return true;
+  // For points exactly on the boundary line (within small epsilon)
+  if (Math.abs(val) < EPSILON) {
+    // For strict inequalities (<, >), points on the line are NOT part of the solution
+    if (eq.operator === '<' || eq.operator === '>') {
+      return false;
+    }
+    // For non-strict inequalities (<=, >=, =), points on the line ARE part of the solution
+    return true;
+  }
   
-  // Check if the point satisfies the inequality
-  return isGreaterType ? val >= -EPSILON : val <= EPSILON;
+  // For normal values:
+  switch (eq.operator) {
+    case '<':
+    case '<=':
+      return val < 0;
+    case '>':
+    case '>=':
+      return val > 0;
+    case '=':
+      return false; // Points not exactly on the line are not solutions for equality
+    default:
+      return val !== 0; // For !=
+  }
 };
 
 const isPointOnLine = (eq, point) => Math.abs(fValue(eq, point)) < EPSILON;
@@ -169,8 +186,10 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   }
 };
 
-// Update fillHalfPlane function to use solution region properly
+// Update fillHalfPlane function to correctly handle all types of inequalities
 const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
+  if (!eq || !eq.solved) return;
+  
   const [p1, p2] = getBoundaryPoints(eq);
   const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   
@@ -182,28 +201,46 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   const normalX = -dy / length;
   const normalY = dx / length;
   
-  const testPoint = { 
+  // Test points on both sides of the line
+  const testPoint1 = { 
     x: mid.x + normalX, 
     y: mid.y + normalY 
   };
   
-  const val = eq.a * testPoint.x + eq.b * testPoint.y + eq.c;
-  const isGreaterType = eq.operator === ">" || eq.operator === ">=";
+  const testPoint2 = { 
+    x: mid.x - normalX, 
+    y: mid.y - normalY 
+  };
   
-  // Determine which region is the correct solution based on solutionType
+  // Determine which test point satisfies the inequality
+  const test1Satisfies = checkPointInInequality(eq, testPoint1);
+  const test2Satisfies = checkPointInInequality(eq, testPoint2);
+  
+  // For equality, we don't fill any region
+  if (eq.operator === '=' && !eq.solutionType) {
+    return;
+  }
+  
+  // For solution region, we need to know which side was selected by the user
   let fillDir;
   
   if (eq.solutionType === 'btn1') {
-    // If Region 1 is the solution
+    // If Region 1 is the solution (regardless of whether it actually satisfies the inequality)
     fillDir = {
       x: -normalX,
       y: -normalY
     };
-  } else {
-    // If Region 2 is the solution
+  } else if (eq.solutionType === 'btn2') {
+    // If Region 2 is the solution (regardless of whether it actually satisfies the inequality)
     fillDir = {
       x: normalX,
       y: normalY
+    };
+  } else {
+    // If no user selection, use the mathematical solution (determined which testPoint satisfies)
+    fillDir = {
+      x: test1Satisfies ? normalX : -normalX,
+      y: test1Satisfies ? normalY : -normalY
     };
   }
   
@@ -234,7 +271,6 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   // Convert the boundary points to canvas coordinates for drawing
   const canvasP1 = toCanvasCoords(p1);
   const canvasP2 = toCanvasCoords(p2);
-  const canvasMid = toCanvasCoords(mid);
   const canvasFar = toCanvasCoords(farPoint);
   
   // Draw a filled triangle to represent the half-plane
@@ -456,7 +492,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
   }, [parsedInequalities, setSelectedPoint, setQuizMessage, inequalities]);
 
-  // Sửa lại phần vẽ trong drawInequality
+  // Modify drawInequality to correctly set up solution buttons
   const drawInequality = useCallback((ctx, eq) => {
     if (!eq) return null;
 
@@ -517,38 +553,37 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         mid.y + perpY * offset
       );
 
-      // Determine solution region
-      const testPoint = { 
+      // Test points to determine which region is the solution
+      const testPoint1 = { 
+        x: mid.x - perpX * offset, 
+        y: mid.y - perpY * offset 
+      };
+      
+      const testPoint2 = { 
         x: mid.x + perpX * offset, 
         y: mid.y + perpY * offset 
       };
-      const isBtn1Solution = checkPointInInequality(eq, testPoint);
       
-      // Create buttons with reversed solution values for > and >=
+      // Check which point satisfies the inequality
+      const point1Satisfies = checkPointInInequality(eq, testPoint1);
+      const point2Satisfies = checkPointInInequality(eq, testPoint2);
+      
+      // Create buttons with solution status
       let btn1 = {
         x: pos1.x - BUTTON_CONFIG.width / 2,
         y: pos1.y - BUTTON_CONFIG.height / 2,
         width: BUTTON_CONFIG.width,
         height: BUTTON_CONFIG.height,
-        sol: eq.operator === '>' || eq.operator === '>=' ? !isBtn1Solution : isBtn1Solution
+        sol: point1Satisfies
       };
+      
       let btn2 = {
         x: pos2.x - BUTTON_CONFIG.width / 2,
         y: pos2.y - BUTTON_CONFIG.height / 2,
         width: BUTTON_CONFIG.width,
         height: BUTTON_CONFIG.height,
-        sol: eq.operator === '>' || eq.operator === '>=' ? isBtn1Solution : !isBtn1Solution
+        sol: point2Satisfies
       };
-
-      // Swap positions only for < and <= (keep existing behavior)
-      if (eq.operator === '<' || eq.operator === '<=') {
-        const tempX = btn1.x;
-        const tempY = btn1.y;
-        btn1.x = btn2.x;
-        btn1.y = btn2.y;
-        btn2.x = tempX;
-        btn2.y = tempY;
-      }
 
       // Create button renderers with improved visuals
       const btn1Renderer = drawButton(ctx, btn1.x, btn1.y, btn1.width, btn1.height, 'Region 1', eq.color);
@@ -709,8 +744,8 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     if (clickedButton) {
       const buttonType = 
         (clickedButton.btn1.contains && clickedButton.btn1.contains(x, y)) ? 
-          { button: clickedButton.btn1, type: 'btn1' } : 
-          { button: clickedButton.btn2, type: 'btn2' };
+          { button: clickedButton.btn1, type: 'btn1', isSolution: clickedButton.btn1.sol } : 
+          { button: clickedButton.btn2, type: 'btn2', isSolution: clickedButton.btn2.sol };
       
       // Mark the inequality as solved with the selected solution
       setInequalities(prev => prev.map(ineq => {
@@ -718,13 +753,19 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
           return { 
             ...ineq, 
             solved: true, 
-            solutionType: buttonType.type 
+            solutionType: buttonType.type,
+            isCorrect: buttonType.isSolution
           };
         }
         return ineq;
       }));
       
-      setQuizMessage(`You've selected ${buttonType.type === 'btn1' ? 'Region 1' : 'Region 2'} as the solution region!`);
+      // Show message based on whether the selected region is correct
+      if (buttonType.isSolution) {
+        setQuizMessage(`Correct! You've selected the right solution region for ${clickedButton.eq.label}.`);
+      } else {
+        setQuizMessage(`Incorrect! The region you selected for ${clickedButton.eq.label} is not the solution.`);
+      }
       return;
     }
     
@@ -738,7 +779,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
   }, [origin, zoom, isPointMode, handlePointSelection, solutionButtons, setInequalities, setQuizMessage]);
 
-  // Fill the non-solution region with red color
+  // Update fillNonSolutionRegion to properly indicate incorrect region
   const fillNonSolutionRegion = useCallback((ctx, eq, toCanvasCoords) => {
     if (!eq.solved) return;
     
@@ -753,17 +794,32 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     const normalX = -dy / length;
     const normalY = dx / length;
     
-    // Determine which region is NOT the solution based on solutionType
+    // Test points on both sides of the line
+    const testPoint1 = { 
+      x: mid.x + normalX, 
+      y: mid.y + normalY 
+    };
+    
+    const testPoint2 = { 
+      x: mid.x - normalX, 
+      y: mid.y - normalY 
+    };
+    
+    // Determine which test point satisfies the inequality
+    const test1Satisfies = checkPointInInequality(eq, testPoint1);
+    const test2Satisfies = checkPointInInequality(eq, testPoint2);
+    
+    // For equality, we still need to mark the non-solution region
     let fillDir;
     
     if (eq.solutionType === 'btn1') {
-      // If Region 1 is the solution, fill Region 2 (the opposite)
+      // If Region 1 was selected, non-solution is Region 2
       fillDir = {
         x: normalX,
         y: normalY
       };
     } else {
-      // If Region 2 is the solution, fill Region 1 (the opposite)
+      // If Region 2 was selected, non-solution is Region 1
       fillDir = {
         x: -normalX,
         y: -normalY
@@ -794,7 +850,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     ctx.fill();
   }, []);
 
-  // Sửa lại phần redraw để hiển thị miền nghiệm và không phải miền nghiệm
+  // Update the redraw function to show correct/incorrect solution regions
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -810,7 +866,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     
     // Draw inequality regions in this order:
     // 1. Non-solution regions (red)
-    // 2. Solution regions (green)
+    // 2. Solution regions (green for correct, yellow for incorrect)
     // 3. Grid/axes again to ensure visibility
     // 4. Boundary lines
     
@@ -821,10 +877,15 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       }
     });
     
-    // Draw solution regions
+    // Draw solution regions with appropriate colors
     inequalities.forEach(eq => {
       if (eq.solved) {
-        fillHalfPlane(ctx, eq, eq.color, toCanvasCoords, 0.3);
+        // If the selection is correct, use the line color
+        // If incorrect, use a warning color
+        const fillColor = eq.isCorrect ? eq.color : '#f57c00'; // Orange for incorrect
+        const fillAlpha = eq.isCorrect ? 0.3 : 0.2; // Less opacity for incorrect
+        
+        fillHalfPlane(ctx, eq, fillColor, toCanvasCoords, fillAlpha);
       }
     });
     
@@ -863,7 +924,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       ctx.lineTo(cp2.x, cp2.y);
       ctx.stroke();
 
-      // Draw label
+      // Draw label - add additional indicator for correct/incorrect
       ctx.font = "bold italic 16px 'STIX Two Math', 'Times New Roman', serif";
       ctx.fillStyle = eq.color || '#666';
       ctx.textAlign = 'left';
@@ -872,7 +933,14 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         x: (cp1.x + cp2.x) / 2,
         y: (cp1.y + cp2.y) / 2
       };
-      ctx.fillText(eq.label, midpoint.x + 10, midpoint.y - 10);
+      
+      // Show label with correctness indicator if solved
+      if (eq.solved) {
+        const indicator = eq.isCorrect ? '✓' : '✗';
+        ctx.fillText(`${eq.label} ${indicator}`, midpoint.x + 10, midpoint.y - 10);
+      } else {
+        ctx.fillText(eq.label, midpoint.x + 10, midpoint.y - 10);
+      }
     });
     
     // Draw buttons for inequalities

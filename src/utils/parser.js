@@ -39,18 +39,18 @@ export const parseInequality = (input) => {
                .replace(/≠/g, '!=');
 
   // Main regex for standard form ax + by + c operator 0
-  const regex = /^(-?\d*\.?\d*)?x\s*([+-]\s*\d*\.?\d*)?y\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=)\s*0$/;
+  const regex = /^(-?\d*\.?\d*)?x\s*([+-]\s*\d*\.?\d*)?y\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=|=)\s*0$/;
   const match = input.match(regex);
 
   if (!match) {
     // Try parsing single variable case (x, y)
-    const singleVarRegex = /^(-?\d*\.?\d*)?([xy])\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=)\s*0$/;
+    const singleVarRegex = /^(-?\d*\.?\d*)?([xy])\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=|=)\s*0$/;
     const singleMatch = input.match(singleVarRegex);
     
     if (singleMatch) {
       let [, coef = '1', variable, c = '0', operator] = singleMatch;
       
-      // Convert to standard form
+      // Handle edge cases
       coef = coef === '-' ? -1 : coef === '' ? 1 : parseFloat(coef);
       c = c ? parseFloat(c.replace(/[+\s]/g, '')) : 0;
       
@@ -124,9 +124,9 @@ export const parseInequality = (input) => {
   }
 
   // Parse standard form ax + by + c
-  let [, a = '1', b = '1', c = '0', operator] = match;
+  let [, a = '1', b = '0', c = '0', operator] = match;
   
-  // Parse coefficients
+  // Parse coefficients carefully
   a = a === '-' ? -1 : a === '' ? 1 : parseFloat(a);
   b = b ? (b === '+' ? 1 : b === '-' ? -1 : parseFloat(b.replace(/[+\s]/g, ''))) : 0;
   c = c ? parseFloat(c.replace(/[+\s]/g, '')) : 0;
@@ -172,6 +172,7 @@ function getLatexOperator(operator) {
     case '<=': return '\\leq';
     case '>=': return '\\geq';
     case '!=': return '\\neq';
+    case '=': return '=';
     default: return operator;
   }
 }

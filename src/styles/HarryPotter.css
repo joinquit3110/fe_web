@@ -422,6 +422,7 @@ button, input, select, textarea {
   animation: fadeIn 0.5s ease forwards;
   animation-delay: calc(0.1s * var(--index, 0));
   opacity: 0;
+  position: relative;
 }
 
 .inequality-item:hover {
@@ -557,15 +558,13 @@ button, input, select, textarea {
 }
 
 .error-message {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  margin-bottom: 15px;
-  border-radius: 6px;
-  background: rgba(170, 51, 51, 0.15);
-  border-left: 3px solid var(--error-color);
-  color: #FFBBBB;
-  font-size: 0.95rem;
+  color: #ff5252;
+  font-size: 12px;
+  margin-top: 5px;
+  padding: 4px 8px;
+  background: rgba(198, 40, 40, 0.1);
+  border-radius: 4px;
+  border-left: 2px solid #c62828;
 }
 
 .error-message i {
@@ -821,12 +820,6 @@ button, input, select, textarea {
   margin-bottom: 15px;
   border-radius: 4px;
   text-align: center;
-}
-
-.error-message {
-  background-color: rgba(220, 53, 69, 0.2);
-  border: 1px solid #dc3545;
-  color: #ff6b6b;
 }
 
 .success-message {
@@ -1795,47 +1788,69 @@ canvas {
 
 /* LaTeX preview container */
 .latex-preview-container {
-  margin: 12px 0;
-  padding: 15px;
-  border: 1px solid #d3a625;
+  margin-top: 15px;
+  width: 100%;
+  padding: 10px;
+  background: rgba(14, 26, 64, 0.6);
   border-radius: 8px;
-  background-color: rgba(14, 26, 64, 0.8);
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 1px solid rgba(211, 166, 37, 0.3);
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 .latex-preview {
-  color: #fff;
-  font-size: 20px;
-  font-family: 'STIX Two Math', 'Times New Roman', serif;
-  line-height: 1.5;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-height: 40px;
 }
 
-.latex-preview.empty {
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
+.preview-label {
+  color: #d3a625;
+  font-weight: bold;
+  margin-right: 10px;
+  font-family: 'Cinzel', serif;
+}
+
+.preview-content {
+  color: white;
+  font-size: 18px;
+  font-family: 'STIX Two Math', 'Times New Roman', serif;
+}
+
+/* Example button styling */
+.example-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 15px;
+  background: linear-gradient(45deg, #0E1A40, #1A2F69);
+  color: white;
+  border: 1px solid #3949ab;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  margin: 0 8px;
+}
+
+.example-button:hover {
+  background: linear-gradient(45deg, #1A2F69, #3949ab);
+  transform: translateY(-2px);
+  box-shadow: 0 0 10px rgba(57, 73, 171, 0.5);
+}
+
+.example-button .material-icons {
   font-size: 16px;
+  color: #90caf9;
 }
 
 /* Input with error state */
 .styled-input.input-error {
   border-color: #c62828;
   background-color: rgba(198, 40, 40, 0.05);
-}
-
-/* Error message for the inequality input */
-.error-message {
-  color: #ff6b6b;
-  border-left: 3px solid #c62828;
-  padding: 8px 12px;
-  margin: 8px 0;
-  background: rgba(198, 40, 40, 0.1);
-  font-size: 14px;
-  border-radius: 4px;
 }
 
 /* Button group for the inequality input */
@@ -1926,7 +1941,6 @@ canvas {
 .region-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-  background: linear-gradient(to bottom, rgba(211, 166, 37, 0.2), rgba(14, 26, 64, 0.9));
 }
 
 /* Responsive adjustments */
@@ -1945,4 +1959,202 @@ canvas {
     font-size: 12px;
     padding: 8px 12px;
   }
+}
+
+/* Improve inequality list item display */
+.inequality-item {
+  border-left: 4px solid;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  background: rgba(14, 26, 64, 0.6);
+  border-radius: 0 5px 5px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease forwards;
+  animation-delay: calc(0.1s * var(--index, 0));
+  opacity: 0;
+  position: relative;
+}
+
+.inequality-item:hover {
+  transform: translateX(5px);
+  background: rgba(211, 166, 37, 0.2);
+}
+
+/* Inequality item with solution status indicators */
+.inequality-item.correct {
+  border-left-color: #2e7d32 !important;
+  box-shadow: 0 0 5px rgba(46, 125, 50, 0.5);
+}
+
+.inequality-item.incorrect {
+  border-left-color: #c62828 !important;
+  box-shadow: 0 0 5px rgba(198, 40, 40, 0.5);
+}
+
+.inequality-item::before {
+  content: attr(data-status);
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(14, 26, 64, 0.8);
+  color: white;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.3s ease;
+}
+
+.inequality-item.correct::before {
+  content: "✓ Correct";
+  background: rgba(46, 125, 50, 0.8);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.inequality-item.incorrect::before {
+  content: "✗ Incorrect";
+  background: rgba(198, 40, 40, 0.8);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Make the LaTeX content look better */
+.latex-content {
+  max-width: calc(100% - 30px);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  font-family: 'STIX Two Math', 'Times New Roman', serif;
+}
+
+/* Button styling for solution region selection */
+.region-button {
+  background: linear-gradient(to bottom, rgba(14, 26, 64, 0.8), rgba(14, 26, 64, 0.9));
+  border: 2px solid;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.region-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.3),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.region-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Coordinate input styling */
+.coordinate-input-below {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  background: rgba(14, 26, 64, 0.8);
+  padding: 8px 15px;
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  border: 1px solid rgba(211, 166, 37, 0.5);
+}
+
+.coordinate-input-below span {
+  color: #d3a625;
+  font-weight: bold;
+  margin: 0 5px;
+}
+
+.coordinate-box {
+  position: relative;
+  margin: 0 2px;
+}
+
+.coordinate-box input {
+  width: 60px;
+  padding: 5px 8px;
+  border: 1px solid rgba(211, 166, 37, 0.5);
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  border-radius: 4px;
+  text-align: center;
+  font-family: 'STIX Two Math', serif;
+}
+
+.coordinate-box input.correct {
+  border-color: #2e7d32;
+  background: rgba(46, 125, 50, 0.1);
+  box-shadow: 0 0 5px rgba(46, 125, 50, 0.5);
+}
+
+.coordinate-box input.incorrect {
+  border-color: #c62828;
+  background: rgba(198, 40, 40, 0.1);
+  box-shadow: 0 0 5px rgba(198, 40, 40, 0.5);
+}
+
+.coordinate-input-below button {
+  margin-left: 10px;
+  padding: 5px 12px;
+  background: linear-gradient(to bottom, #1A472A, #0d2618);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  transition: all 0.3s ease;
+}
+
+.coordinate-input-below button:hover {
+  background: linear-gradient(to bottom, #2E7D32, #1A472A);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Fade-in animation for inequality items */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Valid message styling */
+.valid-message {
+  color: #81c784;
+  font-size: 12px;
+  margin-top: 5px;
+  padding: 4px 8px;
+  background: rgba(46, 125, 50, 0.1);
+  border-radius: 4px;
+  border-left: 2px solid #2e7d32;
 } 
