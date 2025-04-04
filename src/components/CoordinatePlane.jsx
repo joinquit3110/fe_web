@@ -1,5 +1,8 @@
 ﻿import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { computeIntersection } from "../utils/geometry";
+import { useInequalityContext } from '../contexts/InequalityContext';
+import { convertToCanvasCoordinates, convertToMathCoordinates } from '../utils/geometry';
+import '../styles/App.css';
 
 // Constants
 const CANVAS_CONFIG = {
@@ -261,12 +264,17 @@ const CoordinatePlane = forwardRef(({
   setHoveredEq 
 }, ref) => {
   const canvasRef = useRef(null);
+  const { inequalities: contextInequalities } = useInequalityContext();
   const [solutionButtons, setSolutionButtons] = useState([]);
   const [zoom, setZoom] = useState(CANVAS_CONFIG.defaultZoom);
   const [intersectionPoints, setIntersectionPoints] = useState([]); // Store all valid intersection points
   const [activePoint, setActivePoint] = useState(null); // Currently selected point for input
   const [inputCoords, setInputCoords] = useState({ x: '', y: '' }); // User input coordinates
   const [activeLines, setActiveLines] = useState([]); // State to store lines forming the active point
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
 
   const origin = useMemo(() => ({
     x: CANVAS_CONFIG.width / 2,
@@ -928,6 +936,53 @@ const CoordinatePlane = forwardRef(({
     findValidIntersections();
   }, [inequalities, findValidIntersections]);
 
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      setLastPos({ distance, x: (touch1.clientX + touch2.clientX) / 2, y: (touch1.clientY + touch2.clientY) / 2 });
+    } else if (e.touches.length === 1) {
+      setIsDragging(true);
+      setLastPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      const scaleDelta = distance / lastPos.distance;
+      const newScale = Math.min(Math.max(scale * scaleDelta, 0.1), 10);
+      setScale(newScale);
+      setLastPos({ distance, x: (touch1.clientX + touch2.clientX) / 2, y: (touch1.clientY + touch2.clientY) / 2 });
+    } else if (e.touches.length === 1 && isDragging) {
+      const dx = (e.touches[0].clientX - lastPos.x) / scale;
+      const dy = (e.touches[0].clientY - lastPos.y) / scale;
+      setOffset(prev => ({
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+      setLastPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const resetView = () => {
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+  };
+
   return (
     <div className="coordinate-plane-container">
       <canvas
@@ -936,6 +991,9 @@ const CoordinatePlane = forwardRef(({
         height={CANVAS_CONFIG.height}
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
           border: "1px solid #ccc",
           cursor: "default",
@@ -975,6 +1033,11 @@ const CoordinatePlane = forwardRef(({
           <button onClick={handleCheckCoordinates}>Kiểm tra</button>
         </div>
       )}
+      <div className="controls-container">
+        <button className="control-button" onClick={resetView}>
+          Reset View
+        </button>
+      </div>
     </div>
   );
 });
