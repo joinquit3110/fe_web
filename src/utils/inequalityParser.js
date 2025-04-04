@@ -22,17 +22,17 @@ export const processInequality = (input) => {
       .replace(/\+\-/g, '-')
       .replace(/\-\+/g, '-');
     
-    // Try to match pattern: x + y [op] c
-    const simplePattern = /^([+-]?\d*\.?\d*)?x([+-]\d*\.?\d*)?y?([<>]=?|=)([+-]?\d*\.?\d*)$/;
+    // Try to match pattern: x + 1 > 0
+    const simplePattern = /^([+-]?\d*\.?\d*)?x([+-]\d*\.?\d*)?([<>]=?|=)([+-]?\d*\.?\d*)$/;
     let match = normalizedInput.match(simplePattern);
     
     if (match) {
       // Extract coefficients and operator from match
-      const [, aStr = '1', bStr = '1', op, rightSide] = match;
+      const [, aStr = '1', bStr = '0', op, rightSide] = match;
       
       // Parse coefficients
       let a = parseCoefficient(aStr, 'x');
-      let b = parseCoefficient(bStr, 'y');
+      let b = parseCoefficient(bStr);
       let c = -parseFloat(rightSide) || 0; // Move to left side
       
       // Get the appropriate operator
@@ -56,100 +56,22 @@ export const processInequality = (input) => {
       };
     }
     
-    // Check if the inequality is in the form ax + by [op] c
-    // Try to match pattern: ax + by [<>=] c
-    const rightSidePattern = /^([+-]?\d*\.?\d*)?x([+-]\d*\.?\d*)?y?([+-]\d*\.?\d*)?([<>]=?|=)([+-]?\d*\.?\d*)$/;
-    match = normalizedInput.match(rightSidePattern);
-    
-    if (match) {
-      // Extract coefficients and operator from match
-      const [, aStr = '1', bStr = '0', cStr = '0', op, rightSide] = match;
-      
-      // Parse coefficients
-      let a = parseCoefficient(aStr, 'x');
-      let b = parseCoefficient(bStr, 'y');
-      let c = parseCoefficient(cStr);
-      let rhsValue = parseFloat(rightSide) || 0;
-      
-      // Move everything to the left side (standard form: ax + by + c [op] 0)
-      c = c - rhsValue;
-      
-      // Get the appropriate operator
-      const operator = getOperator(op);
-      
-      // Generate LaTeX representation
-      const latex = generateLatex(a, b, c, operator);
-      
-      // Get a color for this inequality
-      const color = getNextColor();
-      
-      // Return the processed inequality
-      return {
-        a,
-        b,
-        c,
-        operator,
-        latex,
-        color,
-        id: generateId()
-      };
-    }
-    
-    // Try to match pattern: ax + by + c [<>=] 0
-    const zeroRightSidePattern = /^([+-]?\d*\.?\d*)?x([+-]\d*\.?\d*)?y?([+-]\d*\.?\d*)?([<>]=?|=)0$/;
-    match = normalizedInput.match(zeroRightSidePattern);
-    
-    if (match) {
-      // Extract coefficients and operator from match
-      const [, aStr = '1', bStr = '0', cStr = '0', op] = match;
-      
-      // Parse coefficients
-      let a = parseCoefficient(aStr, 'x');
-      let b = parseCoefficient(bStr, 'y');
-      let c = parseCoefficient(cStr);
-      
-      // Get the appropriate operator
-      const operator = getOperator(op);
-      
-      // Generate LaTeX representation
-      const latex = generateLatex(a, b, c, operator);
-      
-      // Get a color for this inequality
-      const color = getNextColor();
-      
-      // Return the processed inequality
-      return {
-        a,
-        b,
-        c,
-        operator,
-        latex,
-        color,
-        id: generateId()
-      };
-    }
-    
-    // Try single variable pattern x [op] c or y [op] c
-    const singleVarPattern = /^([+-]?\d*\.?\d*)?([xy])([<>]=?|=)([+-]?\d*\.?\d*)$/;
+    // Try single variable pattern x [op] c
+    const singleVarPattern = /^([+-]?\d*\.?\d*)?x([<>]=?|=)([+-]?\d*\.?\d*)$/;
     match = normalizedInput.match(singleVarPattern);
     
     if (match) {
-      const [, coeffStr = '1', variable, op, rightSide] = match;
+      const [, coeffStr = '1', op, rightSide] = match;
       
       // Parse coefficient
-      let coeff = parseCoefficient(coeffStr, variable);
-      let rhsValue = parseFloat(rightSide) || 0;
-      
-      // Set up the values
-      let a = variable === 'x' ? coeff : 0;
-      let b = variable === 'y' ? coeff : 0;
-      let c = -rhsValue; // Move to left side
+      let a = parseCoefficient(coeffStr, 'x');
+      let c = -parseFloat(rightSide) || 0; // Move to left side
       
       // Get the appropriate operator
       const operator = getOperator(op);
       
       // Generate LaTeX representation
-      const latex = generateLatex(a, b, c, operator);
+      const latex = generateLatex(a, 0, c, operator);
       
       // Get a color for this inequality
       const color = getNextColor();
@@ -157,7 +79,7 @@ export const processInequality = (input) => {
       // Return the processed inequality
       return {
         a,
-        b,
+        b: 0,
         c,
         operator,
         latex,
@@ -248,29 +170,19 @@ function generateLatex(a, b, c, operator) {
   
   // Add constant term if present
   if (Math.abs(c) > 1e-9 || terms.length === 0) {
-    if (terms.length > 0) {
-      terms.push(c < 0 ? `${c}` : `+${c}`);
-    } else {
-      terms.push(`${c}`);
-    }
+    terms.push(c < 0 ? `${c}` : (terms.length > 0 ? `+${c}` : `${c}`));
   }
   
-  // Join terms and format the operator for LaTeX
-  let leftSide = terms.join(' ');
-  let latexOperator = operator
-    .replace('<=', '\\leq')
-    .replace('>=', '\\geq')
-    .replace('=', '=');
-  
-  return `${leftSide} ${latexOperator} 0`;
+  // Join terms and add operator
+  return `${terms.join('')} ${operator} 0`;
 }
 
 /**
- * Get the next color from the color palette
- * @returns {string} Color hex code
+ * Get the next color from the color array
+ * @returns {string} Hex color code
  */
 function getNextColor() {
-  const color = COLORS[colorIndex % COLORS.length];
+  const color = COLORS[colorIndex];
   colorIndex = (colorIndex + 1) % COLORS.length;
   return color;
 }
@@ -280,5 +192,5 @@ function getNextColor() {
  * @returns {string} Unique ID
  */
 function generateId() {
-  return `ineq_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  return Math.random().toString(36).substr(2, 9);
 } 
