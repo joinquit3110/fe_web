@@ -199,7 +199,7 @@ body {
   flex-direction: column;
   gap: 2rem;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .app-container::before {
@@ -245,6 +245,8 @@ body {
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease;
+  position: relative;
+  z-index: 20;
 }
 
 .inequality-input-container:hover {
@@ -310,6 +312,8 @@ body {
   position: relative;
   overflow: hidden;
   min-height: 400px;
+  position: relative;
+  z-index: 20;
 }
 
 .coordinate-plane-canvas {
@@ -349,14 +353,34 @@ body {
 }
 
 /* Error Message Styles */
-.error-message {
-  color: var(--error-color);
-  background: rgba(255, 77, 77, 0.1);
-  padding: 1rem;
+.error-message, .success-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 25px;
   border-radius: 8px;
-  margin-top: 1rem;
-  border: 1px solid var(--error-color);
-  animation: fadeIn 0.3s ease;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease forwards;
+  max-width: 90%;
+  width: auto;
+  z-index: 1000;
+}
+
+.error-message {
+  background-color: rgba(255, 77, 77, 0.9);
+  color: white;
+}
+
+.success-message {
+  background-color: rgba(76, 175, 80, 0.9);
+  color: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 /* Animations */
@@ -970,6 +994,8 @@ button:hover::after {
   align-items: center;
   min-height: 100vh;
   background: var(--sky-bg-color);
+  position: relative;
+  overflow: hidden;
 }
 
 .login-box {
@@ -1484,7 +1510,7 @@ button:hover::after {
   transition: transform 0.3s ease;
 }
 
-.submit-btn:hover i {
+.submit-btn:hover:not(:disabled) i {
   transform: translateX(4px);
 }
 
