@@ -18,14 +18,32 @@ import UserProfile from './components/UserProfile';
 const AppContent = () => {
   const { user } = useAuth();
   const [inequalities, setInequalities] = useState([]);
-  const [message, setMessage] = useState({ text: "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality.", type: "info" });
+  const [message, setMessage] = useState({ 
+    text: "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality.", 
+    type: "info" 
+  });
   const [hoveredEq, setHoveredEq] = useState(null);
   const [quizMessage, setQuizMessage] = useState("");
   const [selectedPoint, setSelectedPoint] = useState(null);
   const coordinatePlaneRef = useRef(null);
   
   const handleAddInequality = (newInequality) => {
-    return coordinatePlaneRef.current?.handleAddInequality(newInequality);
+    const result = coordinatePlaneRef.current?.handleAddInequality(newInequality);
+    
+    if (result === true) {
+      setMessage({
+        text: "Spell cast successfully! Your inequality has been added to the magical plane.",
+        type: "success"
+      });
+      
+      setTimeout(() => {
+        if (window.MathJax && window.MathJax.typeset) {
+          window.MathJax.typeset();
+        }
+      }, 200);
+    }
+    
+    return result;
   };
 
   const resetAll = () => {
@@ -33,7 +51,30 @@ const AppContent = () => {
     setInequalities([]);
     setQuizMessage('');
     setHoveredEq(null);
+    setMessage({
+      text: "The magical plane has been reset. Ready for your next spell!",
+      type: "info"
+    });
   };
+
+  useEffect(() => {
+    if (quizMessage) {
+      setMessage({
+        text: quizMessage,
+        type: quizMessage.includes('Incorrect') || quizMessage.includes('Error') 
+          ? 'error' 
+          : (quizMessage.includes('Correct') ? 'success' : 'info')
+      });
+    }
+  }, [quizMessage]);
+
+  useEffect(() => {
+    if (window.MathJax && window.MathJax.typeset) {
+      setTimeout(() => {
+        window.MathJax.typeset();
+      }, 100);
+    }
+  }, [inequalities]);
 
   const handleListItemHover = (equation) => {
     setHoveredEq(equation);
@@ -110,9 +151,9 @@ const AppContent = () => {
           </div>
         </div>
 
-        {/* 2. Message Box */}
+        {/* 2. Message Box - Always show a message */}
         <div className={`message-box ${message.type}`}>
-          <div className="message-content">{message.text}</div>
+          <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
         </div>
 
         {/* 3. Coordinate Plane */}

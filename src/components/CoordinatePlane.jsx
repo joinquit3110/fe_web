@@ -4,8 +4,8 @@ import { parseInequality } from "../utils/parser";
 
 // Constants
 const CANVAS_CONFIG = {
-  width: 600,
-  height: 600,
+  width: 800,
+  height: 800,
   minZoom: 20,
   defaultZoom: 40
 };
@@ -692,12 +692,6 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Pan the view
-    setOrigin(prev => ({
-      x: prev.x + (x - lastPos.x),
-      y: prev.y + (y - lastPos.y)
-    }));
-    
     setLastPos({ x, y });
     
     // Check for hovering over intersection points
@@ -1088,6 +1082,17 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         onClick={handleCanvasClick}
         style={{ touchAction: 'none' }}
       />
+      
+      {/* Reset View Button */}
+      <button 
+        className="reset-view-button"
+        onClick={resetView}
+        title="Reset View"
+      >
+        <i className="material-icons">restart_alt</i>
+        Reset View
+      </button>
+      
       {activePoint && (
         <div className="coordinate-input-below">
           <span>(</span>
