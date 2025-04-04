@@ -287,16 +287,24 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   const [activePoint, setActivePoint] = useState(null);
   const [inputCoords, setInputCoords] = useState({ x: '', y: '' });
   const [activeLines, setActiveLines] = useState([]);
+  const [points, setPoints] = useState([]);
 
   const originMemo = useMemo(() => ({
     x: canvasWidth / 2,
     y: canvasHeight / 2
   }), [canvasWidth, canvasHeight]);
 
+  // Function to convert mathematical coordinates to canvas coordinates
   const toCanvasCoords = useCallback((x, y) => ({
     x: origin.x + x * zoom,
     y: origin.y - y * zoom
   }), [zoom, origin]);
+
+  // Function to convert canvas coordinates to mathematical coordinates
+  const toMathCoords = useCallback((x, y) => ({
+    x: (x - origin.x) / zoom,
+    y: (origin.y - y) / zoom,
+  }), [origin, zoom]);
 
   // Handle window resize
   useEffect(() => {
@@ -334,31 +342,26 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     };
   }, []);
 
-  // Function to convert canvas coordinates to mathematical coordinates
-  const toMathCoords = useCallback(
-    (x, y) => ({
-      x: (x - origin.x) / zoom,
-      y: (origin.y - y) / zoom,
-    }),
-    [origin, zoom]
-  );
-
-  // Function to convert mathematical coordinates to canvas coordinates
-  const toCanvasCoords = useCallback(
-    (x, y) => ({
-      x: origin.x + x * zoom,
-      y: origin.y - y * zoom,
-    }),
-    [origin, zoom]
-  );
-
   // Handle touch events for mobile
   const handleTouchStart = useCallback((e) => {
     e.preventDefault();
     const touch = e.touches[0];
     setDragging(true);
     setLastPos({ x: touch.clientX, y: touch.clientY });
-  }, []);
+    
+    // Handle point mode if active
+    if (isPointMode) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // Convert canvas coordinates to graph coordinates
+      const worldX = (x - origin.x) / zoom;
+      const worldY = (origin.y - y) / zoom;
+      
+      handlePointSelection({ x: worldX, y: worldY });
+    }
+  }, [isPointMode, origin, zoom]);
 
   const handleTouchMove = useCallback((e) => {
     if (!dragging) return;
@@ -438,7 +441,25 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         setQuizMessage("Incorrect. This point does not satisfy all inequalities.");
       }
     }
-  }, [parsedInequalities, setSelectedPoint, setQuizMessage]);
+    
+    // Also check against the full inequalities array for backward compatibility
+    if (inequalities.length > 0) {
+      // Check if this point satisfies all the inequalities
+      const satisfiesAll = inequalities.every(ineq => 
+        checkPointInInequality(ineq, point)
+      );
+      
+      // Add the point with appropriate color
+      const newPoint = {
+        x: point.x,
+        y: point.y,
+        color: satisfiesAll ? '#2E7D32' : '#AA3333',
+        showCoords: true
+      };
+      
+      setPoints(prev => [...prev, newPoint]);
+    }
+  }, [parsedInequalities, setSelectedPoint, setQuizMessage, inequalities]);
 
   // Sửa lại phần vẽ trong drawInequality
   const drawInequality = useCallback((ctx, eq) => {
@@ -1188,104 +1209,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     resetView: resetView
   }));
 
-  // Function to draw a point
-  const drawPoint = (ctx, point) => {
-    const { x, y } = toCanvasCoords(point.x, point.y);
-    
-    ctx.save();
-    
-    // Draw point with magical glow effect
-    ctx.shadowColor = point.color || '#D3A625';
-    ctx.shadowBlur = 10;
-    
-    ctx.fillStyle = point.color || '#D3A625';
-    ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Draw coordinates if showing
-    if (point.showCoords) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '14px "Cinzel", serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`(${point.x.toFixed(1)}, ${point.y.toFixed(1)})`, x, y - 15);
-    }
-    
-    ctx.restore();
-  };
-  
-  // Function to handle point selection
-  const handlePointSelection = (point) => {
-    // Check if this point satisfies all the inequalities
-    const satisfiesAll = inequalities.every(ineq => 
-      checkPointInInequality(ineq, point)
-    );
-    
-    // Add the point with appropriate color
-    const newPoint = {
-      x: point.x,
-      y: point.y,
-      color: satisfiesAll ? '#2E7D32' : '#AA3333',
-      showCoords: true
-    };
-    
-    setPoints(prev => [...prev, newPoint]);
-    
-    // Set quiz message based on result
-    if (satisfiesAll) {
-      setQuizMessage(`Correct! Point (${point.x.toFixed(1)}, ${point.y.toFixed(1)}) satisfies all inequalities.`);
-    } else {
-      setQuizMessage(`Point (${point.x.toFixed(1)}, ${point.y.toFixed(1)}) doesn't satisfy all inequalities.`);
-    }
-  };
-
-  // Handle touch events for mobile
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      
-      setIsDragging(true);
-      setDragStart({ x, y });
-      
-      // Handle point mode if active
-      if (pointMode) {
-        // Convert canvas coordinates to graph coordinates
-        const worldX = (x - origin.x) / zoom;
-        const worldY = (origin.y - y) / zoom;
-        
-        handlePointSelection({ x: worldX, y: worldY });
-        return;
-      }
-    }
-  };
-  
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 1 && isDragging) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      
-      // Pan the view
-      setOrigin(prev => ({
-        x: prev.x + (x - dragStart.x),
-        y: prev.y + (y - dragStart.y)
-      }));
-      
-      setDragStart({ x, y });
-    }
-  };
-  
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
-
+  // Draw button function (moved outside of component)
   return (
     <div 
       className="coordinate-plane-wrapper"
@@ -1302,8 +1226,47 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={handleCanvasClick}
         style={{ touchAction: 'none' }}
       />
+      {activePoint && (
+        <div className="coordinate-input-below">
+          <span>(</span>
+          <div className="coordinate-box">
+            <input 
+              type="number"
+              step="0.1"
+              inputMode="decimal"
+              value={inputCoords.x}
+              onChange={e => setInputCoords(prev => ({ ...prev, x: e.target.value }))}
+              className={
+                inputCoords.x === '' ? '' :
+                Number(inputCoords.x).toFixed(1) === activePoint.correct.x.toFixed(1) 
+                  ? 'correct' 
+                  : 'incorrect'
+              }
+            />
+          </div>
+          <span>;</span>
+          <div className="coordinate-box">
+            <input 
+              type="number"
+              step="0.1"
+              inputMode="decimal"
+              value={inputCoords.y}
+              onChange={e => setInputCoords(prev => ({ ...prev, y: e.target.value }))}
+              className={
+                inputCoords.y === '' ? '' :
+                Number(inputCoords.y).toFixed(1) === activePoint.correct.y.toFixed(1) 
+                  ? 'correct' 
+                  : 'incorrect'
+              }
+            />
+          </div>
+          <span>)</span>
+          <button onClick={handleCheckCoordinates}>Check</button>
+        </div>
+      )}
     </div>
   );
 });

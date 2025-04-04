@@ -1507,7 +1507,7 @@ h2 {
 }
 
 /* Coordinate Plane */
-.coordinate-plane-container {
+.coordinate-plane-wrapper {
   width: 100%;
   max-width: 100%;
   aspect-ratio: 1;
@@ -1525,7 +1525,7 @@ h2 {
 }
 
 @media (min-width: 768px) {
-  .coordinate-plane-container {
+  .coordinate-plane-wrapper {
     max-width: 500px;
   }
 }
