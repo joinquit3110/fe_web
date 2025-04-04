@@ -9,7 +9,7 @@ const Navbar = () => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Không hiển thị navbar trên trang login
+  // Don't display navbar on login page
   if (location.pathname === '/login') {
     return null;
   }

@@ -22,14 +22,14 @@ const InequalityInput = ({
       const trimmedInput = input.trim();
       
       if (!trimmedInput) {
-        setQuizMessage('Vui lòng nhập bất phương trình');
+        setQuizMessage('Please enter an inequality');
         return;
       }
 
       const parsed = parseInequality(trimmedInput);
       
       if (parsed.error) {
-        setQuizMessage('Định dạng không hợp lệ!');
+        setQuizMessage('Invalid format!');
         setIsLoading(false);
         return;
       }
@@ -45,7 +45,7 @@ const InequalityInput = ({
         inputRef.current?.focus();
       }
     } catch (err) {
-      setQuizMessage('Có lỗi xảy ra, vui lòng thử lại');
+      setQuizMessage('An error occurred, please try again');
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +59,7 @@ const InequalityInput = ({
       .replace(/>=/g, '\\geq')
       .replace(/</g, '<')
       .replace(/>/g, '>')
-      .replace(/\*/g, '\\cdot') // Thêm xử lý ký tự nhân
+      .replace(/\*/g, '\\cdot') // Add handling for multiplication character
       .trim()}$`;
   };
 
@@ -74,7 +74,7 @@ const InequalityInput = ({
             setInput(e.target.value);
             setError('');
           }}
-          placeholder="Nhập bất phương trình (vd: x + y + 1 > 0)"
+          placeholder="Enter inequality (e.g. x + y + 1 > 0)"
           className={`inequality-input ${error ? 'error' : ''}`}
           disabled={isLoading}
         />

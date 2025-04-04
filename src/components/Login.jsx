@@ -30,7 +30,7 @@ const Login = () => {
     
     try {
       if (!formData.username || !formData.password) {
-        setError('Vui lòng nhập đầy đủ thông tin');
+        setError('Please enter your username and password');
         setLoading(false);
         return;
       }
@@ -40,19 +40,19 @@ const Login = () => {
         navigate('/dashboard');
       } else {
         if (!formData.email) {
-          setError('Vui lòng nhập email');
+          setError('Please enter your email');
           setLoading(false);
           return;
         }
         
         if (formData.password !== formData.confirmPassword) {
-          setError('Mật khẩu xác nhận không khớp');
+          setError('Password confirmation does not match');
           setLoading(false);
           return;
         }
         
         await register(formData.username, formData.email, formData.password);
-        setSuccess('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.');
+        setSuccess('Registration successful! You can now log in.');
         setIsLogin(true);
         setFormData({
           ...formData,
@@ -62,7 +62,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+      setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,8 +97,8 @@ const Login = () => {
       <div className="auth-box">
         <div className="auth-header">
           <div className="hogwarts-crest"></div>
-          <h2>{isLogin ? 'Chào mừng đến với Hogwarts' : 'Nhập học Hogwarts'}</h2>
-          <p className="subtitle">{isLogin ? 'Đăng nhập để bắt đầu hành trình' : 'Đăng ký để trở thành phù thủy toán học'}</p>
+          <h2>{isLogin ? 'Welcome to Hogwarts' : 'Enroll at Hogwarts'}</h2>
+          <p className="subtitle">{isLogin ? 'Sign in to begin your journey' : 'Register to become a math wizard'}</p>
         </div>
 
         {error && (
@@ -120,7 +120,7 @@ const Login = () => {
             <i className="material-icons">person</i>
             <input
               type="text"
-              placeholder="Tên đăng nhập"
+              placeholder="Username"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
               autoComplete="username"
@@ -144,7 +144,7 @@ const Login = () => {
             <i className="material-icons">lock</i>
             <input
               type="password"
-              placeholder="Mật khẩu"
+              placeholder="Password"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               autoComplete={isLogin ? "current-password" : "new-password"}
@@ -156,7 +156,7 @@ const Login = () => {
               <i className="material-icons">lock_outline</i>
               <input
                 type="password"
-                placeholder="Xác nhận mật khẩu"
+                placeholder="Confirm Password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 autoComplete="new-password"
@@ -169,7 +169,7 @@ const Login = () => {
               <div className="loading-spinner-small"></div>
             ) : (
               <>
-                <span>{isLogin ? 'Đăng nhập' : 'Đăng ký'}</span>
+                <span>{isLogin ? 'Sign In' : 'Register'}</span>
                 <i className="material-icons">arrow_forward</i>
               </>
             )}
@@ -178,9 +178,9 @@ const Login = () => {
         
         <div className="auth-footer">
           <p onClick={() => !loading && setIsLogin(!isLogin)}>
-            {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
+            {isLogin ? 'Don\'t have an account?' : 'Already have an account?'}
             <span className="switch-btn">
-              {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+              {isLogin ? 'Register Now' : 'Sign In'}
             </span>
           </p>
         </div>

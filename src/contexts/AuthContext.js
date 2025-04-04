@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-// Thay API_URL thành đường dẫn tương đối
+// Replace API_URL with relative path
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 export const AuthProvider = ({ children }) => {
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       if (!username || !password) {
-        throw new Error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+        throw new Error('Please enter your username and password');
       }
 
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -37,11 +37,11 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
+          throw new Error('Incorrect username or password');
         } else if (response.status === 500) {
-          throw new Error('Lỗi máy chủ, vui lòng thử lại sau');
+          throw new Error('Server error, please try again later');
         } else {
-          throw new Error('Đã có lỗi xảy ra, vui lòng thử lại');
+          throw new Error('An error occurred, please try again');
         }
       }
 
@@ -54,11 +54,11 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         return data;
       } else {
-        throw new Error('Token không hợp lệ');
+        throw new Error('Invalid token');
       }
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error(error.message || 'Lỗi kết nối máy chủ');
+      throw new Error(error.message || 'Server connection error');
     }
   };
 
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error('Register error:', error);
-      throw new Error(error.message || 'Lỗi kết nối máy chủ');
+      throw new Error(error.message || 'Server connection error');
     }
   };
 

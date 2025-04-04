@@ -511,7 +511,7 @@ const CoordinatePlane = forwardRef(({
         setActivePoint(clickedPoint);
         setActiveLines(lines);
         setInputCoords({ x: '', y: '' });
-        setQuizMessage('Nhập tọa độ của điểm:');
+        setQuizMessage('Please enter the coordinates of the point:');
         
         setIntersectionPoints(points => points.map(pt => {
           if (Math.abs(pt.x - clickedPoint.x) < EPSILON && 
@@ -546,7 +546,7 @@ const CoordinatePlane = forwardRef(({
           clickY <= btn.btn1.y + btn.btn1.height
         ) {
           const isCorrect = btn.btn1.sol;
-          setQuizMessage(isCorrect ? "Chính xác!" : "Sai, mời chọn lại!");
+          setQuizMessage(isCorrect ? "Correct!" : "Incorrect, please try again!");
           if (isCorrect) {
             setInequalities(prev =>
               prev.map(it => it.label === eq.label ? 
@@ -564,7 +564,7 @@ const CoordinatePlane = forwardRef(({
           clickY <= btn.btn2.y + btn.btn2.height
         ) {
           const isCorrect = btn.btn2.sol;
-          setQuizMessage(isCorrect ? "Chính xác!" : "Sai, mời chọn lại!");
+          setQuizMessage(isCorrect ? "Correct!" : "Incorrect, please try again!");
           if (isCorrect) {
             setInequalities(prev =>
               prev.map(it => it.label === eq.label ? 
@@ -763,7 +763,7 @@ const CoordinatePlane = forwardRef(({
     if (clickedPoint && clickedPoint.status !== POINT_STATUS.SOLVED) {
       setActivePoint(clickedPoint);
       setInputCoords({ x: '', y: '' });
-      setQuizMessage('Nhập tọa độ của điểm:');
+      setQuizMessage('Please enter the coordinates of the point:');
       
       setIntersectionPoints(points => points.map(pt => {
         if (Math.abs(pt.x - clickedPoint.x) < EPSILON && 
@@ -904,7 +904,7 @@ const CoordinatePlane = forwardRef(({
     if (!activePoint) return;
     
     if (inputCoords.x === '' || inputCoords.y === '') {
-      setQuizMessage('Vui lòng nhập đủ tọa độ x và y!');
+      setQuizMessage('Please enter both x and y coordinates!');
       return;
     }
   
@@ -923,11 +923,11 @@ const CoordinatePlane = forwardRef(({
     }));
   
     if (xCorrect && yCorrect) {
-      setQuizMessage('Chính xác!');
+      setQuizMessage('Correct!');
       setActivePoint(null);
     } else {
       setQuizMessage(
-        `${xCorrect ? 'x đúng' : 'x sai'}${yCorrect ? ', y đúng' : ', y sai'}`
+        `${xCorrect ? 'x correct' : 'x incorrect'}${yCorrect ? ', y correct' : ', y incorrect'}`
       );
     }
   }, [activePoint, inputCoords, setQuizMessage]);
@@ -1030,7 +1030,7 @@ const CoordinatePlane = forwardRef(({
             />
           </div>
           <span>)</span>
-          <button onClick={handleCheckCoordinates}>Kiểm tra</button>
+          <button onClick={handleCheckCoordinates}>Check</button>
         </div>
       )}
       <div className="controls-container">
