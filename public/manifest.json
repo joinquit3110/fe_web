@@ -1,10 +1,10 @@
 {
   "short_name": "Inequality Web",
-  "name": "Inequality Web Application",
+  "name": "Inequality Web - Hogwarts Math Academy",
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff",
+  "theme_color": "#740001",
+  "background_color": "#0a0a2a",
   "orientation": "portrait",
   "scope": "/",
   "mobile_web_app_capable": "yes"
