@@ -22,10 +22,44 @@ export const processInequality = (input) => {
       .replace(/\+\-/g, '-')
       .replace(/\-\+/g, '-');
     
+    // Try to match pattern: x + y [op] c
+    const simplePattern = /^([+-]?\d*\.?\d*)?x([+-]\d*\.?\d*)?y?([<>]=?|=)([+-]?\d*\.?\d*)$/;
+    let match = normalizedInput.match(simplePattern);
+    
+    if (match) {
+      // Extract coefficients and operator from match
+      const [, aStr = '1', bStr = '1', op, rightSide] = match;
+      
+      // Parse coefficients
+      let a = parseCoefficient(aStr, 'x');
+      let b = parseCoefficient(bStr, 'y');
+      let c = -parseFloat(rightSide) || 0; // Move to left side
+      
+      // Get the appropriate operator
+      const operator = getOperator(op);
+      
+      // Generate LaTeX representation
+      const latex = generateLatex(a, b, c, operator);
+      
+      // Get a color for this inequality
+      const color = getNextColor();
+      
+      // Return the processed inequality
+      return {
+        a,
+        b,
+        c,
+        operator,
+        latex,
+        color,
+        id: generateId()
+      };
+    }
+    
     // Check if the inequality is in the form ax + by [op] c
     // Try to match pattern: ax + by [<>=] c
     const rightSidePattern = /^([+-]?\d*\.?\d*)?x([+-]\d*\.?\d*)?y?([+-]\d*\.?\d*)?([<>]=?|=)([+-]?\d*\.?\d*)$/;
-    let match = normalizedInput.match(rightSidePattern);
+    match = normalizedInput.match(rightSidePattern);
     
     if (match) {
       // Extract coefficients and operator from match

@@ -101,7 +101,6 @@ const InequalityInput = ({ onAddInequality, inequalities }) => {
 
         {preview && (
           <div className="preview-container">
-            <div className="preview-label">Xem trước:</div>
             <div className="latex-preview">
               <MathJaxContext>
                 <MathJax>{`$$${preview}$$`}</MathJax>

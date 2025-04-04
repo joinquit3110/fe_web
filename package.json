@@ -9,7 +9,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "deploy": "git add . && git commit -m \"Update UI and features\" && git push origin master"
+    "deploy": "git add . && git commit -m \"Update UI and features\" && git push origin master",
+    "postchange": "git add . && git commit -m \"Update: %date% %time%\" && git push"
   },
   "dependencies": {
     "@matejmazur/react-katex": "^3.1.3",

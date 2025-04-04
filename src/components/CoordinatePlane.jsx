@@ -1,5 +1,5 @@
 ﻿import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
-import { computeIntersection } from "../utils/geometry";
+import { computeIntersection, canvasToWorld, worldToCanvas } from "../utils/geometry";
 import '../styles/App.css';
 
 // Constants
@@ -796,10 +796,14 @@ const CoordinatePlane = forwardRef(({
     const mouseY = e.clientY - rect.top;
   
     // Convert mouse coordinates to mathematical coordinates
-    const mathCoords = {
-      x: (mouseX - origin.x) / zoom,
-      y: (origin.y - mouseY) / zoom
-    };
+    const worldCoords = canvasToWorld(
+      { x: mouseX, y: mouseY },
+      {
+        width: CANVAS_CONFIG.width,
+        height: CANVAS_CONFIG.height
+      },
+      zoom
+    );
   
     let foundEq = null;
   
@@ -831,7 +835,7 @@ const CoordinatePlane = forwardRef(({
   
       // Check if mouse is in solution region or near line
       const isNearLine = distance < 5;
-      const isInRegion = eq.solved && isPointInSolutionRegion(mathCoords, eq);
+      const isInRegion = eq.solved && isPointInSolutionRegion(worldCoords, eq);
   
       if (isNearLine || isInRegion) {
         foundEq = eq;
