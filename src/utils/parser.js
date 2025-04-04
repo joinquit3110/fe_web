@@ -1,19 +1,37 @@
-﻿// Dùng biến toàn cục (hoặc closure) để lưu hue đã dùng
-let usedHues = [];
+﻿// Hogwarts house colors
+const hogwartsColors = [
+  '#740001', // Gryffindor Red
+  '#D3A625', // Gryffindor Gold
+  '#1A472A', // Slytherin Green
+  '#AAAAAA', // Slytherin Silver
+  '#0E1A40', // Ravenclaw Blue
+  '#946B2D', // Ravenclaw Bronze
+  '#ECB939', // Hufflepuff Yellow
+  '#372E29'  // Hufflepuff Black
+];
+
+// Track used colors to avoid repeats
+let usedColors = [];
 
 export const parseInequality = (input) => {
-  // Chuẩn hóa input
+  // Normalize input: remove spaces, fix double operators
   input = input.replace(/\s+/g, '')
                .replace(/\-\-/g, '+')
                .replace(/\+\-/g, '-')
                .replace(/\-\+/g, '-');
 
-  const regex = /^(-?\d*\.?\d*)?x\s*([+-]\s*\d*\.?\d*)?y\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?)\s*0$/;
+  // Support unicode inequality symbols
+  input = input.replace(/≤/g, '<=')
+               .replace(/≥/g, '>=')
+               .replace(/≠/g, '!=');
+
+  // Main regex for standard form ax + by + c operator 0
+  const regex = /^(-?\d*\.?\d*)?x\s*([+-]\s*\d*\.?\d*)?y\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=)\s*0$/;
   const match = input.match(regex);
 
   if (!match) {
-    // Thử xử lý trường hợp một biến
-    const singleVarRegex = /^(-?\d*\.?\d*)?([xy])\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?)\s*0$/;
+    // Try parsing single variable case (x, y)
+    const singleVarRegex = /^(-?\d*\.?\d*)?([xy])\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=)\s*0$/;
     const singleMatch = input.match(singleVarRegex);
     
     if (singleMatch) {
@@ -33,18 +51,63 @@ export const parseInequality = (input) => {
       if (c !== 0) {
         latex += ` ${c > 0 ? '+' : '-'} ${Math.abs(c)}`;
       }
-      latex += ` ${operator.replace('<=', '\\leq').replace('>=', '\\geq')} 0`;
+      latex += ` ${getLatexOperator(operator)} 0`;
+
+      // Create unique label
+      const label = `I${Math.floor(Math.random() * 1000)}`;
 
       return {
         a: variable === 'x' ? coef : 0,
         b: variable === 'y' ? coef : 0,
         c,
         operator,
-        latex
+        latex,
+        label,
+        color: getNextColor()
       };
     }
     
-    return { error: 'Định dạng không hợp lệ!' };
+    // Try parsing y = mx + b form
+    const slopeFormRegex = /^y\s*=\s*(-?\d*\.?\d*)?x\s*([+-]\s*\d*\.?\d*)?$/;
+    const slopeMatch = input.match(slopeFormRegex);
+    
+    if (slopeMatch) {
+      let [, m = '1', b = '0'] = slopeMatch;
+      
+      // Convert to standard form
+      m = m === '-' ? -1 : m === '' ? 1 : parseFloat(m);
+      b = b ? parseFloat(b.replace(/[+\s]/g, '')) : 0;
+      
+      // Standard form: -mx + y - b = 0
+      const a = -m;
+      const c = -b;
+      
+      // Build LaTeX string
+      let latex = 'y = ';
+      if (Math.abs(m) === 1) {
+        latex += `${m < 0 ? '-' : ''}x`;
+      } else {
+        latex += `${m}x`;
+      }
+      if (b !== 0) {
+        latex += ` ${b > 0 ? '+' : '-'} ${Math.abs(b)}`;
+      }
+
+      // Create unique label
+      const label = `I${Math.floor(Math.random() * 1000)}`;
+
+      return {
+        a,
+        b: 1,
+        c,
+        operator: '=',
+        latex,
+        label,
+        color: getNextColor()
+      };
+    }
+    
+    return null;
   }
 
   // Parse standard form ax + by + c
@@ -74,10 +137,55 @@ export const parseInequality = (input) => {
   }
   
   // Add operator with proper LaTeX symbols
-  latex += ` ${operator.replace('<=', '\\leq').replace('>=', '\\geq')} 0`;
+  latex += ` ${getLatexOperator(operator)} 0`;
 
-  return { a, b, c, operator, latex };
+  // Create unique label
+  const label = `I${Math.floor(Math.random() * 1000)}`;
+
+  return { 
+    a, 
+    b, 
+    c, 
+    operator, 
+    latex,
+    label,
+    color: getNextColor() 
+  };
 };
+
+// Function to convert operators to LaTeX
+function getLatexOperator(operator) {
+  switch(operator) {
+    case '<=': return '\\leq';
+    case '>=': return '\\geq';
+    case '!=': return '\\neq';
+    default: return operator;
+  }
+}
+
+// Function to get the next color from the Hogwarts palette
+function getNextColor() {
+  // Reset if all colors are used
+  if (usedColors.length >= hogwartsColors.length) {
+    usedColors = [];
+  }
+  
+  // Find an unused color
+  let availableColors = hogwartsColors.filter(color => !usedColors.includes(color));
+  if (availableColors.length === 0) {
+    usedColors = [];
+    availableColors = [...hogwartsColors];
+  }
+  
+  // Pick a random color from available ones
+  const randomIndex = Math.floor(Math.random() * availableColors.length);
+  const selectedColor = availableColors[randomIndex];
+  
+  // Remember this color has been used
+  usedColors.push(selectedColor);
+  
+  return selectedColor;
+}
 
 function parseLeftSide(expr) {
   let a = 0, b = 0, c = 0;
@@ -148,18 +256,4 @@ function formatConst(value, isFirst) {
   let absVal = Math.abs(value);
   if (value < 0) sign = "-";
   return sign + absVal;
-}
-
-// Hàm randomColor() tránh trùng hue
-function randomColor() {
-  // Nếu dùng quá 360 màu => reset
-  if (usedHues.length >= 360) {
-    usedHues = [];
-  }
-  let hue;
-  do {
-    hue = Math.floor(Math.random() * 360);
-  } while (usedHues.includes(hue));
-  usedHues.push(hue);
-  return `hsl(${hue}, 70%, 50%)`;
 }

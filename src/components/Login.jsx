@@ -9,32 +9,35 @@ const Login = () => {
     password: ''
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
     try {
       if (!formData.username || !formData.password) {
-        setError('Please enter your username and password');
+        setError('Please enter your wizard name and secret spell');
+        setLoading(false);
         return;
       }
 
-      console.log('Submitting login...'); // Debug log
-      
       if (isLogin) {
         await login(formData.username, formData.password);
       } else {
         if (!formData.email) {
-          setError('Please enter your email');
+          setError('Please enter your owl mail address');
+          setLoading(false);
           return;
         }
         await register(formData.username, formData.email, formData.password);
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError(err.message || 'An error occurred, please try again');
+      setError(err.message || 'A magical mishap occurred, please try again');
+      setLoading(false);
     }
   };
 
@@ -42,22 +45,27 @@ const Login = () => {
     <div className="login-container">
       <div className="stars">
         <div className="small-stars">
-          {[...Array(24)].map((_, i) => (
+          {[...Array(40)].map((_, i) => (
             <div key={i} className="star" style={{
               left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`
             }} />
           ))}
         </div>
         <div className="medium-stars">
-          {[...Array(16)].map((_, i) => (
+          {[...Array(20)].map((_, i) => (
             <div key={i} className="star" style={{
               left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`
             }} />
           ))}
         </div>
       </div>
+      
+      {/* Hogwarts Crest */}
+      <div className="hogwarts-crest login-crest"></div>
       
       <div className="login-box">
         <div className="login-header">
@@ -77,7 +85,7 @@ const Login = () => {
             <i className="material-icons">person</i>
             <input
               type="text"
-              placeholder="Username"
+              placeholder="Wizard Name"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
             />
@@ -88,7 +96,7 @@ const Login = () => {
               <i className="material-icons">email</i>
               <input
                 type="email"
-                placeholder="Email"
+                placeholder="Owl Mail Address"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
@@ -99,24 +107,37 @@ const Login = () => {
             <i className="material-icons">lock</i>
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Secret Spell"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
           </div>
           
-          <button type="submit" className="submit-btn">
-            <span>{isLogin ? 'Sign In' : 'Register'}</span>
-            <i className="material-icons">arrow_forward</i>
+          <button type="submit" className="submit-btn" disabled={loading}>
+            {loading ? (
+              <>
+                <div className="loading-spinner-small"></div>
+                <span>Casting Spell...</span>
+              </>
+            ) : (
+              <>
+                <span>{isLogin ? 'Enter Hogwarts' : 'Enroll Now'}</span>
+                <i className="material-icons">auto_fix_high</i>
+              </>
+            )}
           </button>
         </form>
         
         <div className="login-footer">
-          <p onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Don\'t have an account?' : 'Already have an account?'}
-            <span className="switch-btn">
-              {isLogin ? 'Register Now' : 'Sign In'}
-            </span>
+          <p>
+            {isLogin ? 'First year at Hogwarts?' : 'Already a Hogwarts student?'}
+            <button 
+              className="switch-btn" 
+              onClick={() => setIsLogin(!isLogin)}
+              disabled={loading}
+            >
+              {isLogin ? 'Enroll Now' : 'Sign In'}
+            </button>
           </p>
         </div>
       </div>

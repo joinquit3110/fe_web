@@ -27,6 +27,7 @@ const AppContent = () => {
   };
 
   const resetAll = () => {
+    coordinatePlaneRef.current?.resetView();
     setInequalities([]);
     setQuizMessage('');
     setHoveredEq(null);
@@ -49,28 +50,30 @@ const AppContent = () => {
   return (
     <div className="app">
       <UserProfile />
+      
+      {/* Dynamic Stars Background */}
       <div className="stars">
         <div className="small-stars">
-          {[...Array(24)].map((_, i) => (
+          {[...Array(40)].map((_, i) => (
             <div key={i} className="star" style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              width: '2px',
-              height: '2px'
+              animationDelay: `${Math.random() * 3}s`
             }} />
           ))}
         </div>
         <div className="medium-stars">
-          {[...Array(16)].map((_, i) => (
+          {[...Array(20)].map((_, i) => (
             <div key={i} className="star" style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              width: '3px',
-              height: '3px'
+              animationDelay: `${Math.random() * 3}s`
             }} />
           ))}
         </div>
       </div>
+      
+      {/* Magical Moon */}
       <div className="moon-wrapper">
         <div className="moonlight moonlight-1">
           <div className="moonlight moonlight-2">
@@ -83,12 +86,18 @@ const AppContent = () => {
         </div>
       </div>
       
-      <header className="farm-header">
+      {/* Hogwarts Crest */}
+      <div className="hogwarts-crest"></div>
+      
+      <header className="hogwarts-header">
         <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
       </header>
       
-      <div className="farm-content">
-        <div className="control-panel farm-panel">
+      <div className="hogwarts-content">
+        {/* Control Panel */}
+        <div className="control-panel wizard-panel">
+          <div className="panel-decoration left"></div>
+          <div className="panel-decoration right"></div>
           <div className="control-panel-content">
             <h2>Professor's Spellbook</h2>
             <InequalityInput 
@@ -99,6 +108,7 @@ const AppContent = () => {
           </div>
         </div>
 
+        {/* Message Box */}
         <div className="message-box">
           {quizMessage && (
             <div className={`message ${
@@ -121,7 +131,10 @@ const AppContent = () => {
           )}
         </div>
 
-        <div className="coordinate-container farm-panel">
+        {/* Coordinate Plane */}
+        <div className="coordinate-container wizard-panel">
+          <div className="panel-decoration left"></div>
+          <div className="panel-decoration right"></div>
           <h2>Magical Coordinate Plane</h2>
           <div className="coordinate-plane">
             <CoordinatePlane
@@ -135,35 +148,50 @@ const AppContent = () => {
           </div>
         </div>
 
-        <div className="inequalities-list farm-panel">
+        {/* Inequalities List */}
+        <div className="inequalities-list wizard-panel">
+          <div className="panel-decoration left"></div>
+          <div className="panel-decoration right"></div>
           <h2>Spells Collection</h2>
-          {inequalities.map((ineq, index) => (
-            <div
-              key={index}
-              className="inequality-item"
-              style={{ 
-                borderLeftColor: ineq.color,
-                background: hoveredEq?.label === ineq.label ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                '--index': index // Add animation delay index
-              }}
-              onMouseEnter={() => handleListItemHover(ineq)}
-              onMouseLeave={() => handleListItemHover(null)}
-            >
-              <span 
-                dangerouslySetInnerHTML={{ 
-                  __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
-                }}
-              />
-              <span 
-                className="delete-icon material-icons"
-                onClick={(e) => handleDelete(e, ineq)}
-              >
-                delete
-              </span>
-            </div>
-          ))}
+          <div className="scroll-container">
+            {inequalities.length > 0 ? (
+              inequalities.map((ineq, index) => (
+                <div
+                  key={index}
+                  className="inequality-item"
+                  style={{ 
+                    borderLeftColor: ineq.color,
+                    background: hoveredEq?.label === ineq.label ? 'rgba(211, 166, 37, 0.2)' : 'rgba(14, 26, 64, 0.6)',
+                    '--index': index
+                  }}
+                  onMouseEnter={() => handleListItemHover(ineq)}
+                  onMouseLeave={() => handleListItemHover(null)}
+                >
+                  <span 
+                    dangerouslySetInnerHTML={{ 
+                      __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
+                    }}
+                  />
+                  <span 
+                    className="delete-icon material-icons"
+                    onClick={(e) => handleDelete(e, ineq)}
+                  >
+                    delete
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="empty-spells">Cast your first inequality spell!</div>
+            )}
+          </div>
         </div>
       </div>
+      
+      <footer className="hogwarts-footer">
+        <div className="footer-content">
+          <p>© {new Date().getFullYear()} Hogwarts School of Inequality Magic</p>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 ﻿import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { computeIntersection } from "../utils/geometry";
+import { parseInequality } from "../utils/parser";
 
 // Constants
 const CANVAS_CONFIG = {
@@ -56,9 +57,13 @@ const getBoundaryPoints = eq => {
 
 // Update drawGridAndAxes function
 const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
+  // Draw magical grid background
+  ctx.fillStyle = 'rgba(14, 26, 64, 0.05)';
+  ctx.fillRect(0, 0, width, height);
+  
   // Draw grid
-  ctx.strokeStyle = "#eee";
-  ctx.lineWidth = 0.5; // Reduce grid line thickness
+  ctx.strokeStyle = "rgba(211, 166, 37, 0.2)";
+  ctx.lineWidth = 0.5;
 
   // Calculate units to draw
   const unitsX = Math.ceil(width / (2 * zoom));
@@ -86,8 +91,8 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
     }
   }
 
-  // Draw axes
-  ctx.strokeStyle = "#000";
+  // Draw axes with Harry Potter theme colors
+  ctx.strokeStyle = "#D3A625"; // Gryffindor Gold
   ctx.lineWidth = 2;
   
   // X-axis
@@ -102,9 +107,6 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.lineTo(origin.x, 0);
   ctx.stroke();
 
-  // Draw arrows and labels
-  // ... existing code ...
-
   // Draw arrows at the very edges
   const arrowSize = 10;
 
@@ -113,7 +115,7 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.moveTo(width, origin.y);  // Tip at the very edge
   ctx.lineTo(width - arrowSize, origin.y - arrowSize);
   ctx.lineTo(width - arrowSize, origin.y + arrowSize);
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#D3A625"; // Gryffindor Gold
   ctx.fill();
   ctx.closePath();
 
@@ -125,9 +127,9 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.fill();
   ctx.closePath();
 
-  // Draw only one set of labels with consistent spacing
+  // Draw labels
   ctx.font = "bold italic 18px 'STIX Two Math', 'Times New Roman', serif";
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#D3A625"; // Gryffindor Gold
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
@@ -141,8 +143,8 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.fillText("y", origin.x + 20, 20);
 
   // Draw numbers on axes
-  ctx.font = '14px Arial';
-  ctx.fillStyle = '#000';
+  ctx.font = '14px "Cinzel", serif';
+  ctx.fillStyle = '#D3A625'; // Gryffindor Gold
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
@@ -252,26 +254,43 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.2) => {
   ctx.restore();
 };
 
-// Sửa lại phần xử lý kiểm tra trùng trong component chính
-const CoordinatePlane = forwardRef(({ 
-  inequalities, 
-  setInequalities, 
-  setQuizMessage,
-  hoveredEq,
-  setHoveredEq 
-}, ref) => {
+// Define a simple color function for backward compatibility
+const getRandomColor = () => {
+  const colors = [
+    '#740001', // Gryffindor Red
+    '#D3A625', // Gryffindor Gold
+    '#1A472A', // Slytherin Green
+    '#0E1A40', // Ravenclaw Blue
+    '#ECB939', // Hufflepuff Yellow
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
+// Main component
+const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq }, ref) => {
+  // Canvas and state for positioning
   const canvasRef = useRef(null);
-  const [solutionButtons, setSolutionButtons] = useState([]);
+  const [width, setWidth] = useState(CANVAS_CONFIG.width);
+  const [height, setHeight] = useState(CANVAS_CONFIG.height);
   const [zoom, setZoom] = useState(CANVAS_CONFIG.defaultZoom);
+  const [origin, setOrigin] = useState({ x: width / 2, y: height / 2 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [points, setPoints] = useState([]);
+  const [pointMode, setPointMode] = useState(false);
+  const [quizMode, setQuizMode] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState(null);
+  const [activeInequality, setActiveInequality] = useState(null);
+  const [solutionButtons, setSolutionButtons] = useState([]);
   const [intersectionPoints, setIntersectionPoints] = useState([]); // Store all valid intersection points
   const [activePoint, setActivePoint] = useState(null); // Currently selected point for input
   const [inputCoords, setInputCoords] = useState({ x: '', y: '' }); // User input coordinates
   const [activeLines, setActiveLines] = useState([]); // State to store lines forming the active point
 
-  const origin = useMemo(() => ({
-    x: CANVAS_CONFIG.width / 2,
-    y: CANVAS_CONFIG.height / 2
-  }), []); // Empty dependency array since values are constants
+  const originMemo = useMemo(() => ({
+    x: width / 2,
+    y: height / 2
+  }), [width, height]); // Empty dependency array since values are constants
 
   const toCanvasCoords = useCallback((x, y) => ({
     x: origin.x + x * zoom,
@@ -442,24 +461,89 @@ const CoordinatePlane = forwardRef(({
     return false;
   }, []);
 
-  // Thêm hàm xử lý thêm bất phương trình mới (cần export và sử dụng ở component cha)
-  useImperativeHandle(ref, () => ({
-    handleAddInequality: (newInequality) => {
-      // Find duplicate inequalities
-      const duplicateEq = inequalities.find(eq => 
-        checkDuplicateInequality(newInequality, eq)
-      );
+  // Reset view function - properly defined within component
+  const resetView = () => {
+    setZoom(CANVAS_CONFIG.defaultZoom);
+    setOrigin({
+      x: width / 2, 
+      y: height / 2
+    });
+    setIsDragging(false);
+    setPointMode(false);
+    setQuizMode(false);
+    setSelectedPoint(null);
+    setActiveInequality(null);
+    setPoints([]);
+    
+    // Add magical reset animation
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.fillStyle = 'rgba(211, 166, 37, 0.2)';
+      ctx.beginPath();
+      ctx.arc(width/2, height/2, Math.max(width, height), 0, Math.PI * 2);
+      ctx.fill();
       
-      if (duplicateEq) {
-        setQuizMessage(`Inequality ${newInequality.label} already exists as ${duplicateEq.label}!`);
-        return false;
-      }
-      
-      setInequalities(prev => [...prev, newInequality]);
-      setQuizMessage(''); // Xóa thông báo cũ
-      return true;
+      setTimeout(() => {
+        drawEverything();
+      }, 200);
     }
-  }), [inequalities, checkDuplicateInequality, setQuizMessage, setInequalities]);
+  };
+  
+  // Drawing function to call after reset
+  const drawEverything = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, width, height);
+    
+    // Draw grid and axes
+    drawGridAndAxes(ctx, width, height, zoom, origin);
+    
+    // Draw all inequalities
+    inequalities.forEach(ineq => {
+      const isHovered = hoveredEq?.label === ineq.label;
+      drawInequality(ctx, ineq, isHovered);
+    });
+    
+    // Draw points if any
+    points.forEach(point => {
+      drawPoint(ctx, point);
+    });
+  };
+  
+  // Update the mouse interaction functions to include magical effects
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Add magical effect on click
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.save();
+      ctx.fillStyle = 'rgba(211, 166, 37, 0.1)';
+      ctx.beginPath();
+      ctx.arc(x, y, 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Original mouse down code
+    setIsDragging(true);
+    setDragStart({ x, y });
+    
+    // Handle point mode if active
+    if (pointMode) {
+      // Convert canvas coordinates to graph coordinates
+      const worldX = (x - origin.x) / zoom;
+      const worldY = (origin.y - y) / zoom;
+      
+      handlePointSelection({ x: worldX, y: worldY });
+      return;
+    }
+  };
 
   // Cập nhật handleCanvasClick để xử lý việc bấm vào điểm đang chọn
   const handleCanvasClick = useCallback((e) => {
@@ -938,6 +1022,29 @@ const CoordinatePlane = forwardRef(({
     }
     return false;
   };
+
+  // Update useImperativeHandle with the handleAddInequality function
+  useImperativeHandle(ref, () => ({
+    handleAddInequality: (inputText) => {
+      const result = parseInequality(inputText);
+      if (!result) {
+        setQuizMessage("Incorrect spell format. Try examples like: x+y<0, 2x-3y+1≥0, x>-2");
+        return false;
+      }
+      
+      if (inequalities.some(ineq => ineq.label === result.label)) {
+        return 'EXISTS';
+      }
+      
+      // Add inequality to list
+      setInequalities(prev => [...prev, result]);
+      
+      // Clear any previous message
+      setQuizMessage('');
+      return true;
+    },
+    resetView: resetView
+  }));
 
   return (
     <div className="coordinate-plane-container">

@@ -9,7 +9,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
     e.preventDefault();
     
     if (!inputValue.trim()) {
-      setQuizMessage('Please enter an inequality');
+      setQuizMessage('Please enter an inequality spell');
       return;
     }
     
@@ -17,15 +17,16 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
       const result = addInequality(inputValue);
       
       if (result === 'EXISTS') {
-        setQuizMessage('This inequality already exists');
+        setQuizMessage('This spell has already been cast');
       } else if (result) {
         setInputValue('');
+        setQuizMessage('Spell successfully cast!');
       } else {
-        setQuizMessage('Incorrect format. Try examples like: x+y<0, 2x-3y+1≥0, x>-2');
+        setQuizMessage('Incorrect spell format. Try examples like: x+y<0, 2x-3y+1≥0, x>-2');
       }
     } catch (error) {
       console.error('Error adding inequality:', error);
-      setQuizMessage('An error occurred. Please try again.');
+      setQuizMessage('Your spell misfired. Please try again.');
     }
   };
 
@@ -33,14 +34,14 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
     setQuizMode(prev => !prev);
     resetAll();
     if (pointsMode) setPointsMode(false);
-    setQuizMessage('');
+    setQuizMessage(prev => quizMode ? '' : 'O.W.L. Exam mode activated. Find the correct inequalities!');
   };
 
   const togglePointsMode = () => {
     setPointsMode(prev => !prev);
     resetAll();
     if (quizMode) setQuizMode(false);
-    setQuizMessage('');
+    setQuizMessage(prev => pointsMode ? '' : 'Magical Points mode activated. Plot points to create regions.');
   };
 
   return (
@@ -61,6 +62,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             type="submit" 
             className="add-btn"
             disabled={quizMode || pointsMode}
+            title="Cast Spell"
           >
             <i className="material-icons">auto_fix_high</i>
           </button>
@@ -71,6 +73,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
         <button 
           className={`mode-btn ${quizMode ? 'active' : ''}`} 
           onClick={toggleQuizMode}
+          title="O.W.L. Exam Mode"
         >
           <i className="material-icons">school</i> 
           <span>O.W.L. Exam</span>
@@ -79,6 +82,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
         <button 
           className={`mode-btn ${pointsMode ? 'active' : ''}`} 
           onClick={togglePointsMode}
+          title="Plot Magical Points"
         >
           <i className="material-icons">place</i>
           <span>Magical Points</span>
@@ -87,6 +91,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
         <button 
           className="reset-btn" 
           onClick={resetAll}
+          title="Clear All Spells"
         >
           <i className="material-icons">restart_alt</i>
           <span>Finite Incantatem</span>

@@ -39,8 +39,20 @@ const UserProfile = () => {
   };
   
   const getInitials = (name) => {
-    return name ? name.charAt(0).toUpperCase() : 'U';
+    return name ? name.charAt(0).toUpperCase() : 'W';
   };
+
+  // Assign a Hogwarts house based on username
+  const getHouseClass = (username) => {
+    if (!username) return 'gryffindor';
+    
+    // Simple hashing of username to pick a house
+    const sum = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const houses = ['gryffindor', 'slytherin', 'ravenclaw', 'hufflepuff'];
+    return houses[sum % houses.length];
+  };
+
+  const userHouse = getHouseClass(user.username);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -109,7 +121,7 @@ const UserProfile = () => {
 
   return (
     <div className="profile-container">
-      <div className="profile-icon" onClick={toggleMenu}>
+      <div className={`profile-icon ${userHouse}`} onClick={toggleMenu} title={`${user.username}'s profile`}>
         {getInitials(user.username)}
       </div>
       
@@ -118,21 +130,22 @@ const UserProfile = () => {
           <div className="menu-user-info">
             <span className="menu-username">{user.username}</span>
             <span className="menu-email">{user.email}</span>
+            <span className="menu-house">House of {userHouse.charAt(0).toUpperCase() + userHouse.slice(1)}</span>
           </div>
           
-          <button onClick={toggleMenu}>
-            <i className="material-icons">settings</i>
-            Settings
+          <button onClick={toggleMenu} title="View your wizarding achievements">
+            <i className="material-icons">emoji_events</i>
+            Achievements
           </button>
           
-          <button onClick={toggleMenu}>
+          <button onClick={toggleMenu} title="View your spell history">
             <i className="material-icons">history</i>
-            History
+            Spell History
           </button>
           
-          <button className="logout-btn" onClick={handleLogout}>
+          <button className="logout-btn" onClick={handleLogout} title="Leave Hogwarts">
             <i className="material-icons">exit_to_app</i>
-            Sign Out
+            Leave Hogwarts
           </button>
         </div>
       )}
