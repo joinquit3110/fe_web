@@ -45,11 +45,11 @@ const UserProfile = () => {
         if (response.ok) {
           const { avatarUrl } = await response.json();
           setAvatar(avatarUrl);
-          setSuccess('Avatar updated successfully!');
+          setSuccess('Cập nhật ảnh đại diện thành công!');
           updateProfile({ ...user, avatar: avatarUrl });
         }
       } catch (err) {
-        setError('Could not update avatar');
+        setError('Không thể cập nhật ảnh đại diện');
       } finally {
         URL.revokeObjectURL(previewUrl);
       }
@@ -72,7 +72,7 @@ const UserProfile = () => {
         school: form.school,
         grade: form.grade
       });
-      setSuccess('Profile updated successfully!');
+      setSuccess('Cập nhật thông tin thành công!');
     } catch (err) {
       setError(err.message);
     }
@@ -81,12 +81,12 @@ const UserProfile = () => {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (form.newPassword !== form.confirmPassword) {
-      setError('New passwords do not match!');
+      setError('Mật khẩu mới không khớp!');
       return;
     }
     try {
       await updatePassword(form.currentPassword, form.newPassword);
-      setSuccess('Password changed successfully!');
+      setSuccess('Đổi mật khẩu thành công!');
       setForm({ ...form, currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       setError(err.message);
@@ -114,7 +114,7 @@ const UserProfile = () => {
       {isOpen && (
         <div className="profile-dropdown">
           <div className="profile-header">
-            <h3>Account Information</h3>
+            <h3>Thông tin tài khoản</h3>
             <button className="close-btn" onClick={() => setIsOpen(false)}>
               <i className="material-icons">close</i>
             </button>
@@ -136,7 +136,7 @@ const UserProfile = () => {
               {!imagePreview && !avatar && (
                 <div className="avatar-placeholder">
                   <i className="material-icons">add_a_photo</i>
-                  <span>Upload Image</span>
+                  <span>Tải ảnh lên</span>
                 </div>
               )}
               <input
@@ -151,12 +151,12 @@ const UserProfile = () => {
                 <i className="material-icons">photo_camera</i>
               </div>
             </div>
-            <small className="upload-hint">Click to change avatar</small>
+            <small className="upload-hint">Bấm để thay đổi ảnh đại diện</small>
           </div>
 
           <form onSubmit={handleProfileUpdate} className="profile-form">
             <div className="form-group">
-              <label>Full Name</label>
+              <label>Họ và tên</label>
               <input
                 type="text"
                 value={form.fullName}
@@ -164,7 +164,7 @@ const UserProfile = () => {
               />
             </div>
             <div className="form-group">
-              <label>School</label>
+              <label>Trường</label>
               <input
                 type="text"
                 value={form.school}
@@ -172,20 +172,20 @@ const UserProfile = () => {
               />
             </div>
             <div className="form-group">
-              <label>Grade</label>
+              <label>Lớp</label>
               <input
                 type="text"
                 value={form.grade}
                 onChange={(e) => setForm({...form, grade: e.target.value})}
               />
             </div>
-            <button type="submit" className="update-btn">Update Profile</button>
+            <button type="submit" className="update-btn">Cập nhật thông tin</button>
           </form>
 
           <form onSubmit={handlePasswordChange} className="password-form">
-            <h4>Change Password</h4>
+            <h4>Đổi mật khẩu</h4>
             <div className="form-group">
-              <label>Current Password</label>
+              <label>Mật khẩu hiện tại</label>
               <input
                 type="password"
                 value={form.currentPassword}
@@ -193,7 +193,7 @@ const UserProfile = () => {
               />
             </div>
             <div className="form-group">
-              <label>New Password</label>
+              <label>Mật khẩu mới</label>
               <input
                 type="password"
                 value={form.newPassword}
@@ -201,19 +201,19 @@ const UserProfile = () => {
               />
             </div>
             <div className="form-group">
-              <label>Confirm New Password</label>
+              <label>Xác nhận mật khẩu mới</label>
               <input
                 type="password"
                 value={form.confirmPassword}
                 onChange={(e) => setForm({...form, confirmPassword: e.target.value})}
               />
             </div>
-            <button type="submit" className="change-password-btn">Change Password</button>
+            <button type="submit" className="change-password-btn">Đổi mật khẩu</button>
           </form>
 
           <button onClick={logout} className="logout-btn">
             <i className="material-icons">logout</i>
-            Logout
+            Đăng xuất
           </button>
         </div>
       )}

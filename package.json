@@ -1,26 +1,18 @@
 {
   "name": "inequality-latex-app",
   "version": "1.0.0",
-  "private": true,
   "description": "Dự án React hiển thị bất phương trình với LaTeX realtime và vẽ hệ trục Oxy",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "deploy": "git add . && git commit -m \"Update UI and features\" && git push origin master",
-    "postchange": "powershell -ExecutionPolicy Bypass -File ../auto-git.ps1"
+    "build": "CI=false react-scripts build"
   },
   "dependencies": {
     "@matejmazur/react-katex": "^3.1.3",
-    "axios": "^1.8.4",
-    "better-react-mathjax": "^2.1.0",
     "katex": "^0.16.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-latex-next": "^2.2.0",
-    "react-router-dom": "^7.4.1",
     "react-scripts": "5.0.1"
   },
   "author": "Your Name",

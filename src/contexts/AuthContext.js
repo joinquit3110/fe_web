@@ -2,13 +2,12 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-// Replace API_URL with relative path
+// Thay API_URL thành đường dẫn tương đối
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     // Check local storage for token
@@ -16,49 +15,35 @@ export const AuthProvider = ({ children }) => {
     const userData = localStorage.getItem('user');
     if (token && userData) {
       setUser(JSON.parse(userData));
-      setIsAuthenticated(true);
     }
     setLoading(false);
   }, []);
 
   const login = async (username, password) => {
     try {
-      if (!username || !password) {
-        throw new Error('Please enter your username and password');
-      }
+      console.log('Attempting login...');
 
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password })
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Incorrect username or password');
-        } else if (response.status === 500) {
-          throw new Error('Server error, please try again later');
-        } else {
-          throw new Error('An error occurred, please try again');
-        }
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
       }
 
       const data = await response.json();
-      
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-        setIsAuthenticated(true);
-        return data;
-      } else {
-        throw new Error('Invalid token');
-      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+      return data;
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error(error.message || 'Server connection error');
+      throw new Error('Lỗi kết nối máy chủ');
     }
   };
 
@@ -87,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error('Register error:', error);
-      throw new Error(error.message || 'Server connection error');
+      throw new Error(error.message || 'Lỗi kết nối máy chủ');
     }
   };
 
@@ -95,7 +80,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    setIsAuthenticated(false);
   };
 
   const updateProfile = async (profileData) => {
@@ -147,8 +131,7 @@ export const AuthProvider = ({ children }) => {
       logout, 
       loading,
       updateProfile,
-      updatePassword,
-      isAuthenticated
+      updatePassword 
     }}>
       {children}
     </AuthContext.Provider>
