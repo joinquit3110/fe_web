@@ -267,7 +267,7 @@ const getRandomColor = () => {
 };
 
 // Main component
-const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq }, ref) => {
+const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq }, ref) => {
   // Canvas and state for positioning
   const canvasRef = useRef(null);
   const [width, setWidth] = useState(CANVAS_CONFIG.width);
@@ -1045,6 +1045,58 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     },
     resetView: resetView
   }));
+
+  // Function to draw a point
+  const drawPoint = (ctx, point) => {
+    const { x, y } = toCanvasCoords(point.x, point.y);
+    
+    ctx.save();
+    
+    // Draw point with magical glow effect
+    ctx.shadowColor = point.color || '#D3A625';
+    ctx.shadowBlur = 10;
+    
+    ctx.fillStyle = point.color || '#D3A625';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw coordinates if showing
+    if (point.showCoords) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '14px "Cinzel", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`(${point.x.toFixed(1)}, ${point.y.toFixed(1)})`, x, y - 15);
+    }
+    
+    ctx.restore();
+  };
+  
+  // Function to handle point selection
+  const handlePointSelection = (point) => {
+    // Check if this point satisfies all the inequalities
+    const satisfiesAll = inequalities.every(ineq => 
+      checkPointInInequality(ineq, point)
+    );
+    
+    // Add the point with appropriate color
+    const newPoint = {
+      x: point.x,
+      y: point.y,
+      color: satisfiesAll ? '#2E7D32' : '#AA3333',
+      showCoords: true
+    };
+    
+    setPoints(prev => [...prev, newPoint]);
+    
+    // Set quiz message based on result
+    if (satisfiesAll) {
+      setQuizMessage(`Correct! Point (${point.x.toFixed(1)}, ${point.y.toFixed(1)}) satisfies all inequalities.`);
+    } else {
+      setQuizMessage(`Point (${point.x.toFixed(1)}, ${point.y.toFixed(1)}) doesn't satisfy all inequalities.`);
+    }
+  };
 
   return (
     <div className="coordinate-plane-container">
