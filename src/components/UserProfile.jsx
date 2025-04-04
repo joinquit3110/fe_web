@@ -19,6 +19,14 @@ const UserProfile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
+  
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   if (!user) return null;
   
@@ -69,14 +77,6 @@ const UserProfile = () => {
       }
     }
   };
-
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
