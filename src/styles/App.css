@@ -1539,3 +1539,414 @@ button:hover::after {
     padding: 10px 10px 10px 40px;
   }
 }
+
+/* Auth Container Styles */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.auth-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--background-dark) 0%, var(--background-light) 100%);
+  z-index: -1;
+}
+
+.hogwarts-silhouette {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30vh;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" fill="none"><path d="M0,300 L1200,300 L1200,250 C1100,260 1050,200 1000,220 C950,240 900,200 850,210 C800,220 750,240 700,230 C650,220 600,180 550,190 C500,200 450,250 400,240 C350,230 300,190 250,200 C200,210 150,250 100,230 C50,210 0,250 0,250 L0,300 Z" fill="rgba(0,0,0,0.5)"/><path d="M600,250 L600,100 L620,100 L620,200 L650,200 L650,80 L670,80 L670,180 L700,180 L700,40 L720,40 L720,150 L750,150 L750,10 L770,10 L770,120 L800,120 L800,30 L820,30 L820,100 L850,100 L850,50 L870,50 L870,80 L900,80 L900,70 L920,70 L920,90 L950,90 L950,80 L970,80 L970,100 L1000,100 L1000,90 L1020,90 L1020,110 L1050,110 L1050,100 L1070,100 L1070,120 L1100,120 L1100,110 L1120,110 L1120,130 L1150,130 L1150,120 L1170,120 L1170,140 L1200,140 L1200,250 C1100,260 1050,200 1000,220 C950,240 900,200 850,210 C800,220 750,240 700,230 C650,220 600,180 550,190 C500,200 450,250 400,240 C350,230 300,190 250,200 C200,210 150,250 100,230 C50,210 0,250 0,250 L0,200 L30,200 L30,120 L50,120 L50,170 L80,170 L80,100 L100,100 L100,150 L130,150 L130,80 L150,80 L150,130 L180,130 L180,60 L200,60 L200,110 L230,110 L230,40 L250,40 L250,90 L280,90 L280,20 L300,20 L300,70 L330,70 L330,50 L350,50 L350,100 L380,100 L380,70 L400,70 L400,120 L430,120 L430,90 L450,90 L450,140 L480,140 L480,110 L500,110 L500,160 L530,160 L530,130 L550,130 L550,180 L580,180 L580,150 L600,150 L600,250 Z" fill="rgba(0,0,0,0.7)"/></svg>');
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% auto;
+  opacity: 0.8;
+}
+
+.auth-box {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  backdrop-filter: blur(10px);
+  width: 100%;
+  max-width: 420px;
+  transform: translateY(0);
+  animation: floatIn 0.6s ease-out;
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(211, 166, 37, 0.3);
+}
+
+.auth-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 20px;
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(211, 166, 37, 0.8), rgba(116, 0, 1, 0.8));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.hogwarts-crest {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,5 L95,30 L95,70 L50,95 L5,70 L5,30 Z" fill="%23740001" stroke="%23D3A625" stroke-width="2"/><text x="50" y="60" font-family="serif" font-size="40" text-anchor="middle" fill="%23D3A625">H</text></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+  animation: crestGlow 3s infinite alternate;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-header h2 {
+  color: var(--primary-color);
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.auth-header .subtitle {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.auth-form .form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.auth-form .form-group i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  transition: color 0.3s ease;
+  pointer-events: none;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 12px 12px 12px 45px;
+  border: 2px solid #e1e1e1;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  box-sizing: border-box;
+}
+
+.auth-form input:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(211, 166, 37, 0.1);
+}
+
+.auth-form input:focus + i {
+  color: var(--secondary-color);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(45deg, var(--primary-color), #8B0000);
+  color: var(--secondary-color);
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Cinzel', serif;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(116, 0, 1, 0.4);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.submit-btn i {
+  transition: transform 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) i {
+  transform: translateX(4px);
+}
+
+.loading-spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(211, 166, 37, 0.3);
+  border-top: 3px solid var(--secondary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.auth-footer p {
+  color: #666;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.switch-btn {
+  color: var(--primary-color);
+  font-weight: 500;
+  margin-left: 6px;
+  transition: color 0.3s ease;
+}
+
+.switch-btn:hover {
+  color: var(--secondary-color);
+  text-decoration: underline;
+}
+
+@keyframes crestGlow {
+  0% {
+    filter: drop-shadow(0 0 2px rgba(211, 166, 37, 0.5));
+  }
+  100% {
+    filter: drop-shadow(0 0 10px rgba(211, 166, 37, 0.8));
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 480px) {
+  .auth-box {
+    padding: 1.5rem;
+    margin: 10px;
+    width: 95%;
+  }
+  
+  .auth-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .hogwarts-crest {
+    width: 60px;
+    height: 60px;
+  }
+
+  .auth-form input {
+    font-size: 14px;
+    padding: 10px 10px 10px 40px;
+  }
+}
+
+/* Navbar Styles */
+.navbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(10, 10, 42, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  border-bottom: 1px solid rgba(211, 166, 37, 0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.8rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logo {
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.navbar-logo:hover {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(211, 166, 37, 0.5);
+}
+
+.navbar-logo-crest {
+  width: 36px;
+  height: 36px;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,5 L95,30 L95,70 L50,95 L5,70 L5,30 Z" fill="%23740001" stroke="%23D3A625" stroke-width="2"/><text x="50" y="60" font-family="serif" font-size="40" text-anchor="middle" fill="%23D3A625">H</text></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.navbar-toggle {
+  display: none;
+  color: var(--secondary-color);
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.navbar-item {
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.navbar-item:hover {
+  background: rgba(211, 166, 37, 0.1);
+  color: var(--secondary-color);
+}
+
+.navbar-item i {
+  font-size: 1.2rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--secondary-color);
+}
+
+.avatar-placeholder {
+  color: var(--secondary-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.logout-button {
+  background: none;
+  border: 1px solid var(--primary-color);
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.logout-button:hover {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+}
+
+.login-button {
+  background: linear-gradient(45deg, var(--primary-color), #8B0000);
+  color: var(--secondary-color);
+  border-radius: 8px;
+  padding: 0.5rem 1.2rem;
+  font-weight: 500;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(116, 0, 1, 0.4);
+  background: linear-gradient(45deg, #8B0000, var(--primary-color));
+}
+
+/* Mobile Responsive Navbar */
+@media (max-width: 768px) {
+  .navbar-content {
+    padding: 0.8rem 1rem;
+  }
+  
+  .navbar-toggle {
+    display: block;
+  }
+  
+  .navbar-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 42, 0.95);
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+    align-items: flex-start;
+    transform: translateY(-100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(211, 166, 37, 0.2);
+  }
+  
+  .navbar-menu.active {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .navbar-item {
+    width: 100%;
+  }
+  
+  .navbar-logo span {
+    font-size: 1.2rem;
+  }
+}
