@@ -1,133 +1,125 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { parseInequality } from '../utils/parser';
 
 const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [latexPreview, setLatexPreview] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [isValid, setIsValid] = useState(false);
+  const [input, setInput] = useState('');
+  const [isValid, setIsValid] = useState(true);
+  const [error, setError] = useState('');
+  const [showLatex, setShowLatex] = useState(false);
+  const inputRef = useRef(null);
 
-  // Validate input and update LaTeX preview
+  // Focus input on component mount
   useEffect(() => {
-    if (inputValue.trim()) {
-      try {
-        const result = parseInequality(inputValue);
-        if (result && result.latex) {
-          setLatexPreview(`\\(${result.latex}\\)`);
-          setErrorMsg('');
-          setIsValid(true);
-        } else {
-          setLatexPreview('');
-          setErrorMsg('Invalid inequality format');
-          setIsValid(false);
-        }
-      } catch (error) {
-        setLatexPreview('');
-        setErrorMsg('Invalid inequality format');
-        setIsValid(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  // Validate input and update LaTeX preview when input changes
+  useEffect(() => {
+    if (!input.trim()) {
+      setShowLatex(false);
+      setIsValid(true);
+      setError('');
+      return;
+    }
+
+    const result = parseInequality(input);
+    
+    if (result) {
+      setIsValid(true);
+      setError('');
+      setShowLatex(true);
+      
+      // Trigger MathJax rendering
+      if (window.MathJax && window.MathJax.typeset) {
+        setTimeout(() => {
+          window.MathJax.typeset();
+        }, 100);
       }
     } else {
-      setLatexPreview('');
-      setErrorMsg('');
       setIsValid(false);
+      setError('Invalid inequality format');
+      setShowLatex(false);
     }
-    
-    // Trigger MathJax to reprocess the LaTeX only if valid
-    if (window.MathJax && isValid) {
-      setTimeout(() => {
-        if (window.MathJax && window.MathJax.typeset) {
-          window.MathJax.typeset();
-        }
-      }, 100);
-    }
-  }, [inputValue, isValid]);
+  }, [input]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!inputValue.trim() || !isValid) {
-      setErrorMsg('Please enter a valid inequality');
+    if (!input.trim()) {
+      setQuizMessage('Please enter an inequality spell!');
       return;
     }
     
-    try {
-      const result = addInequality(inputValue);
-      
-      if (result === true) {
-        // Success - inequality added
-        setQuizMessage('Inequality spell cast successfully!');
-        setInputValue('');
-        setLatexPreview('');
-        setIsValid(false);
-      } else if (result === 'EXISTS') {
-        // Duplicate inequality
-        setErrorMsg('This spell is already in your collection!');
-        setQuizMessage('This inequality is already in your collection.');
-      } else {
-        // Error adding inequality
-        setErrorMsg('Invalid inequality format. Try examples like x+y<0 or 2x-3y≤4');
-        setQuizMessage('Incorrect spell format. Try examples like: x+y<0, 2x-3y≥1');
-      }
-    } catch (error) {
-      console.error('Error casting spell:', error);
-      setErrorMsg('Error casting spell');
-      setQuizMessage('Error in casting inequality spell.');
+    const result = addInequality(input);
+    
+    if (result === true) {
+      // Successfully added
+      setInput('');
+      setShowLatex(false);
+    } else if (result === 'EXISTS') {
+      setQuizMessage('This inequality spell already exists!');
+    } else {
+      setQuizMessage('Invalid inequality format. Try examples like: x+y<0, 2x-3y+1≥0');
     }
   };
 
   const handleReset = () => {
     resetAll();
-    setInputValue('');
-    setLatexPreview('');
-    setErrorMsg('');
-    setIsValid(false);
-    setQuizMessage('All spells cleared. Ready for new inequality magic!');
+    setInput('');
+    setShowLatex(false);
   };
 
   return (
-    <div className="inequality-form">
-      <h3>Cast Your Spell</h3>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="inequality-input">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter an inequality (e.g., x+y<0, 2x-3y≥1)"
-            className={`styled-input ${errorMsg ? 'input-error' : ''}`}
-          />
-          
-          {/* LaTeX Preview Box - only show if valid */}
-          <div className="latex-preview-container">
-            {isValid && latexPreview ? (
-              <div className="latex-preview" dangerouslySetInnerHTML={{ __html: latexPreview }}></div>
-            ) : (
-              <div className="latex-preview empty">Valid LaTeX preview will appear here</div>
-            )}
+    <div className="inequality-input-container">
+      <form onSubmit={handleSubmit} className="input-container">
+        <div className="input-row">
+          <div className="input-group">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Cast your inequality spell (e.g., x+y<0)"
+              className={!isValid && input ? 'error' : ''}
+              autoComplete="off"
+            />
+            {error && <div className="error-message">{error}</div>}
           </div>
-          
-          {/* Always show error message if present */}
-          {errorMsg && <div className="error-message">{errorMsg}</div>}
           
           <div className="button-group">
             <button 
               type="submit" 
               className="spellcast-button"
-              disabled={!inputValue.trim() || !isValid}
+              disabled={!isValid || !input.trim()}
             >
               Cast Spell
             </button>
-            
             <button 
-              type="button"
-              className="reset-button finite-button"
+              type="button" 
+              className="finite-button"
               onClick={handleReset}
+              title="Reset All (Clear All Inequalities)"
             >
               Finite Incantatem
             </button>
           </div>
         </div>
+        
+        {/* LaTeX Preview Area - only show for valid input */}
+        {showLatex && isValid && input.trim() && (
+          <div className="latex-preview-container">
+            <div className="latex-preview">
+              <span>Preview: </span>
+              <span 
+                dangerouslySetInnerHTML={{ 
+                  __html: `\\(${parseInequality(input)?.latex}\\)` 
+                }}
+              />
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

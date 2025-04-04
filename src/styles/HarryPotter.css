@@ -342,25 +342,30 @@ button, input, select, textarea {
 
 /* Coordinate container and plane */
 .coordinate-container {
-  width: 100%;
   position: relative;
-  margin: 15px 0;
-  min-height: 500px;
-  padding: 15px;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: rgba(14, 26, 64, 0.7);
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
 }
 
 .coordinate-plane {
+  position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 400px;
-  padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(211, 166, 37, 0.3);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
   overflow: hidden;
-  position: relative;
 }
 
 .coordinate-plane-wrapper {
@@ -369,6 +374,9 @@ button, input, select, textarea {
   height: 100%;
   max-width: 100%;
   margin: 0 auto;
+  box-shadow: 0 0 10px rgba(211, 166, 37, 0.3);
+  border: 2px solid rgba(211, 166, 37, 0.5);
+  border-radius: 8px;
 }
 
 /* Inequalities List */
@@ -379,50 +387,46 @@ button, input, select, textarea {
 }
 
 .scroll-container {
-  max-height: 200px;
+  max-height: 250px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 10px;
-  margin-top: 10px;
   scrollbar-width: thin;
-  scrollbar-color: #d3a625 rgba(14, 26, 64, 0.5);
+  scrollbar-color: rgba(211, 166, 37, 0.6) rgba(14, 26, 64, 0.3);
 }
 
 .scroll-container::-webkit-scrollbar {
   width: 8px;
 }
 
-.scroll-container::-webkit-scrollbar-thumb {
-  background-color: var(--secondary-color);
-  border-radius: 4px;
+.scroll-container::-webkit-scrollbar-track {
+  background: rgba(14, 26, 64, 0.3);
+  border-radius: 10px;
 }
 
-.scroll-container::-webkit-scrollbar-track {
-  background-color: var(--panel-bg);
-  border-radius: 4px;
+.scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(211, 166, 37, 0.6);
+  border-radius: 10px;
 }
 
 .inequality-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px;
-  margin-bottom: 8px;
   border-left: 4px solid;
+  padding: 10px 15px;
+  margin-bottom: 10px;
   background: rgba(14, 26, 64, 0.6);
-  border-radius: 4px;
-  transition: all 0.3s;
-  animation: item-appear 0.5s ease-out;
-  animation-delay: calc(var(--index) * 0.1s);
+  border-radius: 0 5px 5px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease forwards;
+  animation-delay: calc(0.1s * var(--index, 0));
   opacity: 0;
-  animation-fill-mode: forwards;
-  word-break: break-word;
-  width: 100%;
 }
 
 .inequality-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transform: translateX(5px);
+  background: rgba(211, 166, 37, 0.2);
 }
 
 .delete-icon {
@@ -1761,33 +1765,32 @@ canvas {
 /* Reset View Button */
 .reset-view-button {
   position: absolute;
-  bottom: 15px;
-  right: 15px;
+  top: 10px;
+  right: 10px;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 5px;
-  background: rgba(14, 26, 64, 0.8);
-  color: #d3a625;
-  border: 2px solid #d3a625;
-  border-radius: 8px;
   padding: 8px 12px;
-  font-family: 'Cinzel', serif;
-  font-weight: bold;
+  background: linear-gradient(to bottom, #1A472A, #0d2618);
+  color: white;
+  border: 1px solid #2E7D32;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
   z-index: 10;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
 }
 
 .reset-view-button:hover {
-  background: rgba(211, 166, 37, 0.15);
+  background: linear-gradient(to bottom, #2E7D32, #1A472A);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 12px rgba(46, 125, 50, 0.5);
 }
 
-.reset-view-button i {
-  font-size: 18px;
+.reset-view-button .material-icons {
+  font-size: 16px;
 }
 
 /* LaTeX preview container */
@@ -1844,113 +1847,102 @@ canvas {
 
 /* Reset button styling for Finite Incantatem */
 .finite-button {
-  background: linear-gradient(to bottom, #0e1a40, #1a2a5a);
-  color: #fff;
-  border: 2px solid #d3a625;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 10px 15px;
   font-family: 'Cinzel', serif;
   font-weight: bold;
+  font-size: 14px;
+  background: linear-gradient(45deg, #740001, #a52a2a);
+  color: white;
+  border: none;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.3s;
-  flex: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 10px rgba(116, 0, 1, 0.5);
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  text-shadow: 0 0 5px rgba(211, 166, 37, 0.8);
 }
 
-.finite-button:before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(45deg, #d3a625, transparent, #d3a625);
-  z-index: -1;
-  opacity: 0.5;
-  filter: blur(5px);
-  animation: finite-glow 3s ease-in-out infinite alternate;
-}
-
-@keyframes finite-glow {
-  0% {
-    opacity: 0.3;
-    filter: blur(3px);
-  }
-  100% {
-    opacity: 0.7;
-    filter: blur(7px);
-  }
+.finite-button::before {
+  content: "↺"; /* Reset icon */
+  font-size: 16px;
+  margin-right: 8px;
 }
 
 .finite-button:hover {
-  background: linear-gradient(to bottom, #1a2a5a, #0e1a40);
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 15px rgba(211, 166, 37, 0.7);
 }
 
 .finite-button:active {
-  transform: translateY(0);
+  transform: translateY(1px);
+}
+
+/* Add a subtle glow effect */
+.finite-button::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: radial-gradient(
+    circle at center,
+    rgba(211, 166, 37, 0.4),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.finite-button:hover::after {
+  opacity: 1;
+}
+
+/* Make region buttons more interactive */
+canvas {
+  cursor: crosshair;
+}
+
+/* Interactive button style for drawButton function (update this in JS code) */
+.region-button {
+  background: linear-gradient(to bottom, rgba(14, 26, 64, 0.8), rgba(14, 26, 64, 0.9));
+  border: 2px solid;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-.spellcast-button {
-  flex: 2;
+.region-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(to bottom, rgba(211, 166, 37, 0.2), rgba(14, 26, 64, 0.9));
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .coordinate-plane-wrapper {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-  }
-  
-  canvas {
-    max-width: 100%;
-    height: auto;
-  }
-  
-  .reset-view-button {
-    bottom: 10px;
-    right: 10px;
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  
-  .reset-view-button i {
-    font-size: 16px;
-  }
-  
-  .latex-preview {
-    font-size: 16px;
-  }
-  
-  .button-group {
-    flex-direction: column;
-  }
-  
-  .spellcast-button, .finite-button {
-    width: 100%;
-  }
-}
-
-/* Mobile responsive fixes */
+/* Responsive adjustments */
 @media (max-width: 768px) {
   .coordinate-container {
     min-height: 350px;
-  }
-
-  .coordinate-plane {
-    min-height: 300px;
+    padding: 15px;
   }
   
-  .coordinate-plane-wrapper {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
+  .reset-view-button {
+    font-size: 12px;
+    padding: 6px 10px;
   }
   
-  /* ... existing mobile styles ... */
+  .finite-button {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
 } 

@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { computeIntersection } from "../utils/geometry";
-import { parseInequality } from "../utils/parser";
+import { parseInequality, resetLabelCounter } from "../utils/parser";
 
 // Constants
 const CANVAS_CONFIG = {
@@ -62,7 +62,7 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.fillRect(0, 0, width, height);
   
   // Draw grid
-  ctx.strokeStyle = "rgba(211, 166, 37, 0.2)";
+  ctx.strokeStyle = "rgba(14, 26, 64, 0.1)";
   ctx.lineWidth = 0.5;
 
   // Calculate units to draw
@@ -169,7 +169,7 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   }
 };
 
-// Sửa lại hàm fillHalfPlane
+// Update fillHalfPlane function to use solution region properly
 const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   const [p1, p2] = getBoundaryPoints(eq);
   const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
@@ -190,18 +190,20 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   const val = eq.a * testPoint.x + eq.b * testPoint.y + eq.c;
   const isGreaterType = eq.operator === ">" || eq.operator === ">=";
   
+  // Determine which region is the correct solution based on solutionType
   let fillDir;
-  if (eq.operator === '<' || eq.operator === '<=') {
-    // Keep existing logic for < and <=
+  
+  if (eq.solutionType === 'btn1') {
+    // If Region 1 is the solution
     fillDir = {
-      x: (val > 0) !== isGreaterType ? normalX : -normalX,
-      y: (val > 0) !== isGreaterType ? normalY : -normalY
+      x: -normalX,
+      y: -normalY
     };
   } else {
-    // For > and >=
+    // If Region 2 is the solution
     fillDir = {
-      x: (val > 0) === isGreaterType ? normalX : -normalX,
-      y: (val > 0) === isGreaterType ? normalY : -normalY
+      x: normalX,
+      y: normalY
     };
   }
   
@@ -281,6 +283,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   const [inputCoords, setInputCoords] = useState({ x: '', y: '' });
   const [activeLines, setActiveLines] = useState([]);
   const [points, setPoints] = useState([]);
+  const [labelCounter, setLabelCounter] = useState(1); // Counter for inequality labels
 
   const originMemo = useMemo(() => ({
     x: canvasWidth / 2,
@@ -603,6 +606,10 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     setSelectedPoint(null);
     setActiveInequality(null);
     setParsedInequalities([]);
+    setLabelCounter(1);
+    
+    // Reset the label counter in parser.js
+    resetLabelCounter();
     
     // Add magical reset animation
     if (canvasRef.current) {
@@ -731,28 +738,98 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
   }, [origin, zoom, isPointMode, handlePointSelection, solutionButtons, setInequalities, setQuizMessage]);
 
-  // Sửa lại phần redraw để kiểm tra trùng
+  // Fill the non-solution region with red color
+  const fillNonSolutionRegion = useCallback((ctx, eq, toCanvasCoords) => {
+    if (!eq.solved) return;
+    
+    const [p1, p2] = getBoundaryPoints(eq);
+    const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    
+    // Calculate vectors
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    const normalX = -dy / length;
+    const normalY = dx / length;
+    
+    // Determine which region is NOT the solution based on solutionType
+    let fillDir;
+    
+    if (eq.solutionType === 'btn1') {
+      // If Region 1 is the solution, fill Region 2 (the opposite)
+      fillDir = {
+        x: normalX,
+        y: normalY
+      };
+    } else {
+      // If Region 2 is the solution, fill Region 1 (the opposite)
+      fillDir = {
+        x: -normalX,
+        y: -normalY
+      };
+    }
+    
+    // Create a region to fill by extending far in the direction of the non-solution region
+    const big = 10000;
+    const farPoint = {
+      x: mid.x + fillDir.x * big,
+      y: mid.y + fillDir.y * big
+    };
+    
+    // Convert to canvas coordinates
+    const canvasP1 = toCanvasCoords(p1);
+    const canvasP2 = toCanvasCoords(p2);
+    const canvasFar = toCanvasCoords(farPoint);
+    
+    // Create a path for the non-solution region
+    ctx.beginPath();
+    ctx.moveTo(canvasP1.x, canvasP1.y);
+    ctx.lineTo(canvasP2.x, canvasP2.y);
+    ctx.lineTo(canvasFar.x, canvasFar.y);
+    ctx.closePath();
+    
+    // Fill with a reddish color to indicate non-solution region
+    ctx.fillStyle = 'rgba(255, 100, 100, 0.2)';
+    ctx.fill();
+  }, []);
+
+  // Sửa lại phần redraw để hiển thị miền nghiệm và không phải miền nghiệm
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     
     // Clear canvas and draw background
-    ctx.clearRect(0, 0, CANVAS_CONFIG.width, CANVAS_CONFIG.height);
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, CANVAS_CONFIG.width, CANVAS_CONFIG.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
     // Draw grid and axes
-    drawGridAndAxes(ctx, CANVAS_CONFIG.width, CANVAS_CONFIG.height, zoom, origin);
+    drawGridAndAxes(ctx, canvasWidth, canvasHeight, zoom, origin);
     
-    // Draw solved inequality regions
+    // Draw inequality regions in this order:
+    // 1. Non-solution regions (red)
+    // 2. Solution regions (green)
+    // 3. Grid/axes again to ensure visibility
+    // 4. Boundary lines
+    
+    // Draw non-solution regions
     inequalities.forEach(eq => {
       if (eq.solved) {
-        fillHalfPlane(ctx, eq, eq.color, toCanvasCoords);
+        fillNonSolutionRegion(ctx, eq, toCanvasCoords);
       }
     });
     
-    drawGridAndAxes(ctx, CANVAS_CONFIG.width, CANVAS_CONFIG.height, zoom, origin);
+    // Draw solution regions
+    inequalities.forEach(eq => {
+      if (eq.solved) {
+        fillHalfPlane(ctx, eq, eq.color, toCanvasCoords, 0.3);
+      }
+    });
+    
+    // Redraw grid and axes to ensure visibility
+    drawGridAndAxes(ctx, canvasWidth, canvasHeight, zoom, origin);
     
     // Draw boundaries with enhanced highlight
     inequalities.forEach(eq => {
@@ -766,8 +843,8 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         ctx.strokeStyle = 'rgba(255, 140, 0, 0.3)'; // Orange glow
         ctx.lineWidth = 8;
         const [p1, p2] = getBoundaryPoints(eq);
-        const cp1 = toCanvasCoords(p1.x, p1.y);
-        const cp2 = toCanvasCoords(p2.x, p2.y);
+        const cp1 = toCanvasCoords(p1);
+        const cp2 = toCanvasCoords(p2);
         ctx.moveTo(cp1.x, cp1.y);
         ctx.lineTo(cp2.x, cp2.y);
         ctx.stroke();
@@ -775,28 +852,30 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       
       // Draw main line
       ctx.beginPath();
-      ctx.strokeStyle = isActive ? '#ff6d00' : (isHighlighted ? '#0077cc' : '#666');
-      ctx.lineWidth = isActive ? 4 : (isHighlighted ? 2 : 1);
+      ctx.strokeStyle = isActive ? '#ff6d00' : (isHighlighted ? '#0077cc' : eq.color || '#666');
+      ctx.lineWidth = isActive ? 4 : (isHighlighted ? 3 : 2);
       
       const [p1, p2] = getBoundaryPoints(eq);
-      const cp1 = toCanvasCoords(p1.x, p1.y);
-      const cp2 = toCanvasCoords(p2.x, p2.y);
+      const cp1 = toCanvasCoords(p1);
+      const cp2 = toCanvasCoords(p2);
       
       ctx.moveTo(cp1.x, cp1.y);
       ctx.lineTo(cp2.x, cp2.y);
       ctx.stroke();
 
-      // Draw endpoints for active lines
-      if (isActive) {
-        ctx.beginPath();
-        ctx.fillStyle = '#ff6d00';
-        ctx.arc(cp1.x, cp1.y, 3, 0, 2 * Math.PI);
-        ctx.arc(cp2.x, cp2.y, 3, 0, 2 * Math.PI);
-        ctx.fill();
-      }
+      // Draw label
+      ctx.font = "bold italic 16px 'STIX Two Math', 'Times New Roman', serif";
+      ctx.fillStyle = eq.color || '#666';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      const midpoint = {
+        x: (cp1.x + cp2.x) / 2,
+        y: (cp1.y + cp2.y) / 2
+      };
+      ctx.fillText(eq.label, midpoint.x + 10, midpoint.y - 10);
     });
     
-    // Draw boundaries and buttons
+    // Draw buttons for inequalities
     const buttons = inequalities.map(eq => {
       if (!eq) return null;
       return drawInequality(ctx, eq);
@@ -804,22 +883,21 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     
     setSolutionButtons(buttons);
 
-    // Draw intersection points with enhanced visibility
+    // Draw intersection points
     intersectionPoints.forEach(pt => {
-      const cpt = toCanvasCoords(pt.x, pt.y);
+      const cpt = toCanvasCoords(pt);
       
-      // Draw glow effect for active point
+      // Draw point glow based on status
       if (pt.status === POINT_STATUS.ACTIVE) {
         ctx.beginPath();
         ctx.fillStyle = 'rgba(255, 109, 0, 0.3)';
         ctx.arc(cpt.x, cpt.y, 8, 0, 2 * Math.PI);
         ctx.fill();
       }
-
-      // Draw glow effect for solved points
+      
       if (pt.status === POINT_STATUS.SOLVED) {
         ctx.beginPath();
-        ctx.fillStyle = 'rgba(46, 125, 50, 0.2)'; // Light green glow
+        ctx.fillStyle = 'rgba(46, 125, 50, 0.2)';
         ctx.arc(cpt.x, cpt.y, 12, 0, 2 * Math.PI);
         ctx.fill();
       }
@@ -830,24 +908,22 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       
       switch (pt.status) {
         case POINT_STATUS.SOLVED:
-          // Draw point
-          ctx.fillStyle = '#2e7d32'; // Darker green
+          ctx.fillStyle = '#2e7d32';
           ctx.fill();
           
-          // Draw coordinates without background
           ctx.font = "bold 14px 'STIX Two Math', 'Times New Roman', serif";
           ctx.textAlign = 'left';
           ctx.textBaseline = 'bottom';
           const text = `(${pt.correct.x.toFixed(1)}, ${pt.correct.y.toFixed(1)})`;
-          ctx.fillStyle = '#1b5e20'; // Darker green for text
+          ctx.fillStyle = '#1b5e20';
           ctx.fillText(text, cpt.x + 8, cpt.y - 8);
           break;
         case POINT_STATUS.ACTIVE:
-          ctx.fillStyle = '#ff6d00'; // Deeper orange
+          ctx.fillStyle = '#ff6d00';
           ctx.fill();
           break;
         case POINT_STATUS.PARTIAL:
-          ctx.fillStyle = '#c62828'; // Darker red
+          ctx.fillStyle = '#c62828';
           ctx.fill();
           break;
         default:
@@ -855,7 +931,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
           ctx.fill();
       }
     });
-  }, [inequalities, zoom, drawInequality, toCanvasCoords, intersectionPoints, origin, activeLines, hoveredEq]);
+  }, [inequalities, zoom, drawInequality, toCanvasCoords, fillNonSolutionRegion, canvasWidth, canvasHeight, intersectionPoints, origin, activeLines, hoveredEq]);
 
   useEffect(() => {
     redraw();
@@ -1040,7 +1116,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     return false;
   };
 
-  // Update useImperativeHandle with the handleAddInequality function
+  // Update useImperativeHandle with modified handleAddInequality function
   useImperativeHandle(ref, () => ({
     handleAddInequality: (inputText) => {
       const result = parseInequality(inputText);
@@ -1049,18 +1125,30 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         return false;
       }
       
-      if (inequalities.some(ineq => ineq.label === result.label)) {
+      // Check if inequality already exists
+      if (inequalities.some(ineq => 
+        Math.abs(ineq.a - result.a) < EPSILON && 
+        Math.abs(ineq.b - result.b) < EPSILON && 
+        Math.abs(ineq.c - result.c) < EPSILON &&
+        ineq.operator === result.operator
+      )) {
         return 'EXISTS';
       }
       
-      // Add inequality to list
-      setInequalities(prev => [...prev, result]);
+      // Add inequality to list with label from parser
+      setInequalities(prev => [...prev, {
+        ...result,
+        color: getRandomColor()
+      }]);
       
       // Clear any previous message
       setQuizMessage('');
       return true;
     },
-    resetView: resetView
+    resetView: () => {
+      resetView();
+      setInequalities([]);
+    }
   }));
 
   // Draw button function (moved outside of component)

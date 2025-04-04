@@ -13,6 +13,19 @@ const hogwartsColors = [
 // Track used colors to avoid repeats
 let usedColors = [];
 
+// Counter for sequential inequality labels
+let nextLabelNumber = 1;
+
+// Reset the label counter
+export const resetLabelCounter = () => {
+  nextLabelNumber = 1;
+};
+
+// Get the next sequential label
+export const getNextLabel = () => {
+  return `d_{${nextLabelNumber++}}`;
+};
+
 export const parseInequality = (input) => {
   // Normalize input: remove spaces, fix double operators
   input = input.replace(/\s+/g, '')
@@ -53,8 +66,8 @@ export const parseInequality = (input) => {
       }
       latex += ` ${getLatexOperator(operator)} 0`;
 
-      // Create unique label
-      const label = `I${Math.floor(Math.random() * 1000)}`;
+      // Get next sequential label
+      const label = getNextLabel();
 
       return {
         a: variable === 'x' ? coef : 0,
@@ -93,8 +106,8 @@ export const parseInequality = (input) => {
         latex += ` ${b > 0 ? '+' : '-'} ${Math.abs(b)}`;
       }
 
-      // Create unique label
-      const label = `I${Math.floor(Math.random() * 1000)}`;
+      // Get next sequential label
+      const label = getNextLabel();
 
       return {
         a,
@@ -139,8 +152,8 @@ export const parseInequality = (input) => {
   // Add operator with proper LaTeX symbols
   latex += ` ${getLatexOperator(operator)} 0`;
 
-  // Create unique label
-  const label = `I${Math.floor(Math.random() * 1000)}`;
+  // Get next sequential label
+  const label = getNextLabel();
 
   return { 
     a, 
