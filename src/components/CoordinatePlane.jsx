@@ -675,146 +675,73 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     });
   };
   
-  // Update the mouse interaction functions to include magical effects
-  const handleMouseDown = (e) => {
-    e.preventDefault();
+  // Define proper mouse event handlers
+  const handleMouseDown = useCallback((e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Add magical effect on click
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      ctx.save();
-      ctx.fillStyle = 'rgba(211, 166, 37, 0.1)';
-      ctx.beginPath();
-      ctx.arc(x, y, 30, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // Original mouse down code
     setDragging(true);
     setLastPos({ x, y });
     
     // Handle point mode if active
     if (isPointMode) {
-      // Convert canvas coordinates to graph coordinates
       const worldX = (x - origin.x) / zoom;
       const worldY = (origin.y - y) / zoom;
-      
       handlePointSelection({ x: worldX, y: worldY });
-      return;
     }
-  };
+  }, [origin, zoom, isPointMode, handlePointSelection]);
 
-  // Cập nhật handleCanvasClick để xử lý việc bấm vào điểm đang chọn
-  const handleCanvasClick = useCallback((e) => {
+  const handleMouseMove = useCallback((e) => {
+    if (!dragging) return;
+    
     const rect = canvasRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-  
-    // Check for point clicks
-    const clickedPoint = intersectionPoints.find(pt => {
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Pan the view
+    setOrigin(prev => ({
+      x: prev.x + (x - lastPos.x),
+      y: prev.y + (y - lastPos.y)
+    }));
+    
+    setLastPos({ x, y });
+    
+    // Check for hovering over intersection points
+    const hoveredPoint = intersectionPoints.find(pt => {
       const cpt = toCanvasCoords(pt.x, pt.y);
       const distance = Math.sqrt(
-        Math.pow(clickX - cpt.x, 2) + 
-        Math.pow(clickY - cpt.y, 2)
+        Math.pow(x - cpt.x, 2) + 
+        Math.pow(y - cpt.y, 2)
       );
       return distance < 8;
     });
-  
-    if (clickedPoint) {
-      // If clicking on currently active point -> deselect
-      if (activePoint && 
-          Math.abs(clickedPoint.x - activePoint.x) < EPSILON && 
-          Math.abs(clickedPoint.y - activePoint.y) < EPSILON) {
-        setActivePoint(null);
-        setActiveLines([]);
-        return;
-      }
-  
-      // Find lines forming this point
-      const lines = parsedInequalities.filter(eq => {
-        if (!eq.solved) return false;
-        return Math.abs(eq.a * clickedPoint.x + eq.b * clickedPoint.y + eq.c) < EPSILON;
-      });
-  
-      // Handle solved and unsolved points differently
-      if (clickedPoint.status === POINT_STATUS.SOLVED) {
-        // For solved points, only highlight lines and don't change point status
-        setActivePoint(clickedPoint);
-        setActiveLines(lines);
-      } else {
-        // For unsolved points, show input fields and change status to active
-        setActivePoint(clickedPoint);
-        setActiveLines(lines);
-        setInputCoords({ x: '', y: '' });
-        setQuizMessage('Please enter the coordinates of the point:');
-        
-        setIntersectionPoints(points => points.map(pt => {
-          if (Math.abs(pt.x - clickedPoint.x) < EPSILON && 
-              Math.abs(pt.y - clickedPoint.y) < EPSILON) {
-            return { ...pt, status: POINT_STATUS.ACTIVE };
-          }
-          return pt;
-        }));
-      }
-      return;
+    
+    setHoveredIntersection(hoveredPoint);
+  }, [dragging, lastPos, intersectionPoints, toCanvasCoords]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  const handleCanvasClick = useCallback((e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Convert canvas coordinates to graph coordinates
+    const worldX = (x - origin.x) / zoom;
+    const worldY = (origin.y - y) / zoom;
+    
+    // Handle point selection
+    if (isPointMode) {
+      handlePointSelection({ x: worldX, y: worldY });
     }
-  
-    // Reset when clicking elsewhere
-    setActivePoint(null);
-    setActiveLines([]);
-    
-    // If no point was clicked, handle solution buttons
-    if (!activePoint) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-    
-      // Check solution buttons click
-      for (const btn of solutionButtons) {
-        const { eq } = btn;
-        
-        // Check Miền 1
-        if (
-          clickX >= btn.btn1.x &&
-          clickX <= btn.btn1.x + btn.btn1.width &&
-          clickY >= btn.btn1.y &&
-          clickY <= btn.btn1.y + btn.btn1.height
-        ) {
-          const isCorrect = btn.btn1.sol;
-          setQuizMessage(isCorrect ? "Correct! Well done!" : "Incorrect, please try again!");
-          if (isCorrect) {
-            setInequalities(prev =>
-              prev.map(it => it.label === eq.label ? 
-                { ...it, solved: true } : it)
-            );
-          }
-          return;
-        }
-    
-        // Check Miền 2
-        if (
-          clickX >= btn.btn2.x &&
-          clickX <= btn.btn2.x + btn.btn2.width &&
-          clickY >= btn.btn2.y &&
-          clickY <= btn.btn2.y + btn.btn2.height
-        ) {
-          const isCorrect = btn.btn2.sol;
-          setQuizMessage(isCorrect ? "Correct! Well done!" : "Incorrect, please try again!");
-          if (isCorrect) {
-            setInequalities(prev =>
-              prev.map(it => it.label === eq.label ? 
-                { ...it, solved: true } : it)
-            );
-          }
-          return;
-        }
-      }
-    }
-  }, [intersectionPoints, toCanvasCoords, activePoint, inequalities, solutionButtons, setActivePoint, setActiveLines, setQuizMessage, setIntersectionPoints, setInequalities]);
+  }, [origin, zoom, isPointMode, handlePointSelection]);
 
   // Sửa lại phần redraw để kiểm tra trùng
   const redraw = useCallback(() => {
@@ -1028,67 +955,6 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       return val < EPSILON;
     }
   };
-
-  const handleMouseMove = useCallback((e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-  
-    // Convert mouse coordinates to mathematical coordinates
-    const mathCoords = {
-      x: (mouseX - origin.x) / zoom,
-      y: (origin.y - mouseY) / zoom
-    };
-  
-    let foundEq = null;
-  
-    // Check each inequality
-    for (const eq of inequalities) {
-      const [p1, p2] = getBoundaryPoints(eq);
-      const pt1 = toCanvasCoords(p1.x, p1.y);
-      const pt2 = toCanvasCoords(p2.x, p2.y);
-  
-      // Check if mouse is near line
-      const A = mouseX - pt1.x;
-      const B = mouseY - pt1.y;
-      const C = pt2.x - pt1.x;
-      const D = pt2.y - pt1.y;
-  
-      const dot = A * C + B * D;
-      const len_sq = C * C + D * D;
-      const param = len_sq !== 0 ? dot / len_sq : -1;
-  
-      let distance;
-      if (param < 0) {
-        distance = Math.sqrt(A * A + B * B);
-      } else if (param > 1) {
-        distance = Math.sqrt((mouseX - pt2.x) * (mouseX - pt2.x) + 
-                           (mouseY - pt2.y) * (mouseY - pt2.y));
-      } else {
-        distance = Math.abs(A * D - B * C) / Math.sqrt(len_sq);
-      }
-  
-      // Check if mouse is in solution region or near line
-      const isNearLine = distance < 5;
-      const isInRegion = eq.solved && isPointInSolutionRegion(mathCoords, eq);
-  
-      if (isNearLine || isInRegion) {
-        foundEq = eq;
-        break;
-      }
-    }
-  
-    // Update hoveredEq and cursor
-    setHoveredEq(foundEq);
-    const isOverButton = solutionButtons.some(btn => 
-      (mouseX >= btn.btn1.x && mouseX <= btn.btn1.x + btn.btn1.width &&
-       mouseY >= btn.btn1.y && mouseY <= btn.btn1.y + btn.btn1.height) ||
-      (mouseX >= btn.btn2.x && mouseX <= btn.btn2.x + btn.btn2.width &&
-       mouseY >= btn.btn2.y && mouseY <= btn.btn2.y + btn.btn2.height)
-    );
-    
-    canvasRef.current.style.cursor = isOverButton || foundEq ? 'pointer' : 'default';
-  }, [inequalities, toCanvasCoords, zoom, origin, solutionButtons, setHoveredEq]);
 
   // Cập nhật hàm findValidIntersections
   const findValidIntersections = useCallback(() => {
