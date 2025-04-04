@@ -29,17 +29,16 @@
   --cabin-color: #031f2f;
   --cabin-color-shadow: rgba(0,41,66,.1);
   --light-color: #f5e14d;
+  --background-dark: #1a0f0f;
+  --background-light: #2d1f1f;
 }
 
 body {
   margin: 0;
   font-family: 'Cinzel', serif;
-  background-color: var(--background-color);
+  background: linear-gradient(135deg, var(--background-dark) 0%, var(--background-light) 100%);
   color: var(--text-color);
-  background-image: url('../assets/hogwarts-bg.jpg');
-  background-size: cover;
-  background-attachment: fixed;
-  background-position: center;
+  min-height: 100vh;
 }
 
 /* Mobile-first styles */
