@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import InequalityInput from "./components/InequalityInput";
-import CoordinatePlane from "./components/CoordinatePlane";
+import EnhancedInequalityInput from "./components/EnhancedInequalityInput";
+import EnhancedCoordinatePlane from "./components/EnhancedCoordinatePlane";
+import InequalityList from "./components/InequalityList";
+import { resetLabelCounter } from "./utils/inequalityAlgorithms";
 import './styles/App.css';
 import './styles/HarryPotter.css';
+import './styles/enhanced-inequality.css';
 
 // Import images
 import sunImage from './assets/sun.png';
@@ -23,10 +26,9 @@ const AppContent = () => {
     type: "info" 
   });
   const [hoveredEq, setHoveredEq] = useState(null);
-  const [quizMessage, setQuizMessage] = useState("");
-  const [selectedPoint, setSelectedPoint] = useState(null);
   const coordinatePlaneRef = useRef(null);
   
+  // Handle adding a new inequality
   const handleAddInequality = (newInequality) => {
     const result = coordinatePlaneRef.current?.handleAddInequality(newInequality);
     
@@ -46,10 +48,11 @@ const AppContent = () => {
     return result;
   };
 
+  // Handle reset all
   const resetAll = () => {
     coordinatePlaneRef.current?.resetView();
     setInequalities([]);
-    setQuizMessage('');
+    resetLabelCounter();
     setHoveredEq(null);
     setMessage({
       text: "The magical plane has been reset. Ready for your next spell!",
@@ -57,17 +60,33 @@ const AppContent = () => {
     });
   };
 
-  useEffect(() => {
-    if (quizMessage) {
-      setMessage({
-        text: quizMessage,
-        type: quizMessage.includes('Incorrect') || quizMessage.includes('Error') 
-          ? 'error' 
-          : (quizMessage.includes('Correct') ? 'success' : 'info')
-      });
-    }
-  }, [quizMessage]);
+  // Handle setting quiz/feedback messages
+  const setQuizMessage = (text) => {
+    if (!text) return;
+    
+    const type = 
+      text.includes('Incorrect') || text.includes('Error') 
+        ? 'error' 
+        : (text.includes('Correct') ? 'success' : 'info');
+    
+    setMessage({ text, type });
+  };
 
+  // Handle deleting an inequality
+  const handleDeleteInequality = (inequality) => {
+    setInequalities(prev => prev.filter(item => item.label !== inequality.label));
+    setMessage({
+      text: `Inequality ${inequality.label} removed from the magical plane.`,
+      type: "info"
+    });
+  };
+
+  // Handle showing region selection buttons
+  const handleShowRegionSelect = (inequalityLabel) => {
+    coordinatePlaneRef.current?.showRegionButtons(inequalityLabel);
+  };
+
+  // Render MathJax whenever inequalities change
   useEffect(() => {
     if (window.MathJax && window.MathJax.typeset) {
       setTimeout(() => {
@@ -75,16 +94,6 @@ const AppContent = () => {
       }, 100);
     }
   }, [inequalities]);
-
-  const handleListItemHover = (equation) => {
-    setHoveredEq(equation);
-  };
-
-  const handleDelete = (e, inequality) => {
-    e.stopPropagation();
-    setInequalities(prev => prev.filter(item => item.label !== inequality.label));
-    setQuizMessage('');
-  };
   
   if (!user) {
     return <Login />;
@@ -137,13 +146,13 @@ const AppContent = () => {
       </header>
       
       <div className="hogwarts-content mobile-friendly">
-        {/* 1. Control Panel - Cast Spell at top */}
+        {/* 1. Enhanced Inequality Input - Cast Spell */}
         <div className="control-panel wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
           <div className="control-panel-content">
             <h2>Professor's Spellbook</h2>
-            <InequalityInput 
+            <EnhancedInequalityInput 
               addInequality={handleAddInequality}
               setQuizMessage={setQuizMessage}
               resetAll={resetAll}
@@ -153,16 +162,16 @@ const AppContent = () => {
 
         {/* 2. Message Box - Always show a message */}
         <div className={`message-box ${message.type}`}>
-          <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
+          <div className="message-content">{message.text}</div>
         </div>
 
-        {/* 3. Coordinate Plane */}
+        {/* 3. Enhanced Coordinate Plane */}
         <div className="coordinate-container wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
           <h2>Magical Coordinate Plane</h2>
           <div className="coordinate-plane">
-            <CoordinatePlane
+            <EnhancedCoordinatePlane
               ref={coordinatePlaneRef}
               inequalities={inequalities}
               setInequalities={setInequalities}
@@ -173,43 +182,17 @@ const AppContent = () => {
           </div>
         </div>
 
-        {/* 4. Inequalities List at bottom */}
+        {/* 4. Inequality List */}
         <div className="inequalities-list wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
           <h2>Spells Collection</h2>
-          <div className="scroll-container">
-            {inequalities.length > 0 ? (
-              inequalities.map((ineq, index) => (
-                <div
-                  key={index}
-                  className="inequality-item"
-                  style={{ 
-                    borderLeftColor: ineq.color,
-                    background: hoveredEq?.label === ineq.label ? 'rgba(211, 166, 37, 0.2)' : 'rgba(14, 26, 64, 0.6)',
-                    '--index': index
-                  }}
-                  onMouseEnter={() => handleListItemHover(ineq)}
-                  onMouseLeave={() => handleListItemHover(null)}
-                >
-                  <span 
-                    className="latex-content"
-                    dangerouslySetInnerHTML={{ 
-                      __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
-                    }}
-                  />
-                  <span 
-                    className="delete-icon material-icons"
-                    onClick={(e) => handleDelete(e, ineq)}
-                  >
-                    delete
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="empty-spells">Cast your first inequality spell!</div>
-            )}
-          </div>
+          <InequalityList
+            inequalities={inequalities}
+            onDelete={handleDeleteInequality}
+            onHover={setHoveredEq}
+            onShowRegionSelect={handleShowRegionSelect}
+          />
         </div>
       </div>
       
