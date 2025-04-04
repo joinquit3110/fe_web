@@ -1,106 +1,97 @@
-﻿import React, { useState, useRef } from 'react';
-import Latex from 'react-latex-next';
-import 'katex/dist/katex.min.css';
-import { parseInequality } from '../utils/parser';
+﻿import React, { useState } from 'react';
 
-const InequalityInput = ({ 
-  addInequality, 
-  setQuizMessage,
-  resetAll 
-}) => {
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const inputRef = useRef(null);
+const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
+  const [inputValue, setInputValue] = useState('');
+  const [quizMode, setQuizMode] = useState(false);
+  const [pointsMode, setPointsMode] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
+    
+    if (!inputValue.trim()) {
+      setQuizMessage('Please enter an inequality');
+      return;
+    }
+    
     try {
-      const trimmedInput = input.trim();
+      const result = addInequality(inputValue);
       
-      if (!trimmedInput) {
-        setQuizMessage('Vui lòng nhập bất phương trình');
-        return;
+      if (result === 'EXISTS') {
+        setQuizMessage('This inequality already exists');
+      } else if (result) {
+        setInputValue('');
+      } else {
+        setQuizMessage('Incorrect format. Try examples like: x+y<0, 2x-3y+1≥0, x>-2');
       }
-
-      const parsed = parseInequality(trimmedInput);
-      
-      if (parsed.error) {
-        setQuizMessage('Định dạng không hợp lệ!');
-        setIsLoading(false);
-        return;
-      }
-
-      const success = addInequality({
-        ...parsed,
-        solved: false,
-        latex: parsed.latex
-      });
-
-      if (success) {
-        setInput('');
-        inputRef.current?.focus();
-      }
-    } catch (err) {
-      setQuizMessage('Có lỗi xảy ra, vui lòng thử lại');
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Error adding inequality:', error);
+      setQuizMessage('An error occurred. Please try again.');
     }
   };
 
-  const formatLatex = (input) => {
-    if (!input) return '';
-    return `$${input
-      .replace(/<=>/g, '\\Leftrightarrow')
-      .replace(/<=/g, '\\leq')
-      .replace(/>=/g, '\\geq')
-      .replace(/</g, '<')
-      .replace(/>/g, '>')
-      .replace(/\*/g, '\\cdot') // Thêm xử lý ký tự nhân
-      .trim()}$`;
+  const toggleQuizMode = () => {
+    setQuizMode(prev => !prev);
+    resetAll();
+    if (pointsMode) setPointsMode(false);
+    setQuizMessage('');
+  };
+
+  const togglePointsMode = () => {
+    setPointsMode(prev => !prev);
+    resetAll();
+    if (quizMode) setQuizMode(false);
+    setQuizMessage('');
   };
 
   return (
-    <div className="inequality-input-container">
+    <div className="inequality-input">
+      <h3 className="control-title">Input Inequality</h3>
+      
       <form onSubmit={handleSubmit}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setError('');
-          }}
-          placeholder="Nhập bất phương trình (vd: x + y + 1 > 0)"
-          className={`inequality-input ${error ? 'error' : ''}`}
-          disabled={isLoading}
-        />
-        <div className="buttons-container">
-          <button
-            type="button"
-            className="reset-button"
-            onClick={resetAll}
+        <div className="input-container">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Enter inequality (e.g., x+y<0)"
+            disabled={quizMode || pointsMode}
+            className="inequality-input-field"
+          />
+          <button 
+            type="submit" 
+            className="add-btn"
+            disabled={quizMode || pointsMode}
           >
-            <i className="material-icons" style={{color: '#ffd700'}}>delete_sweep</i>
-            Reset
+            <i className="material-icons">add</i>
           </button>
         </div>
       </form>
-
-      {error && (
-        <div className="error-message" role="alert">
-          {error}
-        </div>
-      )}
-
-      {input && !error && (
-        <div className="latex-preview">
-          <Latex>{formatLatex(input)}</Latex>
-        </div>
-      )}
+      
+      <div className="mode-controls">
+        <button 
+          className={`mode-btn ${quizMode ? 'active' : ''}`} 
+          onClick={toggleQuizMode}
+        >
+          <i className="material-icons">quiz</i> 
+          <span>Quiz Mode</span>
+        </button>
+        
+        <button 
+          className={`mode-btn ${pointsMode ? 'active' : ''}`} 
+          onClick={togglePointsMode}
+        >
+          <i className="material-icons">place</i>
+          <span>Points Mode</span>
+        </button>
+        
+        <button 
+          className="reset-btn" 
+          onClick={resetAll}
+        >
+          <i className="material-icons">refresh</i>
+          <span>Reset</span>
+        </button>
+      </div>
     </div>
   );
 };

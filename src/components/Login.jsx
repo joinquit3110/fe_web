@@ -17,7 +17,7 @@ const Login = () => {
     
     try {
       if (!formData.username || !formData.password) {
-        setError('Vui lòng nhập đầy đủ thông tin');
+        setError('Please enter your username and password');
         return;
       }
 
@@ -27,14 +27,14 @@ const Login = () => {
         await login(formData.username, formData.password);
       } else {
         if (!formData.email) {
-          setError('Vui lòng nhập email');
+          setError('Please enter your email');
           return;
         }
         await register(formData.username, formData.email, formData.password);
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại');
+      setError(err.message || 'An error occurred, please try again');
     }
   };
 
@@ -49,12 +49,20 @@ const Login = () => {
             }} />
           ))}
         </div>
+        <div className="medium-stars">
+          {[...Array(16)].map((_, i) => (
+            <div key={i} className="star" style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`
+            }} />
+          ))}
+        </div>
       </div>
       
       <div className="login-box">
         <div className="login-header">
-          <h2>{isLogin ? 'Chào mừng trở lại!' : 'Tạo tài khoản mới'}</h2>
-          <p className="subtitle">{isLogin ? 'Rất vui được gặp lại bạn' : 'Bắt đầu hành trình học tập của bạn'}</p>
+          <h2>{isLogin ? 'Welcome to Hogwarts' : 'Join Hogwarts School'}</h2>
+          <p className="subtitle">{isLogin ? 'Sign in to continue your magical journey' : 'Register to start your wizarding education'}</p>
         </div>
 
         {error && (
@@ -69,7 +77,7 @@ const Login = () => {
             <i className="material-icons">person</i>
             <input
               type="text"
-              placeholder="Tên đăng nhập"
+              placeholder="Username"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
             />
@@ -91,23 +99,23 @@ const Login = () => {
             <i className="material-icons">lock</i>
             <input
               type="password"
-              placeholder="Mật khẩu"
+              placeholder="Password"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
           </div>
           
           <button type="submit" className="submit-btn">
-            <span>{isLogin ? 'Đăng nhập' : 'Đăng ký'}</span>
+            <span>{isLogin ? 'Sign In' : 'Register'}</span>
             <i className="material-icons">arrow_forward</i>
           </button>
         </form>
         
         <div className="login-footer">
           <p onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
+            {isLogin ? 'Don\'t have an account?' : 'Already have an account?'}
             <span className="switch-btn">
-              {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+              {isLogin ? 'Register Now' : 'Sign In'}
             </span>
           </p>
         </div>

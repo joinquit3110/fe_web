@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import './styles/App.css';
+import './styles/HarryPotter.css';
 
 // Import images
 import sunImage from './assets/sun.png';
@@ -83,7 +84,7 @@ const AppContent = () => {
       </div>
       
       <header className="farm-header">
-        <h1>Học cùng thầy Vĩ <span className="highlight">chỉ điểm 10!</span></h1>
+        <h1>Learning with Professor Vi <span className="highlight">Perfect Score!</span></h1>
       </header>
       
       <div className="farm-content">
@@ -100,19 +101,19 @@ const AppContent = () => {
         <div className="message-box">
           {quizMessage && (
             <div className={`message ${
-              quizMessage.includes('Chính xác') ? 'success' :
-              quizMessage.includes('Sai') || quizMessage.includes('sai') ? 'error' :
-              quizMessage.includes('tồn tại') ? 'warning' :
-              quizMessage.includes('Định dạng') ? 'error' :
-              quizMessage.includes('Vui lòng nhập') ? 'info' :
-              quizMessage.includes('Nhập tọa độ') ? 'info' :
-              quizMessage.includes('đúng') ? 'success' : ''
+              quizMessage.includes('Correct') ? 'success' :
+              quizMessage.includes('Incorrect') || quizMessage.includes('wrong') ? 'error' :
+              quizMessage.includes('exists') ? 'warning' :
+              quizMessage.includes('Format') ? 'error' :
+              quizMessage.includes('Please enter') ? 'info' :
+              quizMessage.includes('Enter coordinate') ? 'info' :
+              quizMessage.includes('correct') ? 'success' : ''
             }`}>
-              {quizMessage.includes('Chính xác') && <i className="material-icons">check_circle</i>}
-              {quizMessage.includes('Sai') && <i className="material-icons">error</i>}
-              {quizMessage.includes('tồn tại') && <i className="material-icons">warning</i>}
-              {quizMessage.includes('Định dạng') && <i className="material-icons">format_clear</i>}
-              {(quizMessage.includes('Vui lòng nhập') || quizMessage.includes('Nhập tọa độ')) && 
+              {quizMessage.includes('Correct') && <i className="material-icons">check_circle</i>}
+              {quizMessage.includes('Incorrect') && <i className="material-icons">error</i>}
+              {quizMessage.includes('exists') && <i className="material-icons">warning</i>}
+              {quizMessage.includes('Format') && <i className="material-icons">format_clear</i>}
+              {(quizMessage.includes('Please enter') || quizMessage.includes('Enter coordinate')) && 
                 <i className="material-icons">info</i>}
               {quizMessage}
             </div>
@@ -120,7 +121,6 @@ const AppContent = () => {
         </div>
 
         <div className="coordinate-container farm-panel">
-          <div className="tree-decoration"></div>
           <div className="coordinate-plane">
             <CoordinatePlane
               ref={coordinatePlaneRef}
@@ -134,15 +134,13 @@ const AppContent = () => {
         </div>
 
         <div className="inequalities-list farm-panel">
-          <div className="cow-decoration"></div>
-          <div className="chicken-decoration"></div>
           {inequalities.map((ineq, index) => (
             <div
               key={index}
               className="inequality-item"
               style={{ 
                 borderLeftColor: ineq.color,
-                background: hoveredEq?.label === ineq.label ? '#fff3e0' : '#fff',
+                background: hoveredEq?.label === ineq.label ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
                 '--index': index // Add animation delay index
               }}
               onMouseEnter={() => handleListItemHover(ineq)}
