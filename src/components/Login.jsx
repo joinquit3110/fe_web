@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/Animations.css';
+import MagicalElements from './MagicalElements';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -68,8 +70,17 @@ const Login = () => {
     }
   };
 
+  const handleCloseError = () => {
+    setError('');
+  };
+
+  const handleCloseSuccess = () => {
+    setSuccess('');
+  };
+
   return (
-    <div className="auth-container">
+    <div className="auth-container wand-cursor">
+      <MagicalElements />
       <div className="auth-background">
         <div className="hogwarts-silhouette"></div>
         <div className="stars">
@@ -94,24 +105,32 @@ const Login = () => {
         </div>
       </div>
       
-      <div className="auth-box">
+      <div className="auth-box magic-sparkle">
         <div className="auth-header">
           <div className="hogwarts-crest"></div>
-          <h2>{isLogin ? 'Welcome to Hogwarts' : 'Enroll at Hogwarts'}</h2>
+          <h2 className="float">{isLogin ? 'Welcome to Hogwarts' : 'Enroll at Hogwarts'}</h2>
           <p className="subtitle">{isLogin ? 'Sign in to begin your journey' : 'Register to become a math wizard'}</p>
         </div>
 
         {error && (
           <div className="error-message">
-            <i className="material-icons">error</i>
-            <span>{error}</span>
+            <i className="material-icons error-icon">error_outline</i>
+            <div className="error-content">
+              <div className="error-title">Authentication Error</div>
+              <div className="error-details">{error}</div>
+            </div>
+            <button className="error-close" onClick={handleCloseError}>×</button>
           </div>
         )}
         
         {success && (
           <div className="success-message">
-            <i className="material-icons">check_circle</i>
-            <span>{success}</span>
+            <i className="material-icons success-icon">check_circle</i>
+            <div className="error-content">
+              <div className="error-title">Success</div>
+              <div className="error-details">{success}</div>
+            </div>
+            <button className="error-close" onClick={handleCloseSuccess}>×</button>
           </div>
         )}
         
@@ -164,7 +183,7 @@ const Login = () => {
             </div>
           )}
           
-          <button type="submit" className="submit-btn" disabled={loading}>
+          <button type="submit" className="submit-btn spell-trail" disabled={loading}>
             {loading ? (
               <div className="loading-spinner-small"></div>
             ) : (

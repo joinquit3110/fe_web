@@ -1,0 +1,386 @@
+/* Harry Potter Themed Animations */
+
+/* Floating Elements */
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Magic Sparkle */
+.magic-sparkle {
+  position: relative;
+}
+
+.magic-sparkle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle, #D3A625 1px, transparent 1px),
+    radial-gradient(circle, #D3A625 1px, transparent 1px),
+    radial-gradient(circle, #D3A625 1px, transparent 1px);
+  background-size: 6px 6px;
+  background-position: 0 0, 3px 3px, 6px 6px;
+  animation: sparkle 3s linear infinite;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0% { 
+    opacity: 0; 
+    transform: scale(0.9) rotate(0deg);
+  }
+  50% { 
+    opacity: 0.5; 
+  }
+  100% { 
+    opacity: 0;
+    transform: scale(1.3) rotate(180deg); 
+  }
+}
+
+/* Wand Cursor */
+.wand-cursor {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M7,4L7,2L9,2L9,4L11,4L11,6L9,6L9,8L7,8L7,6L5,6L5,4L7,4Z M19,8L21,12L19,16L15,16L12,19L11,14L14,11L14,7L19,8Z" fill="%23D3A625"/></svg>') 0 0, auto;
+}
+
+/* Spell Trail */
+.spell-trail {
+  position: relative;
+  overflow: hidden;
+}
+
+.spell-trail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(211, 166, 37, 0.2), 
+    rgba(211, 166, 37, 0.4), 
+    rgba(211, 166, 37, 0.2), 
+    transparent);
+  z-index: 1;
+  animation: spell-cast 2s ease-in-out infinite;
+}
+
+@keyframes spell-cast {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Hogwarts House Colors Glow */
+.gryffindor-glow { box-shadow: 0 0 10px rgba(116, 0, 1, 0.7); }
+.slytherin-glow { box-shadow: 0 0 10px rgba(26, 71, 42, 0.7); }
+.ravenclaw-glow { box-shadow: 0 0 10px rgba(14, 26, 64, 0.7); }
+.hufflepuff-glow { box-shadow: 0 0 10px rgba(236, 185, 57, 0.7); }
+
+/* Magical Icons */
+.hp-icon {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: inline-block;
+  margin: 0 5px;
+  vertical-align: middle;
+}
+
+/* Golden Snitch */
+.icon-snitch {
+  position: relative;
+  display: inline-block;
+}
+
+.icon-snitch::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #D3A625 30%, #916b15 100%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 5px #D3A625;
+  animation: snitch-glow 2s ease-in-out infinite;
+}
+
+.icon-snitch::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 4px;
+  background: linear-gradient(90deg, #D3A625, transparent);
+  transform-origin: left center;
+  transform: rotate(30deg) translateY(-50%);
+  animation: wing-flap 0.2s linear infinite;
+  box-shadow: 0 0 5px rgba(211, 166, 37, 0.5);
+}
+
+.icon-snitch span {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 4px;
+  background: linear-gradient(90deg, #D3A625, transparent);
+  transform-origin: left center;
+  transform: rotate(-30deg) translateY(-50%);
+  animation: wing-flap 0.2s ease-in-out infinite;
+  animation-delay: 0.1s;
+  box-shadow: 0 0 5px rgba(211, 166, 37, 0.5);
+}
+
+@keyframes snitch-glow {
+  0%, 100% { box-shadow: 0 0 5px #D3A625; }
+  50% { box-shadow: 0 0 15px #D3A625; }
+}
+
+@keyframes wing-flap {
+  0%, 100% { transform: rotate(30deg) translateY(-50%); }
+  50% { transform: rotate(50deg) translateY(-50%); }
+}
+
+/* Wand */
+.icon-wand {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, #8B4513, #A86E3D);
+  transform: rotate(45deg);
+}
+
+.icon-wand::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #D3A625;
+  transform: translate(0, -1px);
+  box-shadow: 0 0 5px #D3A625;
+  animation: wand-tip 2s ease-in-out infinite;
+}
+
+@keyframes wand-tip {
+  0%, 100% { box-shadow: 0 0 5px #D3A625; }
+  50% { box-shadow: 0 0 15px #D3A625; }
+}
+
+/* Magic Star */
+.icon-star {
+  position: relative;
+}
+
+.icon-star::before {
+  content: '★';
+  font-size: 20px;
+  color: #D3A625;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-shadow: 0 0 5px rgba(211, 166, 37, 0.7);
+  animation: star-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes star-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.3); }
+}
+
+/* Error Message Enhanced Styling */
+.error-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(116, 0, 1, 0.9);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(211, 166, 37, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 90%;
+  z-index: 1000;
+  text-align: left;
+  animation: error-appear 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes error-appear {
+  0% { 
+    opacity: 0; 
+    transform: translate(-50%, -30px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translate(-50%, 0); 
+  }
+}
+
+.error-message::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M30,10 L70,10 L90,50 L70,90 L30,90 L10,50 Z" stroke="%23D3A625" stroke-width="2" fill="none"/></svg>') center/contain no-repeat;
+  opacity: 0.1;
+  z-index: -1;
+  animation: rotate 10s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 24px;
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+.error-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.error-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 16px;
+  color: #D3A625;
+}
+
+.error-details {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 20px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.error-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Success Message Enhanced Styling */
+.success-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 71, 42, 0.9);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(211, 166, 37, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 90%;
+  z-index: 1000;
+  text-align: left;
+  animation: success-appear 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes success-appear {
+  0% { 
+    opacity: 0; 
+    transform: translate(-50%, -30px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translate(-50%, 0); 
+  }
+}
+
+.success-icon {
+  font-size: 24px;
+  animation: success-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes success-pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.floating-elements {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.floating-element {
+  position: absolute;
+  opacity: 0.6;
+  animation: float-around 20s linear infinite;
+}
+
+@keyframes float-around {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
+} 

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { InequalityProvider } from './contexts/InequalityContext';
 import './styles/App.css';
+import './styles/Animations.css';
 
 // Components
 import Navbar from './components/Navbar';
@@ -11,7 +12,6 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
-import CastleBackground from './components/CastleBackground';
 
 function App() {
   return (
@@ -19,7 +19,6 @@ function App() {
       <AuthProvider>
         <InequalityProvider>
           <div className="app-container">
-            <CastleBackground />
             <Navbar />
             <Routes>
               <Route path="/login" element={<Login />} />
