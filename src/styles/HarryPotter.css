@@ -1332,7 +1332,7 @@ h2 {
 }
 
 .hogwarts-app {
-  background-image: url('/background.jpg');
+  background-image: url('https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?auto=format&fit=crop&q=80');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
