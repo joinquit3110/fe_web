@@ -18,8 +18,10 @@ import UserProfile from './components/UserProfile';
 const AppContent = () => {
   const { user } = useAuth();
   const [inequalities, setInequalities] = useState([]);
-  const [quizMessage, setQuizMessage] = useState('');
+  const [message, setMessage] = useState({ text: "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality.", type: "info" });
   const [hoveredEq, setHoveredEq] = useState(null);
+  const [quizMessage, setQuizMessage] = useState("");
+  const [selectedPoint, setSelectedPoint] = useState(null);
   const coordinatePlaneRef = useRef(null);
   
   const handleAddInequality = (newInequality) => {
@@ -93,8 +95,8 @@ const AppContent = () => {
         <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
       </header>
       
-      <div className="hogwarts-content">
-        {/* Control Panel */}
+      <div className="hogwarts-content mobile-friendly">
+        {/* 1. Control Panel - Cast Spell at top */}
         <div className="control-panel wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
@@ -108,30 +110,12 @@ const AppContent = () => {
           </div>
         </div>
 
-        {/* Message Box */}
-        <div className="message-box">
-          {quizMessage && (
-            <div className={`message ${
-              quizMessage.includes('Correct') ? 'success' :
-              quizMessage.includes('Incorrect') || quizMessage.includes('wrong') ? 'error' :
-              quizMessage.includes('exists') ? 'warning' :
-              quizMessage.includes('Format') ? 'error' :
-              quizMessage.includes('Please enter') ? 'info' :
-              quizMessage.includes('Enter coordinate') ? 'info' :
-              quizMessage.includes('correct') ? 'success' : ''
-            }`}>
-              {quizMessage.includes('Correct') && <i className="material-icons">check_circle</i>}
-              {quizMessage.includes('Incorrect') && <i className="material-icons">error</i>}
-              {quizMessage.includes('exists') && <i className="material-icons">warning</i>}
-              {quizMessage.includes('Format') && <i className="material-icons">format_clear</i>}
-              {(quizMessage.includes('Please enter') || quizMessage.includes('Enter coordinate')) && 
-                <i className="material-icons">info</i>}
-              {quizMessage}
-            </div>
-          )}
+        {/* 2. Message Box */}
+        <div className={`message-box ${message.type}`}>
+          <div className="message-content">{message.text}</div>
         </div>
 
-        {/* Coordinate Plane */}
+        {/* 3. Coordinate Plane */}
         <div className="coordinate-container wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
@@ -148,7 +132,7 @@ const AppContent = () => {
           </div>
         </div>
 
-        {/* Inequalities List */}
+        {/* 4. Inequalities List at bottom */}
         <div className="inequalities-list wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
@@ -168,6 +152,7 @@ const AppContent = () => {
                   onMouseLeave={() => handleListItemHover(null)}
                 >
                   <span 
+                    className="latex-content"
                     dangerouslySetInnerHTML={{ 
                       __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
                     }}

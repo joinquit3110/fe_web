@@ -268,34 +268,177 @@ const getRandomColor = () => {
 
 // Main component
 const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq }, ref) => {
-  // Canvas and state for positioning
   const canvasRef = useRef(null);
-  const [width, setWidth] = useState(CANVAS_CONFIG.width);
-  const [height, setHeight] = useState(CANVAS_CONFIG.height);
+  const containerRef = useRef(null);
+  
+  const [canvasWidth, setCanvasWidth] = useState(CANVAS_CONFIG.width);
+  const [canvasHeight, setCanvasHeight] = useState(CANVAS_CONFIG.height);
   const [zoom, setZoom] = useState(CANVAS_CONFIG.defaultZoom);
-  const [origin, setOrigin] = useState({ x: width / 2, y: height / 2 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [points, setPoints] = useState([]);
-  const [pointMode, setPointMode] = useState(false);
-  const [quizMode, setQuizMode] = useState(false);
+  const [origin, setOrigin] = useState({ x: CANVAS_CONFIG.width / 2, y: CANVAS_CONFIG.height / 2 });
+  const [dragging, setDragging] = useState(false);
+  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+  const [parsedInequalities, setParsedInequalities] = useState([]);
+  const [intersectionPoints, setIntersectionPoints] = useState([]);
+  const [hoveredIntersection, setHoveredIntersection] = useState(null);
+  const [isPointMode, setIsPointMode] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [activeInequality, setActiveInequality] = useState(null);
   const [solutionButtons, setSolutionButtons] = useState([]);
-  const [intersectionPoints, setIntersectionPoints] = useState([]); // Store all valid intersection points
-  const [activePoint, setActivePoint] = useState(null); // Currently selected point for input
-  const [inputCoords, setInputCoords] = useState({ x: '', y: '' }); // User input coordinates
-  const [activeLines, setActiveLines] = useState([]); // State to store lines forming the active point
+  const [activePoint, setActivePoint] = useState(null);
+  const [inputCoords, setInputCoords] = useState({ x: '', y: '' });
+  const [activeLines, setActiveLines] = useState([]);
 
   const originMemo = useMemo(() => ({
-    x: width / 2,
-    y: height / 2
-  }), [width, height]); // Empty dependency array since values are constants
+    x: canvasWidth / 2,
+    y: canvasHeight / 2
+  }), [canvasWidth, canvasHeight]);
 
   const toCanvasCoords = useCallback((x, y) => ({
     x: origin.x + x * zoom,
     y: origin.y - y * zoom
   }), [zoom, origin]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const isMobile = window.innerWidth < 768;
+        
+        // For mobile, use full width minus padding
+        const newWidth = isMobile ? 
+          containerWidth - 20 : // 10px padding on each side
+          Math.min(containerWidth, CANVAS_CONFIG.width);
+          
+        // Keep aspect ratio as 1:1
+        setCanvasWidth(newWidth);
+        setCanvasHeight(newWidth);
+        
+        // Update origin accordingly
+        setOrigin({ 
+          x: newWidth / 2, 
+          y: newWidth / 2 
+        });
+      }
+    };
+    
+    // Initial size
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Function to convert canvas coordinates to mathematical coordinates
+  const toMathCoords = useCallback(
+    (x, y) => ({
+      x: (x - origin.x) / zoom,
+      y: (origin.y - y) / zoom,
+    }),
+    [origin, zoom]
+  );
+
+  // Function to convert mathematical coordinates to canvas coordinates
+  const toCanvasCoords = useCallback(
+    (x, y) => ({
+      x: origin.x + x * zoom,
+      y: origin.y - y * zoom,
+    }),
+    [origin, zoom]
+  );
+
+  // Handle touch events for mobile
+  const handleTouchStart = useCallback((e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    setDragging(true);
+    setLastPos({ x: touch.clientX, y: touch.clientY });
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - lastPos.x;
+    const deltaY = touch.clientY - lastPos.y;
+    
+    setOrigin(prevOrigin => ({
+      x: prevOrigin.x + deltaX,
+      y: prevOrigin.y + deltaY
+    }));
+    
+    setLastPos({ x: touch.clientX, y: touch.clientY });
+  }, [dragging, lastPos]);
+
+  const handleTouchEnd = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  // Function to draw a point with hover effect
+  const drawPoint = useCallback((ctx, x, y, mathX, mathY, size = 6, color = '#D3A625', isHovered = false, showCoordinates = false) => {
+    // Draw glow effect if hovered
+    if (isHovered) {
+      ctx.shadowColor = 'rgba(211, 166, 37, 0.8)';
+      ctx.shadowBlur = 15;
+    }
+    
+    // Draw the point
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#0E1A40';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    
+    // Show coordinates if needed
+    if (showCoordinates) {
+      ctx.font = '14px "Cinzel", serif';
+      ctx.fillStyle = '#D3A625';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      
+      // Format coordinates to 2 decimal places if needed
+      const formatCoord = (num) => {
+        if (Number.isInteger(num)) return num.toString();
+        return num.toFixed(2);
+      };
+      
+      ctx.fillText(
+        `(${formatCoord(mathX)}, ${formatCoord(mathY)})`, 
+        x + 10, 
+        y - 10
+      );
+    }
+  }, []);
+
+  // Function to handle point selection
+  const handlePointSelection = useCallback((point) => {
+    setSelectedPoint(point);
+    
+    // Check if the point satisfies all inequalities
+    if (parsedInequalities.length > 0) {
+      const allSatisfied = parsedInequalities.every(eq => 
+        checkPointInInequality(eq, point)
+      );
+      
+      if (allSatisfied) {
+        setQuizMessage("Correct! This point satisfies all inequalities.");
+      } else {
+        setQuizMessage("Incorrect. This point does not satisfy all inequalities.");
+      }
+    }
+  }, [parsedInequalities, setSelectedPoint, setQuizMessage]);
 
   // Sửa lại phần vẽ trong drawInequality
   const drawInequality = useCallback((ctx, eq) => {
@@ -465,22 +608,21 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   const resetView = () => {
     setZoom(CANVAS_CONFIG.defaultZoom);
     setOrigin({
-      x: width / 2, 
-      y: height / 2
+      x: canvasWidth / 2, 
+      y: canvasHeight / 2
     });
-    setIsDragging(false);
-    setPointMode(false);
-    setQuizMode(false);
+    setDragging(false);
+    setIsPointMode(false);
     setSelectedPoint(null);
     setActiveInequality(null);
-    setPoints([]);
+    setParsedInequalities([]);
     
     // Add magical reset animation
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       ctx.fillStyle = 'rgba(211, 166, 37, 0.2)';
       ctx.beginPath();
-      ctx.arc(width/2, height/2, Math.max(width, height), 0, Math.PI * 2);
+      ctx.arc(canvasWidth/2, canvasHeight/2, Math.max(canvasWidth, canvasHeight), 0, Math.PI * 2);
       ctx.fill();
       
       setTimeout(() => {
@@ -495,20 +637,20 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
     // Draw grid and axes
-    drawGridAndAxes(ctx, width, height, zoom, origin);
+    drawGridAndAxes(ctx, canvasWidth, canvasHeight, zoom, origin);
     
     // Draw all inequalities
-    inequalities.forEach(ineq => {
+    parsedInequalities.forEach(ineq => {
       const isHovered = hoveredEq?.label === ineq.label;
       drawInequality(ctx, ineq, isHovered);
     });
     
     // Draw points if any
-    points.forEach(point => {
-      drawPoint(ctx, point);
+    intersectionPoints.forEach(point => {
+      drawPoint(ctx, point.x, point.y, point.x, point.y, 6, point.color, point.status === POINT_STATUS.ACTIVE || point.status === POINT_STATUS.SOLVED);
     });
   };
   
@@ -531,11 +673,11 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
 
     // Original mouse down code
-    setIsDragging(true);
-    setDragStart({ x, y });
+    setDragging(true);
+    setLastPos({ x, y });
     
     // Handle point mode if active
-    if (pointMode) {
+    if (isPointMode) {
       // Convert canvas coordinates to graph coordinates
       const worldX = (x - origin.x) / zoom;
       const worldY = (origin.y - y) / zoom;
@@ -572,7 +714,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       }
   
       // Find lines forming this point
-      const lines = inequalities.filter(eq => {
+      const lines = parsedInequalities.filter(eq => {
         if (!eq.solved) return false;
         return Math.abs(eq.a * clickedPoint.x + eq.b * clickedPoint.y + eq.c) < EPSILON;
       });
@@ -1098,53 +1240,70 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
   };
 
+  // Handle touch events for mobile
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      setIsDragging(true);
+      setDragStart({ x, y });
+      
+      // Handle point mode if active
+      if (pointMode) {
+        // Convert canvas coordinates to graph coordinates
+        const worldX = (x - origin.x) / zoom;
+        const worldY = (origin.y - y) / zoom;
+        
+        handlePointSelection({ x: worldX, y: worldY });
+        return;
+      }
+    }
+  };
+  
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 1 && isDragging) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // Pan the view
+      setOrigin(prev => ({
+        x: prev.x + (x - dragStart.x),
+        y: prev.y + (y - dragStart.y)
+      }));
+      
+      setDragStart({ x, y });
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   return (
-    <div className="coordinate-plane-container">
+    <div 
+      className="coordinate-plane-wrapper"
+      ref={containerRef}
+    >
       <canvas
         ref={canvasRef}
-        width={CANVAS_CONFIG.width}
-        height={CANVAS_CONFIG.height}
-        onClick={handleCanvasClick}
+        width={canvasWidth}
+        height={canvasHeight}
+        onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
-        style={{
-          border: "1px solid #ccc",
-          cursor: "default",
-          marginLeft: "10px",
-          backgroundColor: "#ffffff"
-        }}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none' }}
       />
-      {activePoint && (
-        <div className="coordinate-input-below">
-          <span>(</span>
-          <div className="coordinate-box">
-            <input 
-              value={inputCoords.x}
-              onChange={e => setInputCoords(prev => ({ ...prev, x: e.target.value }))}
-              className={
-                inputCoords.x === '' ? '' :
-                Number(inputCoords.x).toFixed(1) === activePoint.correct.x.toFixed(1) 
-                  ? 'correct' 
-                  : 'incorrect'
-              }
-            />
-          </div>
-          <span>;</span>
-          <div className="coordinate-box">
-            <input 
-              value={inputCoords.y}
-              onChange={e => setInputCoords(prev => ({ ...prev, y: e.target.value }))}
-              className={
-                inputCoords.y === '' ? '' :
-                Number(inputCoords.y).toFixed(1) === activePoint.correct.y.toFixed(1) 
-                  ? 'correct' 
-                  : 'incorrect'
-              }
-            />
-          </div>
-          <span>)</span>
-          <button onClick={handleCheckCoordinates}>Check</button>
-        </div>
-      )}
     </div>
   );
 });

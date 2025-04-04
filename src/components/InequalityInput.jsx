@@ -1,102 +1,80 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { parseInequality } from '../utils/parser';
 
-const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
+const InequalityInput = ({ onSpellCast }) => {
   const [inputValue, setInputValue] = useState('');
-  const [quizMode, setQuizMode] = useState(false);
-  const [pointsMode, setPointsMode] = useState(false);
+  const [latexPreview, setLatexPreview] = useState('');
+
+  useEffect(() => {
+    // Update the LaTeX preview whenever the input changes
+    if (inputValue.trim()) {
+      try {
+        const result = parseInequality(inputValue);
+        if (result && result.latex) {
+          setLatexPreview(`\\(${result.latex}\\)`);
+        } else {
+          setLatexPreview('');
+        }
+      } catch (error) {
+        setLatexPreview('');
+      }
+    } else {
+      setLatexPreview('');
+    }
+    
+    // Trigger MathJax to reprocess the LaTeX
+    if (window.MathJax) {
+      window.MathJax.typeset();
+    }
+  }, [inputValue]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
     if (!inputValue.trim()) {
-      setQuizMessage('Please enter an inequality spell');
       return;
     }
     
     try {
-      const result = addInequality(inputValue);
+      // Add the inequality to the parent component
+      onSpellCast(inputValue);
       
-      if (result === 'EXISTS') {
-        setQuizMessage('This spell has already been cast');
-      } else if (result) {
-        setInputValue('');
-        setQuizMessage('Spell successfully cast!');
-      } else {
-        setQuizMessage('Incorrect spell format. Try examples like: x+y<0, 2x-3y+1≥0, x>-2');
-      }
+      // Reset the input field and LaTeX preview
+      setInputValue('');
+      setLatexPreview('');
     } catch (error) {
-      console.error('Error adding inequality:', error);
-      setQuizMessage('Your spell misfired. Please try again.');
+      console.error('Error casting spell:', error);
     }
   };
 
-  const toggleQuizMode = () => {
-    setQuizMode(prev => !prev);
-    resetAll();
-    if (pointsMode) setPointsMode(false);
-    setQuizMessage(prev => quizMode ? '' : 'O.W.L. Exam mode activated. Find the correct inequalities!');
-  };
-
-  const togglePointsMode = () => {
-    setPointsMode(prev => !prev);
-    resetAll();
-    if (quizMode) setQuizMode(false);
-    setQuizMessage(prev => pointsMode ? '' : 'Magical Points mode activated. Plot points to create regions.');
-  };
-
   return (
-    <div className="inequality-input">
-      <h3 className="control-title">Spell Formula</h3>
+    <div className="inequality-form">
+      <h3>Cast Your Spell</h3>
       
       <form onSubmit={handleSubmit}>
-        <div className="input-container">
+        <div className="inequality-input">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Cast your inequality spell (e.g., x+y<0)"
-            disabled={quizMode || pointsMode}
-            className="inequality-input-field"
+            placeholder="Enter an inequality (e.g., x+y<0, 2x-3y≥1)"
+            className="styled-input"
           />
+          
+          {/* LaTeX Preview */}
+          {latexPreview && (
+            <div className="latex-preview" dangerouslySetInnerHTML={{ __html: latexPreview }}></div>
+          )}
+          
           <button 
             type="submit" 
-            className="add-btn"
-            disabled={quizMode || pointsMode}
-            title="Cast Spell"
+            className="spellcast-button"
+            disabled={!inputValue.trim()}
           >
-            <i className="material-icons">auto_fix_high</i>
+            Cast Spell
           </button>
         </div>
       </form>
-      
-      <div className="mode-controls">
-        <button 
-          className={`mode-btn ${quizMode ? 'active' : ''}`} 
-          onClick={toggleQuizMode}
-          title="O.W.L. Exam Mode"
-        >
-          <i className="material-icons">school</i> 
-          <span>O.W.L. Exam</span>
-        </button>
-        
-        <button 
-          className={`mode-btn ${pointsMode ? 'active' : ''}`} 
-          onClick={togglePointsMode}
-          title="Plot Magical Points"
-        >
-          <i className="material-icons">place</i>
-          <span>Magical Points</span>
-        </button>
-        
-        <button 
-          className="reset-btn" 
-          onClick={resetAll}
-          title="Clear All Spells"
-        >
-          <i className="material-icons">restart_alt</i>
-          <span>Finite Incantatem</span>
-        </button>
-      </div>
     </div>
   );
 };
