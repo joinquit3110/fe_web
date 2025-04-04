@@ -1,114 +1,106 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
-import { processInequality } from '../utils/inequalityParser';
-import { MathJax, MathJaxContext } from 'better-react-mathjax';
-import '../styles/App.css';
+﻿import React, { useState, useRef } from 'react';
+import Latex from 'react-latex-next';
+import 'katex/dist/katex.min.css';
+import { parseInequality } from '../utils/parser';
 
-const InequalityInput = ({ onAddInequality, inequalities }) => {
+const InequalityInput = ({ 
+  addInequality, 
+  setQuizMessage,
+  resetAll 
+}) => {
   const [input, setInput] = useState('');
-  const [preview, setPreview] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const inputRef = useRef(null);
-
-  // Handle input changes with debounce for preview
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (input.trim()) {
-        const result = processInequality(input);
-        if (result) {
-          setPreview(result.latex);
-          setError('');
-        } else {
-          setPreview('');
-          setError('Định dạng không hợp lệ!');
-        }
-      } else {
-        setPreview('');
-        setError('');
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [input]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-
+    setError('');
     setIsLoading(true);
+
     try {
-      const result = processInequality(input);
-      if (result) {
-        await onAddInequality(result);
+      const trimmedInput = input.trim();
+      
+      if (!trimmedInput) {
+        setQuizMessage('Vui lòng nhập bất phương trình');
+        return;
+      }
+
+      const parsed = parseInequality(trimmedInput);
+      
+      if (parsed.error) {
+        setQuizMessage('Định dạng không hợp lệ!');
+        setIsLoading(false);
+        return;
+      }
+
+      const success = addInequality({
+        ...parsed,
+        solved: false,
+        latex: parsed.latex
+      });
+
+      if (success) {
         setInput('');
-        setPreview('');
-        setError('');
-      } else {
-        setError('Định dạng không hợp lệ!');
+        inputRef.current?.focus();
       }
     } catch (err) {
-      setError('Có lỗi xảy ra!');
+      setQuizMessage('Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetAll = () => {
-    setInput('');
-    setPreview('');
-    setError('');
+  const formatLatex = (input) => {
+    if (!input) return '';
+    return `$${input
+      .replace(/<=>/g, '\\Leftrightarrow')
+      .replace(/<=/g, '\\leq')
+      .replace(/>=/g, '\\geq')
+      .replace(/</g, '<')
+      .replace(/>/g, '>')
+      .replace(/\*/g, '\\cdot') // Thêm xử lý ký tự nhân
+      .trim()}$`;
   };
 
   return (
     <div className="inequality-input-container">
-      <form onSubmit={handleSubmit} className="inequality-form">
-        <div className="form-header">
-          <h2>Nhập Bất Phương Trình</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            setError('');
+          }}
+          placeholder="Nhập bất phương trình (vd: x + y + 1 > 0)"
+          className={`inequality-input ${error ? 'error' : ''}`}
+          disabled={isLoading}
+        />
+        <div className="buttons-container">
           <button
             type="button"
             className="reset-button"
             onClick={resetAll}
-            title="Reset tất cả"
           >
-            <i className="fas fa-magic"></i>
+            <i className="material-icons" style={{color: '#ffd700'}}>delete_sweep</i>
+            Reset
           </button>
         </div>
-        
-        <div className="input-group">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ví dụ: 2x + 3y < 6"
-            className="inequality-input"
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            className="submit-btn"
-            disabled={isLoading || !input.trim()}
-          >
-            {isLoading ? (
-              <span className="loading-dots">...</span>
-            ) : (
-              'Thêm'
-            )}
-          </button>
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        {preview && (
-          <div className="preview-container">
-            <div className="latex-preview">
-              <MathJaxContext>
-                <MathJax>{`$$${preview}$$`}</MathJax>
-              </MathJaxContext>
-            </div>
-          </div>
-        )}
       </form>
+
+      {error && (
+        <div className="error-message" role="alert">
+          {error}
+        </div>
+      )}
+
+      {input && !error && (
+        <div className="latex-preview">
+          <Latex>{formatLatex(input)}</Latex>
+        </div>
+      )}
     </div>
   );
 };

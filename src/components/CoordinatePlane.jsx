@@ -1,17 +1,12 @@
 ﻿import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
-import { computeIntersection, canvasToWorld, worldToCanvas } from "../utils/geometry";
-import '../styles/App.css';
+import { computeIntersection } from "../utils/geometry";
 
 // Constants
 const CANVAS_CONFIG = {
-  width: 500,
-  height: 500,
-  padding: 40,
-  gridSize: 50,
-  axisColor: '#fff',
-  gridColor: 'rgba(255, 255, 255, 0.1)',
-  textColor: '#fff',
-  fontSize: 12
+  width: 600,
+  height: 600,
+  minZoom: 20,
+  defaultZoom: 40
 };
 
 const BUTTON_CONFIG = {
@@ -263,18 +258,15 @@ const CoordinatePlane = forwardRef(({
   setInequalities, 
   setQuizMessage,
   hoveredEq,
-  setHoveredEq,
-  onSelectRegion
+  setHoveredEq 
 }, ref) => {
   const canvasRef = useRef(null);
   const [solutionButtons, setSolutionButtons] = useState([]);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(CANVAS_CONFIG.defaultZoom);
   const [intersectionPoints, setIntersectionPoints] = useState([]); // Store all valid intersection points
   const [activePoint, setActivePoint] = useState(null); // Currently selected point for input
   const [inputCoords, setInputCoords] = useState({ x: '', y: '' }); // User input coordinates
   const [activeLines, setActiveLines] = useState([]); // State to store lines forming the active point
-  const [selectedRegion, setSelectedRegion] = useState(null);
-  const [hoverPoint, setHoverPoint] = useState(null);
 
   const origin = useMemo(() => ({
     x: CANVAS_CONFIG.width / 2,
@@ -710,7 +702,7 @@ const CoordinatePlane = forwardRef(({
   const handleWheel = useCallback((e) => {
     if (e.target === canvasRef.current) {
       e.preventDefault(); // Prevent scroll only when on canvas
-      setZoom(prev => Math.max(1, prev + (e.deltaY > 0 ? -0.1 : 0.1)));
+      setZoom(prev => Math.max(CANVAS_CONFIG.minZoom, prev + (e.deltaY > 0 ? -2 : 2)));
     }
   }, []);
 
@@ -796,14 +788,10 @@ const CoordinatePlane = forwardRef(({
     const mouseY = e.clientY - rect.top;
   
     // Convert mouse coordinates to mathematical coordinates
-    const worldCoords = canvasToWorld(
-      { x: mouseX, y: mouseY },
-      {
-        width: CANVAS_CONFIG.width,
-        height: CANVAS_CONFIG.height
-      },
-      zoom
-    );
+    const mathCoords = {
+      x: (mouseX - origin.x) / zoom,
+      y: (origin.y - mouseY) / zoom
+    };
   
     let foundEq = null;
   
@@ -835,7 +823,7 @@ const CoordinatePlane = forwardRef(({
   
       // Check if mouse is in solution region or near line
       const isNearLine = distance < 5;
-      const isInRegion = eq.solved && isPointInSolutionRegion(worldCoords, eq);
+      const isInRegion = eq.solved && isPointInSolutionRegion(mathCoords, eq);
   
       if (isNearLine || isInRegion) {
         foundEq = eq;
@@ -940,57 +928,21 @@ const CoordinatePlane = forwardRef(({
     findValidIntersections();
   }, [inequalities, findValidIntersections]);
 
-  const handleClick = useCallback((e) => {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Find the closest inequality
-    const { width, height } = CANVAS_CONFIG;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const scaledGridSize = CANVAS_CONFIG.gridSize * zoom;
-
-    const worldX = (x - centerX) / scaledGridSize;
-    const worldY = -(y - centerY) / scaledGridSize;
-
-    // Check if point is in any inequality's solution region
-    for (const inequality of inequalities) {
-      const { a, b, c, operator } = inequality;
-      const value = a * worldX + b * worldY + c;
-      const isInRegion = operator === '<' ? value < 0 :
-                        operator === '<=' ? value <= 0 :
-                        operator === '>' ? value > 0 :
-                        value >= 0;
-
-      if (isInRegion) {
-        setSelectedRegion(inequality.id);
-        onSelectRegion(inequality.id);
-        return;
-      }
-    }
-
-    setSelectedRegion(null);
-    onSelectRegion(null);
-  }, [inequalities, zoom, onSelectRegion]);
-
   return (
     <div className="coordinate-plane-container">
       <canvas
         ref={canvasRef}
         width={CANVAS_CONFIG.width}
         height={CANVAS_CONFIG.height}
-        className="coordinate-plane-canvas"
-        onWheel={handleWheel}
-        onClick={handleClick}
+        onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
+        style={{
+          border: "1px solid #ccc",
+          cursor: "default",
+          marginLeft: "10px",
+          backgroundColor: "#ffffff"
+        }}
       />
-      {hoverPoint && (
-        <div className="coordinate-display">
-          ({hoverPoint.x.toFixed(2)}, {hoverPoint.y.toFixed(2)})
-        </div>
-      )}
       {activePoint && (
         <div className="coordinate-input-below">
           <span>(</span>
