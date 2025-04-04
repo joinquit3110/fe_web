@@ -57,8 +57,8 @@ const getBoundaryPoints = eq => {
 
 // Update drawGridAndAxes function
 const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
-  // Draw magical grid background
-  ctx.fillStyle = 'rgba(14, 26, 64, 0.05)';
+  // Draw white background
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
   
   // Draw grid
@@ -304,14 +304,13 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     const handleResize = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.clientWidth;
+        const parentHeight = containerRef.current.parentElement.clientHeight;
         const isMobile = window.innerWidth < 768;
         
-        // For mobile, use full width minus padding
-        const newWidth = isMobile ? 
-          containerWidth - 20 : // 10px padding on each side
-          Math.min(containerWidth, CANVAS_CONFIG.width);
-          
-        // Keep aspect ratio as 1:1
+        // For all devices, maximize the available space
+        const newWidth = Math.min(containerWidth, parentHeight);
+        
+        // Keep aspect ratio as 1:1 for a square graph
         setCanvasWidth(newWidth);
         setCanvasHeight(newWidth);
         
@@ -548,37 +547,11 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         btn2.y = tempY;
       }
 
-      // Draw buttons with styling
-      ctx.font = "14px Arial";
-      ctx.lineWidth = 1;
+      // Create button renderers with improved visuals
+      const btn1Renderer = drawButton(ctx, btn1.x, btn1.y, btn1.width, btn1.height, 'Region 1', eq.color);
+      const btn2Renderer = drawButton(ctx, btn2.x, btn2.y, btn2.width, btn2.height, 'Region 2', eq.color);
 
-      // Draw Miền 1 button
-      ctx.fillStyle = '#fff';
-      ctx.strokeStyle = eq.color;
-      ctx.beginPath();
-      ctx.rect(btn1.x, btn1.y, btn1.width, btn1.height);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = eq.color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Miền 1', btn1.x + btn1.width/2, btn1.y + btn1.height/2);
-
-      // Draw Miền 2 button
-      ctx.fillStyle = '#fff';
-      ctx.strokeStyle = eq.color;
-      ctx.beginPath();
-      ctx.rect(btn2.x, btn2.y, btn2.width, btn2.height);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = eq.color;
-      ctx.fillText('Miền 2', btn2.x + btn2.width/2, btn2.y + btn2.height/2);
-
-      // Update button drawing calls:
-      drawButton(ctx, btn1.x, btn1.y, btn1.width, btn1.height, 'Miền 1', eq.color);
-      drawButton(ctx, btn2.x, btn2.y, btn2.width, btn2.height, 'Miền 2', eq.color);
-
-      return { eq, btn1, btn2 };
+      return { eq, btn1: {...btn1, ...btn1Renderer}, btn2: {...btn2, ...btn2Renderer} };
     }
 
     return null;
@@ -720,6 +693,34 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
+    // Check if clicking on a solution button
+    const clickedButton = solutionButtons.find(btn => {
+      return (btn.btn1.contains && btn.btn1.contains(x, y)) || 
+             (btn.btn2.contains && btn.btn2.contains(x, y));
+    });
+    
+    if (clickedButton) {
+      const buttonType = 
+        (clickedButton.btn1.contains && clickedButton.btn1.contains(x, y)) ? 
+          { button: clickedButton.btn1, type: 'btn1' } : 
+          { button: clickedButton.btn2, type: 'btn2' };
+      
+      // Mark the inequality as solved with the selected solution
+      setInequalities(prev => prev.map(ineq => {
+        if (ineq.label === clickedButton.eq.label) {
+          return { 
+            ...ineq, 
+            solved: true, 
+            solutionType: buttonType.type 
+          };
+        }
+        return ineq;
+      }));
+      
+      setQuizMessage(`You've selected ${buttonType.type === 'btn1' ? 'Region 1' : 'Region 2'} as the solution region!`);
+      return;
+    }
+    
     // Convert canvas coordinates to graph coordinates
     const worldX = (x - origin.x) / zoom;
     const worldY = (origin.y - y) / zoom;
@@ -728,7 +729,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     if (isPointMode) {
       handlePointSelection({ x: worldX, y: worldY });
     }
-  }, [origin, zoom, isPointMode, handlePointSelection]);
+  }, [origin, zoom, isPointMode, handlePointSelection, solutionButtons, setInequalities, setQuizMessage]);
 
   // Sửa lại phần redraw để kiểm tra trùng
   const redraw = useCallback(() => {
@@ -1137,46 +1138,44 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
 
 // Add this function before the CoordinatePlane component
 const drawButton = (ctx, x, y, width, height, text, color) => {
-  // Create gradient background
+  // Create gradient background with magical effect
   const gradient = ctx.createLinearGradient(x, y, x, y + height);
-  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-  gradient.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
+  gradient.addColorStop(0, 'rgba(14, 26, 64, 0.8)');
+  gradient.addColorStop(1, 'rgba(14, 26, 64, 0.9)');
 
-  // Draw button background
+  // Draw button background with rounded corners
   ctx.fillStyle = gradient;
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, 6);
+  ctx.roundRect(x, y, width, height, 8);
   ctx.fill();
   ctx.stroke();
 
-  // Add subtle inner shadow
-  ctx.save();
-  ctx.clip();
-  ctx.fillStyle = 'rgba(0,0,0,0.1)';
-  ctx.fillRect(x, y + height - 4, width, 4);
-  ctx.restore();
-
-  // Draw text with shadow
-  ctx.font = "bold 14px Arial";
+  // Draw text with glow effect
+  ctx.font = "bold 14px 'Cinzel', serif";
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   
-  // Text shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.fillText(text, x + width/2 + 1, y + height/2 + 1);
-  
-  // Main text
-  ctx.fillStyle = color;
+  // Text glow
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 5;
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillText(text, x + width/2, y + height/2);
+  
+  // Reset shadow
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
 
-  // Add hover effect preparation
   return {
-    isHovered: false,
+    x, y, width, height,
+    contains: (px, py) => px >= x && px <= x + width && py >= y && py <= y + height,
     draw: (isHovered) => {
       if (isHovered) {
-        ctx.fillStyle = `rgba(${color.match(/\d+/g).join(',')}, 0.1)`;
+        // Draw hover effect
+        ctx.fillStyle = `rgba(211, 166, 37, 0.3)`;
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, 8);
         ctx.fill();
       }
     }
