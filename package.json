@@ -10,7 +10,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "deploy": "git add . && git commit -m \"Update UI and features\" && git push origin master",
-    "postchange": "git add . && git commit -m \"Update: %date% %time%\" && git push"
+    "postchange": "powershell -ExecutionPolicy Bypass -File ../auto-git.ps1"
   },
   "dependencies": {
     "@matejmazur/react-katex": "^3.1.3",
