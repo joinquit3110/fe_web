@@ -1,7 +1,7 @@
 {
-  "name": "inequality-latex-app",
-  "version": "1.0.0",
-  "description": "Dự án React hiển thị bất phương trình với LaTeX realtime và vẽ hệ trục Oxy",
+  "name": "inequality-web",
+  "version": "0.1.0",
+  "description": "Interactive Hogwarts-themed web application for teaching and visualizing inequality systems with real-time LaTeX rendering and coordinate plane",
   "main": "src/index.js",
   "scripts": {
     "start": "react-scripts start",

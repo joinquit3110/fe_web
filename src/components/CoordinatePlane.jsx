@@ -28,15 +28,15 @@ const POINT_STATUS = {
 // Utility functions
 const fValue = (eq, point) => eq.a * point.x + eq.b * point.y + eq.c;
 
-// Cập nhật hàm checkPointInInequality
+// Update pointInInequality function
 const checkPointInInequality = (eq, point) => {
   const val = eq.a * point.x + eq.b * point.y + eq.c;
   const isGreaterType = eq.operator === ">" || eq.operator === ">=";
   
-  // Điểm nằm trên đường thẳng luôn được chấp nhận
+  // Points on the boundary line are always accepted
   if (Math.abs(val) < EPSILON) return true;
   
-  // Kiểm tra điểm có thỏa mãn bất phương trình không
+  // Check if the point satisfies the inequality
   return isGreaterType ? val >= -EPSILON : val <= EPSILON;
 };
 
@@ -54,17 +54,17 @@ const getBoundaryPoints = eq => {
   ];
 };
 
-// Sửa hàm drawGridAndAxes để thêm mũi tên
+// Update drawGridAndAxes function
 const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
-  // Vẽ lưới
+  // Draw grid
   ctx.strokeStyle = "#eee";
-  ctx.lineWidth = 0.5; // Giảm độ dày của lưới
+  ctx.lineWidth = 0.5; // Reduce grid line thickness
 
-  // Tính số đơn vị cần vẽ
+  // Calculate units to draw
   const unitsX = Math.ceil(width / (2 * zoom));
   const unitsY = Math.ceil(height / (2 * zoom));
 
-  // Vẽ lưới dọc
+  // Draw grid lines vertically
   for (let i = -unitsX; i <= unitsX; i++) {
     const x = origin.x + i * zoom;
     if (x >= 0 && x <= width) {
@@ -75,7 +75,7 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
     }
   }
 
-  // Vẽ lưới ngang
+  // Draw grid lines horizontally
   for (let i = -unitsY; i <= unitsY; i++) {
     const y = origin.y + i * zoom;
     if (y >= 0 && y <= height) {
@@ -86,24 +86,24 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
     }
   }
 
-  // Vẽ trục
+  // Draw axes
   ctx.strokeStyle = "#000";
   ctx.lineWidth = 2;
   
-  // Trục x
+  // X-axis
   ctx.beginPath();
   ctx.moveTo(0, origin.y);
   ctx.lineTo(width, origin.y);
   ctx.stroke();
 
-  // Trục y
+  // Y-axis
   ctx.beginPath();
   ctx.moveTo(origin.x, height);
   ctx.lineTo(origin.x, 0);
   ctx.stroke();
 
-  // Vẽ mũi tên và nhãn
-  // ... phần code vẽ mũi tên và nhãn giữ nguyên
+  // Draw arrows and labels
+  // ... existing code ...
 
   // Draw arrows at the very edges
   const arrowSize = 10;
@@ -412,7 +412,7 @@ const CoordinatePlane = forwardRef(({
   const checkDuplicateInequality = useCallback((newEq, existingEq) => {
     if (!existingEq) return false;
     
-    // Chuẩn hóa các hệ số
+    // Normalize coefficients
     const normalize = (coef) => Math.abs(coef) < EPSILON ? 0 : coef;
     const a1 = normalize(existingEq.a);
     const b1 = normalize(existingEq.b);
@@ -421,14 +421,14 @@ const CoordinatePlane = forwardRef(({
     const b2 = normalize(newEq.b);
     const c2 = normalize(newEq.c);
   
-    // Nếu cả hai đều là đường thẳng đứng
+    // If both are vertical lines
     if (Math.abs(b1) < EPSILON && Math.abs(b2) < EPSILON) {
       return Math.abs(a1/a2 - c1/c2) < EPSILON && existingEq.operator === newEq.operator;
     }
   
-    // Trường hợp thông thường
+    // General case
     if (Math.abs(b1) >= EPSILON) {
-      // Chuẩn hóa về dạng y = mx + k
+      // Normalize to y = mx + k
       const m1 = -a1/b1;
       const k1 = -c1/b1;
       const m2 = -a2/b2;
@@ -445,13 +445,13 @@ const CoordinatePlane = forwardRef(({
   // Thêm hàm xử lý thêm bất phương trình mới (cần export và sử dụng ở component cha)
   useImperativeHandle(ref, () => ({
     handleAddInequality: (newInequality) => {
-      // Tìm bất phương trình trùng
+      // Find duplicate inequalities
       const duplicateEq = inequalities.find(eq => 
         checkDuplicateInequality(newInequality, eq)
       );
       
       if (duplicateEq) {
-        setQuizMessage(`Bất phương trình ${newInequality.label} trùng với ${duplicateEq.label}!`);
+        setQuizMessage(`Inequality ${newInequality.label} already exists as ${duplicateEq.label}!`);
         return false;
       }
       
@@ -927,6 +927,17 @@ const CoordinatePlane = forwardRef(({
   useEffect(() => {
     findValidIntersections();
   }, [inequalities, findValidIntersections]);
+
+  // Check if point is in a non-solution region of another inequality
+  const isPointInOtherNonSolutionRegion = (point, currentInequalityIndex) => {
+    // Find an inequality where this point is not in the solution region
+    for (let i = 0; i < inequalities.length; i++) {
+      if (i === currentInequalityIndex) continue; // Skip current inequality
+      const isInSolution = checkPointInInequality(inequalities[i], point);
+      return !isInSolution; // true if point is in a non-solution region
+    }
+    return false;
+  };
 
   return (
     <div className="coordinate-plane-container">

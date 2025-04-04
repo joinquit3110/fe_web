@@ -45,7 +45,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
 
   return (
     <div className="inequality-input">
-      <h3 className="control-title">Input Inequality</h3>
+      <h3 className="control-title">Spell Formula</h3>
       
       <form onSubmit={handleSubmit}>
         <div className="input-container">
@@ -53,7 +53,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter inequality (e.g., x+y<0)"
+            placeholder="Cast your inequality spell (e.g., x+y<0)"
             disabled={quizMode || pointsMode}
             className="inequality-input-field"
           />
@@ -62,7 +62,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             className="add-btn"
             disabled={quizMode || pointsMode}
           >
-            <i className="material-icons">add</i>
+            <i className="material-icons">auto_fix_high</i>
           </button>
         </div>
       </form>
@@ -72,8 +72,8 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
           className={`mode-btn ${quizMode ? 'active' : ''}`} 
           onClick={toggleQuizMode}
         >
-          <i className="material-icons">quiz</i> 
-          <span>Quiz Mode</span>
+          <i className="material-icons">school</i> 
+          <span>O.W.L. Exam</span>
         </button>
         
         <button 
@@ -81,15 +81,15 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
           onClick={togglePointsMode}
         >
           <i className="material-icons">place</i>
-          <span>Points Mode</span>
+          <span>Magical Points</span>
         </button>
         
         <button 
           className="reset-btn" 
           onClick={resetAll}
         >
-          <i className="material-icons">refresh</i>
-          <span>Reset</span>
+          <i className="material-icons">restart_alt</i>
+          <span>Finite Incantatem</span>
         </button>
       </div>
     </div>

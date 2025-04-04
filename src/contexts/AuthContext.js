@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Lỗi kết nối máy chủ');
+      throw new Error('Server connection error');
     }
   };
 
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error('Register error:', error);
-      throw new Error(error.message || 'Lỗi kết nối máy chủ');
+      throw new Error(error.message || 'Server connection error');
     }
   };
 

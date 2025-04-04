@@ -84,12 +84,13 @@ const AppContent = () => {
       </div>
       
       <header className="farm-header">
-        <h1>Learning with Professor Vi <span className="highlight">Perfect Score!</span></h1>
+        <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
       </header>
       
       <div className="farm-content">
         <div className="control-panel farm-panel">
           <div className="control-panel-content">
+            <h2>Professor's Spellbook</h2>
             <InequalityInput 
               addInequality={handleAddInequality}
               setQuizMessage={setQuizMessage}
@@ -121,6 +122,7 @@ const AppContent = () => {
         </div>
 
         <div className="coordinate-container farm-panel">
+          <h2>Magical Coordinate Plane</h2>
           <div className="coordinate-plane">
             <CoordinatePlane
               ref={coordinatePlaneRef}
@@ -134,6 +136,7 @@ const AppContent = () => {
         </div>
 
         <div className="inequalities-list farm-panel">
+          <h2>Spells Collection</h2>
           {inequalities.map((ineq, index) => (
             <div
               key={index}

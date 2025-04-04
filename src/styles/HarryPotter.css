@@ -37,6 +37,7 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
+  background-image: url('https://www.transparenttextures.com/patterns/parchment.png');
 }
 
 * {
@@ -60,6 +61,8 @@ button, input, select, textarea {
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
+  background-image: url('https://www.transparenttextures.com/patterns/dark-wood.png');
+  background-blend-mode: overlay;
 }
 
 /* Moon styling */
@@ -158,24 +161,28 @@ button, input, select, textarea {
   margin-bottom: 20px;
   z-index: 2;
   width: 100%;
+  border-bottom: 2px solid var(--secondary-color);
+  background: rgba(116, 0, 1, 0.15);
+  border-radius: 8px;
 }
 
 .farm-header h1 {
   color: var(--secondary-color);
   font-family: 'Cinzel', serif;
-  text-shadow: 0 0 10px rgba(211, 166, 37, 0.3),
-               0 0 20px rgba(211, 166, 37, 0.2);
+  text-shadow: 0 0 10px rgba(211, 166, 37, 0.5),
+               0 0 20px rgba(211, 166, 37, 0.3);
   margin: 0;
   font-size: 2rem;
   letter-spacing: 1px;
   line-height: 1.3;
+  animation: magical-glow 3s infinite alternate;
 }
 
 .highlight {
-  color: var(--primary-color);
+  color: var(--light-accent);
   font-weight: bold;
-  text-shadow: 0 0 10px rgba(116, 0, 1, 0.3),
-               0 0 20px rgba(116, 0, 1, 0.2);
+  text-shadow: 0 0 10px rgba(236, 185, 57, 0.5),
+               0 0 20px rgba(236, 185, 57, 0.3);
 }
 
 /* Content Layout - Mobile-first approach */
@@ -188,15 +195,31 @@ button, input, select, textarea {
   z-index: 2;
 }
 
-/* Control panel */
+/* Control panel with wizard parchment style */
 .control-panel {
   background: var(--panel-bg);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2),
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4),
              inset 0 0 0 1px var(--panel-border);
   backdrop-filter: blur(5px);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-image: url('https://www.transparenttextures.com/patterns/parchment.png');
+  background-blend-mode: overlay;
+  position: relative;
+}
+
+.control-panel:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  border: 1px solid var(--secondary-color);
+  box-shadow: inset 0 0 10px rgba(211, 166, 37, 0.2);
+  pointer-events: none;
 }
 
 .control-panel:hover {
@@ -723,4 +746,29 @@ button, input, select, textarea {
 
 @keyframes spinner {
   to { transform: rotate(360deg); }
+}
+
+/* Add a new magical glow animation */
+@keyframes magical-glow {
+  0% {
+    text-shadow: 0 0 10px rgba(211, 166, 37, 0.3),
+                 0 0 20px rgba(211, 166, 37, 0.2);
+  }
+  100% {
+    text-shadow: 0 0 15px rgba(211, 166, 37, 0.5),
+                 0 0 30px rgba(211, 166, 37, 0.4),
+                 0 0 45px rgba(211, 166, 37, 0.1);
+  }
+}
+
+/* Add h2 styling for panel headers */
+h2 {
+  color: var(--secondary-color);
+  font-size: 1.4rem;
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--secondary-color);
+  padding-bottom: 8px;
+  text-shadow: 0 0 8px rgba(211, 166, 37, 0.3);
 } 
