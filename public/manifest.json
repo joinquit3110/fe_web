@@ -1,6 +1,6 @@
 {
-  "short_name": "Inequality Solver",
-  "name": "Inequality Solver - Hogwarts Math Academy",
+  "short_name": "Inequality Web",
+  "name": "Inequality Web Application",
   "icons": [
     {
       "src": "favicon.ico",
@@ -22,26 +22,9 @@
   ],
   "start_url": ".",
   "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
   "orientation": "portrait",
-  "theme_color": "#0a0a2a",
-  "background_color": "#0a0a2a",
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "categories": ["education", "mathematics"],
-  "screenshots": [
-    {
-      "src": "screenshot1.jpg",
-      "sizes": "1080x1920",
-      "type": "image/jpeg"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Solve Inequality",
-      "short_name": "Solve",
-      "description": "Jump straight to solving inequalities",
-      "url": "/?action=solve",
-      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
-    }
-  ]
+  "scope": "/",
+  "mobile_web_app_capable": "yes"
 } 

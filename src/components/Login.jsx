@@ -94,6 +94,8 @@ const Login = () => {
               placeholder="Mật khẩu"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
+              autoComplete="current-password"
+              required
             />
           </div>
           

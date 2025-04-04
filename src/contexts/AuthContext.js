@@ -8,6 +8,7 @@ const API_URL = "https://be-web-6c4k.onrender.com/api";
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     // Check local storage for token
@@ -15,35 +16,49 @@ export const AuthProvider = ({ children }) => {
     const userData = localStorage.getItem('user');
     if (token && userData) {
       setUser(JSON.parse(userData));
+      setIsAuthenticated(true);
     }
     setLoading(false);
   }, []);
 
   const login = async (username, password) => {
     try {
-      console.log('Attempting login...');
+      if (!username || !password) {
+        throw new Error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+      }
 
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
+        if (response.status === 401) {
+          throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
+        } else if (response.status === 500) {
+          throw new Error('Lỗi máy chủ, vui lòng thử lại sau');
+        } else {
+          throw new Error('Đã có lỗi xảy ra, vui lòng thử lại');
+        }
       }
 
       const data = await response.json();
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
-      return data;
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        setIsAuthenticated(true);
+        return data;
+      } else {
+        throw new Error('Token không hợp lệ');
+      }
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Lỗi kết nối máy chủ');
+      throw new Error(error.message || 'Lỗi kết nối máy chủ');
     }
   };
 
@@ -80,6 +95,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setIsAuthenticated(false);
   };
 
   const updateProfile = async (profileData) => {
@@ -131,7 +147,8 @@ export const AuthProvider = ({ children }) => {
       logout, 
       loading,
       updateProfile,
-      updatePassword 
+      updatePassword,
+      isAuthenticated
     }}>
       {children}
     </AuthContext.Provider>
