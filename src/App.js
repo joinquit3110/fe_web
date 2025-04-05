@@ -3,6 +3,9 @@ import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import './styles/App.css';
 import './styles/HarryPotter.css';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
+import UserProfile from './components/UserProfile';
 
 // Wizard theme images (using URLs since we had trouble downloading)
 const WIZARD_IMAGES = {
@@ -12,10 +15,6 @@ const WIZARD_IMAGES = {
   spellbook: "https://i.imgur.com/YGMDnKw.png",
   potion: "https://i.imgur.com/Cz0eXUE.png"
 };
-
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
-import UserProfile from './components/UserProfile';
 
 const AppContent = () => {
   const { user } = useAuth();
