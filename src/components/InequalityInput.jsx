@@ -7,6 +7,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   const [error, setError] = useState('');
   const [showLatex, setShowLatex] = useState(false);
   const [latexPreview, setLatexPreview] = useState('');
+  const [isSpellcasting, setIsSpellcasting] = useState(false);
   const inputRef = useRef(null);
 
   // Focus input on component mount
@@ -47,14 +48,14 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
       // Provide more helpful error messages based on common issues
       if (input.includes('x') || input.includes('y')) {
         if (!input.includes('<') && !input.includes('>') && !input.includes('=')) {
-          setError('Missing comparison operator (<, >, <=, >=, =)');
+          setError('Your spell is missing a comparison enchantment (<, >, <=, >=, =)');
         } else if (!input.includes('0') && !input.endsWith('=0') && !input.endsWith('<0') && !input.endsWith('>0')) {
-          setError('Inequality should be in the form: ax + by + c [operator] 0');
+          setError('Magical inequalities should be in the form: ax + by + c [operator] 0');
         } else {
-          setError('Invalid format. Try examples like: x+y<0, 2x-3y+1≥0');
+          setError('Invalid spell format. Try examples like: x+y<0, 2x-3y+1≥0');
         }
       } else {
-        setError('Inequality must include x and/or y variables');
+        setError('Your spell must include x and/or y variables to work');
       }
       
       setShowLatex(false);
@@ -70,18 +71,26 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
       return;
     }
     
-    const result = addInequality(input);
+    // Animation for spellcasting
+    setIsSpellcasting(true);
     
-    if (result === true) {
-      // Successfully added
-      setInput('');
-      setShowLatex(false);
-      setLatexPreview('');
-    } else if (result === 'EXISTS') {
-      setQuizMessage('This inequality spell already exists!');
-    } else {
-      setQuizMessage('Invalid inequality format. Try examples like: x+y<0, 2x-3y+1≥0');
-    }
+    // Delay to show the animation
+    setTimeout(() => {
+      const result = addInequality(input);
+      
+      if (result === true) {
+        // Successfully added
+        setInput('');
+        setShowLatex(false);
+        setLatexPreview('');
+      } else if (result === 'EXISTS') {
+        setQuizMessage('This inequality spell already exists in your spellbook!');
+      } else {
+        setQuizMessage('Invalid spell format. Try examples like: x+y<0, 2x-3y+1≥0');
+      }
+      
+      setIsSpellcasting(false);
+    }, 600);
   };
 
   const handleReset = () => {
@@ -111,7 +120,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   return (
     <div className="inequality-input-container">
       <form onSubmit={handleSubmit} className="input-container">
-        <div className="input-row">
+        <div className={`input-row ${isSpellcasting ? 'spellcasting' : ''}`}>
           <div className="input-group">
             <input
               ref={inputRef}
@@ -122,9 +131,16 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               className={!isValid && input ? 'error' : ''}
               autoComplete="off"
             />
+            {isSpellcasting && (
+              <div className="spell-effect">
+                <div className="spell-sparkle"></div>
+                <div className="spell-sparkle"></div>
+                <div className="spell-sparkle"></div>
+              </div>
+            )}
             {error && <div className="error-message">{error}</div>}
             {!error && input && isValid && (
-              <div className="valid-message">Valid inequality format ✓</div>
+              <div className="valid-message">Valid magical formula ✓</div>
             )}
           </div>
           
@@ -132,8 +148,9 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             <button 
               type="submit" 
               className="spellcast-button"
-              disabled={!isValid || !input.trim()}
+              disabled={!isValid || !input.trim() || isSpellcasting}
             >
+              <span className="spell-icon">✨</span>
               Cast Spell
             </button>
             <button 
@@ -141,6 +158,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               className="example-button"
               onClick={getExampleInequality}
               title="Get an example inequality"
+              disabled={isSpellcasting}
             >
               <span className="material-icons">auto_fix_high</span>
               Example
@@ -150,7 +168,9 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               className="finite-button"
               onClick={handleReset}
               title="Reset All (Clear All Inequalities)"
+              disabled={isSpellcasting}
             >
+              <span className="spell-icon">⚡</span>
               Finite Incantatem
             </button>
           </div>
