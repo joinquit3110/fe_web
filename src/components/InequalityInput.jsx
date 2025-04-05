@@ -8,6 +8,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   const [latexPreview, setLatexPreview] = useState('');
   const [isSpellcasting, setIsSpellcasting] = useState(false);
   const inputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Focus input on component mount
   useEffect(() => {
@@ -25,44 +26,51 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
       return;
     }
 
-    // Try to parse the inequality
-    const result = parseInequality(input);
-    
-    if (result) {
-      setIsValid(true);
-      setError('');
-      setLatexPreview(`\\(${result.latex}\\)`);
-    } else {
-      setIsValid(false);
+    // Clear any existing timeout to prevent flashes
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Use a timeout to avoid processing during rapid typing
+    typingTimeoutRef.current = setTimeout(() => {
+      // Try to parse the inequality
+      const result = parseInequality(input);
       
-      // Provide more helpful error messages based on common issues
-      if (input.includes('x') || input.includes('y')) {
-        if (!input.includes('<') && !input.includes('>') && !input.includes('=')) {
-          setError('Your spell is missing a comparison enchantment (<, >, <=, >=, =)');
-        } else if (!input.includes('0') && !input.endsWith('=0') && !input.endsWith('<0') && !input.endsWith('>0')) {
-          setError('Magical inequalities should be in the form: ax + by + c [operator] 0');
-        } else {
-          setError('Invalid spell format. Try examples like: x+y<0, 2x-3y+1≥0');
-        }
+      if (result) {
+        setIsValid(true);
+        setError('');
+        setLatexPreview(`\\(${result.latex}\\)`);
       } else {
-        setError('Your spell must include x and/or y variables to work');
-      }
-      
-      // Still attempt to show the LaTeX preview for any input
-      try {
-        setLatexPreview(`\\(${input}\\)`);
-      } catch (e) {
+        setIsValid(false);
+        
+        // Provide more helpful error messages based on common issues
+        if (input.includes('x') || input.includes('y')) {
+          if (!input.includes('<') && !input.includes('>') && !input.includes('=')) {
+            setError('Your spell is missing a comparison enchantment (<, >, <=, >=, =)');
+          } else {
+            setError('Invalid spell format. Try examples like: x+y<0, 2x-3y+1≥0');
+          }
+        } else {
+          setError('Your spell must include x and/or y variables to work');
+        }
+        
+        // Don't show LaTeX preview for invalid input
         setLatexPreview('');
       }
-    }
-    
-    // Trigger MathJax rendering for any preview content
-    if (window.MathJax && window.MathJax.typeset) {
-      setTimeout(() => {
+      
+      // Trigger MathJax rendering for any preview content
+      if (window.MathJax && window.MathJax.typeset && latexPreview) {
         window.MathJax.typeset();
-      }, 100);
-    }
-  }, [input]);
+      }
+    }, 300); // Delay processing by 300ms
+    
+    // Cleanup function
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [input, latexPreview]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -131,10 +139,12 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
           {/* LaTeX Preview Area - moved between input and buttons */}
           <div className="latex-preview-container">
             <div className="latex-preview">
-              <span 
-                className="preview-content"
-                dangerouslySetInnerHTML={{ __html: latexPreview || '' }}
-              />
+              {latexPreview && (
+                <span 
+                  className="preview-content"
+                  dangerouslySetInnerHTML={{ __html: latexPreview }}
+                />
+              )}
             </div>
           </div>
           
