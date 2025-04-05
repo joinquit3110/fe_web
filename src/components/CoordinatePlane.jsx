@@ -381,21 +381,22 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
 
   // Handle touch events for mobile
   const handleTouchStart = useCallback((e) => {
-    e.preventDefault();
+    // Don't prevent default for touch events to allow natural pinch zoom behavior
     const touch = e.touches[0];
     
-    // Handle point interactions
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-    
-    // Use same point click handler as mouse
-    handlePointClick(x, y);
+    // Only handle point interactions for single touch
+    if (e.touches.length === 1) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // Use same point click handler as mouse
+      handlePointClick(x, y);
+    }
   }, []);
 
   const handleTouchMove = useCallback((e) => {
-    // Disable panning on touch
-    e.preventDefault();
+    // Don't prevent default to allow natural zoom gestures
   }, []);
 
   const handleTouchEnd = useCallback(() => {
@@ -1239,17 +1240,16 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleCanvasClick}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'manipulation' }} /* Allow pinch zoom while blocking page scroll */
       />
       
-      {/* Reset View Button */}
+      {/* Reset View Button - updated to bottom right with just icon */}
       <button 
-        className="reset-view-button"
+        className="reset-view-button bottom-right"
         onClick={resetView}
         title="Reset View"
       >
         <i className="material-icons">restart_alt</i>
-        Reset View
       </button>
       
       {activePoint && (
