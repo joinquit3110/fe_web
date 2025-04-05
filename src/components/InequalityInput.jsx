@@ -101,21 +101,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
     setIsValid(true);
     setError('');
   };
-  
-  const getExampleInequality = () => {
-    const examples = [
-      'x+y<0',
-      'x-y>=0',
-      '2x+3y-6<=0',
-      'x=0',
-      'y=0',
-      'y=2x+1',
-      'x+y=1'
-    ];
-    const randomExample = examples[Math.floor(Math.random() * examples.length)];
-    setInput(randomExample);
-    // Let the useEffect handle validation and preview
-  };
 
   return (
     <div className="inequality-input-container">
@@ -127,7 +112,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Cast your inequality spell (e.g., x+y<0)"
+              placeholder="Enter inequality (e.g., x+y<0)"
               className={!isValid && input ? 'error' : ''}
               autoComplete="off"
             />
@@ -155,23 +140,13 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             </button>
             <button 
               type="button" 
-              className="example-button"
-              onClick={getExampleInequality}
-              title="Get an example inequality"
-              disabled={isSpellcasting}
-            >
-              <span className="material-icons">auto_fix_high</span>
-              Example
-            </button>
-            <button 
-              type="button" 
               className="finite-button"
               onClick={handleReset}
               title="Reset All (Clear All Inequalities)"
               disabled={isSpellcasting}
             >
               <span className="spell-icon">⚡</span>
-              Finite Incantatem
+              Reset
             </button>
           </div>
         </div>

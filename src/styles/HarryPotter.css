@@ -1956,4 +1956,131 @@ canvas {
 .spell-icon {
   margin-right: 5px;
   font-size: 16px;
+}
+
+/* Mobile optimization styles */
+.mobile-optimized {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
+  padding: 10px;
+}
+
+.mobile-optimized .hogwarts-header h1 {
+  font-size: 1.5rem;
+  padding: 10px 0;
+}
+
+.mobile-optimized .wizard-panel {
+  margin-bottom: 15px;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.mobile-optimized .wizard-panel h2 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+/* Input container for mobile */
+.mobile-optimized .input-row {
+  flex-direction: column;
+  width: 100%;
+}
+
+.mobile-optimized .input-group {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.mobile-optimized .input-group input {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
+  height: 50px;
+}
+
+.mobile-optimized .button-group {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobile-optimized .button-group button {
+  flex: 1;
+  min-height: 50px;
+  font-size: 16px;
+  white-space: nowrap;
+  padding: 12px 15px;
+}
+
+/* Coordinate plane for mobile */
+.mobile-optimized .coordinate-plane {
+  width: 100%;
+  overflow: hidden;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Inequalities list for mobile */
+.mobile-optimized .inequalities-list {
+  padding: 15px;
+}
+
+.mobile-optimized .scroll-container {
+  max-height: 200px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-optimized .inequality-item {
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+.mobile-optimized .delete-icon {
+  font-size: 22px;
+}
+
+/* Make message box more visible on mobile */
+.mobile-optimized .message-box {
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.mobile-optimized .message-content {
+  font-size: 16px;
+}
+
+/* Prevent zoom on inputs */
+input, button, select, textarea {
+  font-size: 16px;
+}
+
+/* Media queries for different screen sizes */
+@media (max-width: 576px) {
+  .mobile-optimized .hogwarts-header h1 {
+    font-size: 1.3rem;
+  }
+  
+  .mobile-optimized .button-group button {
+    padding: 12px 10px;
+    font-size: 14px;
+  }
+  
+  .mobile-optimized .wizard-panel {
+    padding: 12px;
+  }
+}
+
+/* Prevent pull-to-refresh behavior */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* Disable browser handling of all panning and zooming gestures */
+.coordinate-plane canvas {
+  touch-action: none;
 } 

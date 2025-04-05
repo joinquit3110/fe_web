@@ -7,15 +7,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 
-// Wizard theme images (using URLs since we had trouble downloading)
-const WIZARD_IMAGES = {
-  wand: "https://i.imgur.com/kLBtG9Q.png",
-  staff: "https://i.imgur.com/O8QBeM8.png",
-  cauldron: "https://i.imgur.com/g4Kwu3E.png",
-  spellbook: "https://i.imgur.com/YGMDnKw.png",
-  potion: "https://i.imgur.com/Cz0eXUE.png"
-};
-
 const AppContent = () => {
   const { user } = useAuth();
   const [inequalities, setInequalities] = useState([]);
@@ -92,73 +83,16 @@ const AppContent = () => {
   }
 
   return (
-    <div className="app">
+    <div className="app mobile-optimized">
       <UserProfile />
-      
-      {/* Enhanced Dynamic Stars Background */}
-      <div className="stars">
-        <div className="small-stars">
-          {[...Array(60)].map((_, i) => (
-            <div key={i} className="star" style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`
-            }} />
-          ))}
-        </div>
-        <div className="medium-stars">
-          {[...Array(30)].map((_, i) => (
-            <div key={i} className="star" style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`
-            }} />
-          ))}
-        </div>
-      </div>
-      
-      {/* Enhanced Magical Moon */}
-      <div className="moon-wrapper">
-        <div className="moonlight moonlight-1">
-          <div className="moonlight moonlight-2">
-            <div className="moonlight moonlight-3">
-              <div className="moonlight moonlight-4">
-                <div className="moon" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Hogwarts Crest */}
-      <div className="hogwarts-crest"></div>
-      
-      {/* Floating wizard elements */}
-      <div className="floating-element wand" style={{ 
-        backgroundImage: `url(${WIZARD_IMAGES.wand})`,
-        top: '15%',
-        left: '5%'
-      }}></div>
-      <div className="floating-element potion" style={{ 
-        backgroundImage: `url(${WIZARD_IMAGES.potion})`,
-        top: '75%',
-        right: '8%' 
-      }}></div>
-      <div className="floating-element spellbook" style={{ 
-        backgroundImage: `url(${WIZARD_IMAGES.spellbook})`,
-        bottom: '10%',
-        left: '7%' 
-      }}></div>
       
       <header className="hogwarts-header">
         <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
       </header>
       
-      <div className="hogwarts-content mobile-friendly">
+      <div className="hogwarts-content">
         {/* 1. Control Panel - Cast Spell at top */}
         <div className="control-panel wizard-panel">
-          <div className="panel-decoration left"></div>
-          <div className="panel-decoration right"></div>
           <div className="control-panel-content">
             <h2>Professor's Spellbook</h2>
             <InequalityInput 
@@ -176,8 +110,6 @@ const AppContent = () => {
 
         {/* 3. Coordinate Plane */}
         <div className="coordinate-container wizard-panel">
-          <div className="panel-decoration left"></div>
-          <div className="panel-decoration right"></div>
           <h2>Magical Coordinate Plane</h2>
           <div className="coordinate-plane">
             <CoordinatePlane
@@ -193,8 +125,6 @@ const AppContent = () => {
 
         {/* 4. Inequalities List at bottom */}
         <div className="inequalities-list wizard-panel">
-          <div className="panel-decoration left"></div>
-          <div className="panel-decoration right"></div>
           <h2>Spells Collection</h2>
           <div className="scroll-container">
             {inequalities.length > 0 ? (
