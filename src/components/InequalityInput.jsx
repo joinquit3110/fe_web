@@ -4,7 +4,6 @@ import { parseInequality } from '../utils/parser';
 const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   const [input, setInput] = useState('');
   const [isValid, setIsValid] = useState(true);
-  const [error, setError] = useState('');
   const [latexPreview, setLatexPreview] = useState('');
   const [isSpellcasting, setIsSpellcasting] = useState(false);
   const inputRef = useRef(null);
@@ -21,7 +20,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   useEffect(() => {
     if (!input.trim()) {
       setIsValid(true);
-      setError('');
       setLatexPreview('');
       return;
     }
@@ -38,21 +36,9 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
       
       if (result) {
         setIsValid(true);
-        setError('');
         setLatexPreview(`\\(${result.latex}\\)`);
       } else {
         setIsValid(false);
-        
-        // Provide more helpful error messages based on common issues
-        if (input.includes('x') || input.includes('y')) {
-          if (!input.includes('<') && !input.includes('>') && !input.includes('=')) {
-            setError('Your spell is missing a comparison enchantment (<, >, <=, >=, =)');
-          } else {
-            setError('Invalid spell format. Try examples like: x+y<0, 2x-3y+1≥0');
-          }
-        } else {
-          setError('Your spell must include x and/or y variables to work');
-        }
         
         // Still try to display the LaTeX preview even for invalid input
         try {
@@ -118,7 +104,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
     setInput('');
     setLatexPreview('');
     setIsValid(true);
-    setError('');
   };
 
   return (
@@ -141,10 +126,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
                 <div className="spell-sparkle"></div>
                 <div className="spell-sparkle"></div>
               </div>
-            )}
-            {error && <div className="error-message">{error}</div>}
-            {!error && input && isValid && (
-              <div className="valid-message">Valid magical formula ✓</div>
             )}
           </div>
           

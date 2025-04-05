@@ -1000,6 +1000,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     // Add wheel event listener to canvas only
     const canvas = canvasRef.current;
     if (canvas) {
+      // Specify the event as non-passive
       canvas.addEventListener('wheel', handleWheel, { passive: false });
       return () => canvas.removeEventListener('wheel', handleWheel);
     }
