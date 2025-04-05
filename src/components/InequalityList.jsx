@@ -11,8 +11,11 @@ const InequalityList = ({
     return (
       <div className="inequality-list-empty">
         <div className="empty-message">
-          <span className="material-icons">auto_fix_high</span>
-          <p>Cast your first inequality spell to begin!</p>
+          <div className="empty-icon">
+            <span className="material-icons">auto_fix_high</span>
+          </div>
+          <p>Cast your first inequality spell to begin your magical journey!</p>
+          <p className="empty-hint">Enter an inequality in the spell input above</p>
         </div>
       </div>
     );
@@ -21,7 +24,7 @@ const InequalityList = ({
   return (
     <div className="inequality-list">
       <div className="inequality-list-header">
-        <div className="header-label">Inequality</div>
+        <div className="header-label">Magical Inequality</div>
         <div className="header-actions">Actions</div>
       </div>
       <div className="inequality-list-items">
@@ -71,7 +74,7 @@ const InequalityItem = ({
 
   return (
     <div 
-      className="inequality-item"
+      className={`inequality-item ${hasRegionSelected ? 'has-solution' : ''}`}
       style={{ 
         '--inequality-color': inequality.color,
         '--index': index,
@@ -95,6 +98,12 @@ const InequalityItem = ({
             __html: `\\(${inequality.latex}\\)` 
           }}
         />
+        {hasRegionSelected && (
+          <div className="solution-badge">
+            <span className="material-icons">check_circle</span>
+            <span>Solution Selected</span>
+          </div>
+        )}
       </div>
       <div className="inequality-actions">
         {!isEquality && !hasRegionSelected && (
@@ -104,6 +113,7 @@ const InequalityItem = ({
             title="Choose solution region"
           >
             <span className="material-icons">format_shapes</span>
+            <span className="button-text">Select Region</span>
           </button>
         )}
         <button 

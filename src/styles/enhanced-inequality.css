@@ -236,32 +236,39 @@
 
 /* LaTeX Preview */
 .latex-preview-container {
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--panel-border);
+  margin-top: 15px;
+  padding: 15px;
   border-radius: 8px;
-  padding: 10px 15px;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(211, 166, 37, 0.3);
   display: flex;
   align-items: center;
-  gap: 10px;
   opacity: 0;
-  transform: translateY(-10px);
+  max-height: 0;
+  overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .latex-preview-container.visible {
   opacity: 1;
-  transform: translateY(0);
+  max-height: 80px;
 }
 
 .preview-label {
+  display: flex;
+  align-items: center;
   font-weight: bold;
   color: var(--primary-color);
-  font-size: 14px;
+  margin-right: 15px;
+  font-family: 'Cinzel', serif;
+  gap: 5px;
 }
 
 .preview-content {
   font-size: 18px;
-  color: var(--primary-color);
+  flex: 1;
+  font-family: 'STIX Two Math', 'Times New Roman', serif;
 }
 
 /* Hints Panel */
@@ -404,113 +411,185 @@
 
 /* ===== Inequality List ===== */
 .inequality-list {
-  background-color: var(--panel-bg);
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--panel-border);
-  overflow: hidden;
-  margin-top: 20px;
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(14, 26, 64, 0.2);
 }
 
 .inequality-list-header {
   display: flex;
-  justify-content: space-between;
-  padding: 15px 20px;
-  background-color: var(--primary-color);
-  color: #fff;
+  padding: 10px 15px;
+  background-color: rgba(14, 26, 64, 0.1);
+  border-bottom: 1px solid rgba(14, 26, 64, 0.2);
   font-weight: bold;
   font-family: 'Cinzel', serif;
+}
+
+.header-label {
+  flex: 1;
+}
+
+.header-actions {
+  width: 120px;
+  text-align: center;
 }
 
 .inequality-list-items {
   max-height: 300px;
   overflow-y: auto;
+  padding: 5px;
 }
 
 .inequality-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--panel-border);
-  border-left: 4px solid var(--inequality-color, var(--primary-color));
-  background-color: rgba(255, 255, 255, 0.9);
+  justify-content: space-between;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border-left: 4px solid var(--inequality-color);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
-  animation: slide-in 0.3s ease forwards;
-  animation-delay: calc(var(--index, 0) * 0.05s);
-  opacity: 0;
-  transform: translateX(-10px);
+  animation: slide-in 0.3s ease both;
+  animation-delay: calc(var(--index) * 0.05s);
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes slide-in {
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.inequality-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
+  background-color: var(--inequality-color);
+  opacity: 0.1;
+  transition: width 0.3s ease;
 }
 
-.inequality-item:hover {
-  background-color: rgba(211, 166, 37, 0.1);
+.inequality-item:hover::before {
+  width: 100%;
+}
+
+/* Add a special style for items with solution regions selected */
+.inequality-item.has-solution {
+  background-color: rgba(230, 255, 230, 0.8);
+  border-left-width: 6px;
+}
+
+.inequality-item.has-solution::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 5px;
+  background-color: var(--success-color);
 }
 
 .inequality-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.inequality-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 5px;
 }
 
 .inequality-label-text {
-  font-style: italic;
+  font-weight: bold;
   color: var(--primary-color);
 }
 
 .inequality-latex {
   font-size: 16px;
+  font-family: 'STIX Two Math', 'Times New Roman', serif;
+}
+
+/* New solution badge */
+.solution-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: rgba(52, 199, 89, 0.1);
+  border: 1px solid rgba(52, 199, 89, 0.3);
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--success-color);
+  margin-top: 5px;
+  width: fit-content;
+  gap: 3px;
+}
+
+.solution-badge .material-icons {
+  font-size: 14px;
 }
 
 .inequality-actions {
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  align-items: center;
 }
 
 .region-button,
 .delete-button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  gap: 5px;
+  font-size: 14px;
   transition: all 0.2s ease;
-  background-color: transparent;
 }
 
 .region-button {
-  color: var(--accent-color-2);
+  background-color: var(--accent-color-2);
+  color: white;
 }
 
 .region-button:hover {
-  background-color: rgba(26, 71, 42, 0.1);
+  background-color: #0f2a1a;
+  transform: translateY(-2px);
+}
+
+.button-text {
+  display: none;
 }
 
 .delete-button {
-  color: var(--accent-color-1);
+  background-color: rgba(255, 59, 48, 0.1);
+  color: var(--error-color);
 }
 
 .delete-button:hover {
-  background-color: rgba(116, 0, 1, 0.1);
+  background-color: var(--error-color);
+  color: white;
+  transform: translateY(-2px);
 }
 
+/* Improve the empty state */
 .inequality-list-empty {
-  padding: 30px 20px;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  background-color: var(--panel-bg);
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--panel-border);
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border: 1px dashed rgba(211, 166, 37, 0.5);
 }
 
 .empty-message {
@@ -518,46 +597,82 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  max-width: 80%;
 }
 
-.empty-message .material-icons {
-  font-size: 40px;
+.empty-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: rgba(211, 166, 37, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.empty-icon .material-icons {
+  font-size: 30px;
   color: var(--secondary-color);
-  opacity: 0.7;
 }
 
 .empty-message p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
   font-family: 'Cinzel', serif;
   color: var(--primary-color);
-  font-size: 18px;
-  margin: 0;
 }
 
-/* Responsive Styles */
-@media (min-width: 768px) {
-  .input-container {
-    flex-direction: row;
-    align-items: flex-start;
-  }
+.empty-hint {
+  font-size: 14px !important;
+  font-weight: normal !important;
+  color: rgba(14, 26, 64, 0.7) !important;
+}
 
+/* Make region selection buttons visible on the coordinate plane */
+.region-selection-btn {
+  background: linear-gradient(135deg, var(--accent-color-2), var(--primary-color));
+  color: white;
+  border: 2px solid white;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.region-selection-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive design */
+@media (min-width: 768px) {
+  .button-text {
+    display: inline;
+  }
+  
   .inequality-list-items {
     max-height: 400px;
   }
 }
 
 @media (max-width: 767px) {
-  .zoom-controls,
-  .toggle-controls {
-    transform: scale(0.9);
+  .region-button,
+  .delete-button {
+    padding: 5px;
   }
-
+  
   .inequality-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
   }
-
+  
   .inequality-actions {
+    margin-top: 10px;
     align-self: flex-end;
   }
 } 

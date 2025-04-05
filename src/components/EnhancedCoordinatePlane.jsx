@@ -318,21 +318,43 @@ const EnhancedCoordinatePlane = forwardRef((props, ref) => {
   };
 
   // Region selection handler for inequality
-  const handleRegionSelection = (inequality, regionButton) => {
-    // Update solution regions state
-    setSolutionRegions(prev => ({
-      ...prev,
-      [inequality.label]: regionButton
-    }));
+  const handleRegionSelection = (inequality, buttonType) => {
+    // First, find the inequality in the list
+    const index = inequalities.findIndex(ineq => ineq.label === inequality.label);
+    if (index === -1) return;
     
-    // Update the inequality to mark it has selected region
-    setInequalities(prev => 
-      prev.map(ineq => 
-        ineq.label === inequality.label 
-          ? { ...ineq, solutionType: regionButton, showRegionButtons: false }
-          : ineq
-      )
-    );
+    // Create a copy of the inequality
+    const updatedInequality = { 
+      ...inequalities[index], 
+      showRegionButtons: false,
+      solutionType: buttonType
+    };
+    
+    // Update the inequality in the list
+    const updatedInequalities = [...inequalities];
+    updatedInequalities[index] = updatedInequality;
+    
+    // Update solution regions state
+    setSolutionRegions({
+      ...solutionRegions,
+      [inequality.label]: buttonType
+    });
+    
+    // Apply visual effect for feedback
+    setFadeEffect(true);
+    
+    // Determine if the selection is correct
+    const isCorrect = checkRegionSelection(inequality, buttonType);
+    
+    // Provide feedback
+    if (isCorrect) {
+      setQuizMessage(`Correct! You've identified the solution region for inequality ${inequality.label}!`);
+    } else {
+      setQuizMessage(`The region you selected for inequality ${inequality.label} is not the solution region.`);
+    }
+    
+    // Update inequalities
+    setInequalities(updatedInequalities);
   };
   
   // Show region selection buttons
@@ -354,36 +376,112 @@ const EnhancedCoordinatePlane = forwardRef((props, ref) => {
 
   // Get positions for region selection buttons
   const getRegionButtonPositions = (inequality) => {
-    if (!inequality) return { btn1: { x: 0, y: 0 }, btn2: { x: 0, y: 0 } };
-    
-    // Get boundary points and calculate a point 1/3 of the way along the line
     const [p1, p2] = getBoundaryPoints(inequality);
-    const linePoint = {
-      x: p1.x + (p2.x - p1.x) / 3,
-      y: p1.y + (p2.y - p1.y) / 3
+    const canvas1 = toCanvasCoords(p1.x, p1.y);
+    const canvas2 = toCanvasCoords(p2.x, p2.y);
+    
+    // Calculate midpoint of the line
+    const midX = (canvas1.x + canvas2.x) / 2;
+    const midY = (canvas1.y + canvas2.y) / 2;
+    
+    // Calculate vector perpendicular to the line
+    const dx = canvas2.x - canvas1.x;
+    const dy = canvas2.y - canvas1.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    const nx = -dy / length;
+    const ny = dx / length;
+    
+    // Button offset distance from the line
+    const offset = 50;
+    
+    // Return positions for both buttons
+    return {
+      btn1: {
+        x: midX - nx * offset - 30,
+        y: midY - ny * offset - 15
+      },
+      btn2: {
+        x: midX + nx * offset - 30,
+        y: midY + ny * offset - 15
+      }
     };
+  };
+
+  // Check if selected region is correct
+  const checkRegionSelection = (inequality, selectedRegion) => {
+    // Get boundary points
+    const [p1, p2] = getBoundaryPoints(inequality);
     
-    // Convert to canvas coordinates
-    const canvasPoint = toCanvasCoords(linePoint.x, linePoint.y);
+    // Calculate a point in the middle of the line
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
     
-    // Get the normal vector for button positioning
+    // Calculate normal vector
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const length = Math.sqrt(dx * dx + dy * dy);
-    const normalX = -dy / length * 40; // 40px offset
-    const normalY = dx / length * 40;
     
-    // Return button positions on opposite sides of the line
-    return {
-      btn1: {
-        x: canvasPoint.x + normalX - 30,
-        y: canvasPoint.y + normalY - 15
-      },
-      btn2: {
-        x: canvasPoint.x - normalX - 30,
-        y: canvasPoint.y - normalY - 15
-      }
+    const nx = -dy / length;
+    const ny = dx / length;
+    
+    // Create test points in both regions
+    const testPoint1 = { 
+      x: midX + nx, 
+      y: midY + ny 
     };
+    
+    const testPoint2 = { 
+      x: midX - nx, 
+      y: midY - ny 
+    };
+    
+    // Check which test point satisfies the inequality
+    const test1Satisfies = checkPointInInequality(inequality, testPoint1);
+    
+    // If region 1 is selected, it should match test point 2 (which is in region 1 direction)
+    // If region 2 is selected, it should match test point 1 (which is in region 2 direction)
+    return (selectedRegion === 'btn1' && !test1Satisfies) || 
+           (selectedRegion === 'btn2' && test1Satisfies);
+  };
+
+  // Test if a point satisfies all inequalities
+  const testPointWithInequalities = (point) => {
+    if (inequalities.length === 0) {
+      setQuizMessage("No inequalities to test against! Cast some inequality spells first.");
+      return;
+    }
+    
+    // Test against each inequality
+    const results = inequalities.map(ineq => ({
+      label: ineq.label,
+      satisfies: checkPointInInequality(ineq, point)
+    }));
+    
+    // Check if the point satisfies all inequalities
+    const allSatisfied = results.every(result => result.satisfies);
+    
+    // Format the point coordinates
+    const formattedX = formatCoord(point.x);
+    const formattedY = formatCoord(point.y);
+    
+    // Create a message with the results
+    if (allSatisfied) {
+      setPointStatus(POINT_STATUS.CORRECT);
+      setShowPointCoordinates(true);
+      setQuizMessage(`Correct! The point (${formattedX}, ${formattedY}) is a solution to all inequalities.`);
+    } else {
+      setPointStatus(POINT_STATUS.INCORRECT);
+      setShowPointCoordinates(true);
+      
+      // Find which inequalities are not satisfied
+      const failedInequalities = results
+        .filter(result => !result.satisfies)
+        .map(result => result.label)
+        .join(', ');
+      
+      setQuizMessage(`The point (${formattedX}, ${formattedY}) does not satisfy the inequalities: ${failedInequalities}`);
+    }
   };
 
   // Main drawing function
@@ -700,27 +798,74 @@ const EnhancedCoordinatePlane = forwardRef((props, ref) => {
   const drawRegionSelectionButtons = (ctx, inequality) => {
     const buttonPositions = getRegionButtonPositions(inequality);
     
-    // Draw button 1
-    drawButton(
-      ctx, 
+    // Draw region selection instruction
+    const instX = (buttonPositions.btn1.x + buttonPositions.btn2.x) / 2;
+    const instY = buttonPositions.btn1.y - 30;
+    
+    ctx.font = 'bold 16px "Cinzel", serif';
+    ctx.fillStyle = themeColors.primary;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Draw instruction background
+    const text = "Select the solution region:";
+    const textWidth = ctx.measureText(text).width;
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillRect(
+      instX - textWidth / 2 - 10,
+      instY - 10,
+      textWidth + 20,
+      20
+    );
+    
+    // Draw instruction text
+    ctx.fillStyle = themeColors.primary;
+    ctx.fillText(text, instX, instY);
+    
+    // Draw button 1 with better styling
+    ctx.fillStyle = 'rgba(26, 71, 42, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(
       buttonPositions.btn1.x, 
       buttonPositions.btn1.y, 
       60, 
       30, 
-      "Region 1", 
-      themeColors.accent2
+      8
     );
+    ctx.fill();
     
-    // Draw button 2
-    drawButton(
-      ctx, 
+    // Button 1 border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Button 1 label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px "Cinzel", serif';
+    ctx.fillText("Region 1", buttonPositions.btn1.x + 30, buttonPositions.btn1.y + 15);
+    
+    // Draw button 2 with better styling
+    ctx.fillStyle = 'rgba(14, 26, 64, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(
       buttonPositions.btn2.x, 
       buttonPositions.btn2.y, 
       60, 
       30, 
-      "Region 2", 
-      themeColors.accent2
+      8
     );
+    ctx.fill();
+    
+    // Button 2 border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Button 2 label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px "Cinzel", serif';
+    ctx.fillText("Region 2", buttonPositions.btn2.x + 30, buttonPositions.btn2.y + 15);
   };
 
   // Draw test point
@@ -842,42 +987,6 @@ const EnhancedCoordinatePlane = forwardRef((props, ref) => {
     textLines.forEach((line, i) => {
       ctx.fillText(line, 20, 35 + i * 16);
     });
-  };
-
-  // Draw a button
-  const drawButton = (ctx, x, y, width, height, text, color) => {
-    // Button background with gradient
-    const gradient = ctx.createLinearGradient(x, y, x, y + height);
-    gradient.addColorStop(0, '#FFFFFF');
-    gradient.addColorStop(1, '#EEEEEE');
-    
-    ctx.fillStyle = gradient;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    
-    // Rounded rectangle background
-    const radius = 5;
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-    
-    ctx.fill();
-    ctx.stroke();
-    
-    // Button text
-    ctx.font = 'bold 12px "Cinzel", serif';
-    ctx.fillStyle = themeColors.primary;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, x + width / 2, y + height / 2);
   };
 
   // Expose functions to parent component through ref

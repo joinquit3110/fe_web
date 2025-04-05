@@ -85,6 +85,7 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
       setInput('');
       setShowLatex(false);
       setLatexPreview('');
+      setQuizMessage('Spell cast successfully! Your inequality has been added to the magical plane.');
     } else if (result === 'EXISTS') {
       setQuizMessage('This inequality spell already exists in the magical plane!');
     } else {
@@ -200,30 +201,42 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
           </div>
         </div>
         
-        {/* LaTeX Preview Area - only show for valid input */}
-        {showLatex && isValid && input.trim() && (
-          <div className={`latex-preview-container ${showLatex ? 'visible' : ''}`}>
-            <div className="preview-label">Preview:</div>
-            <div 
-              className="preview-content"
-              dangerouslySetInnerHTML={{ __html: latexPreview }}
-            />
+        {/* Enhanced LaTeX Preview Area - always visible when there's valid input */}
+        <div className={`latex-preview-container ${showLatex && isValid && input.trim() ? 'visible' : ''}`}>
+          <div className="preview-label">
+            <span className="material-icons">preview</span>
+            Preview:
           </div>
-        )}
+          <div 
+            className="preview-content"
+            dangerouslySetInnerHTML={{ __html: latexPreview }}
+          />
+        </div>
         
-        {/* Hints panel */}
+        {/* Hints panel with helpful tips */}
         {showHints && (
           <div className="hints-panel">
-            <h3>Inequality Formats:</h3>
+            <h3>
+              <span className="material-icons">tips_and_updates</span>
+              Inequality Spell Tips
+            </h3>
+            <p>Cast these magical inequality spells in any of these forms:</p>
             <ul>
               <li><strong>Standard form:</strong> ax + by + c [operator] 0</li>
-              <li><strong>Examples:</strong> x+y&lt;0, 2x-3y+1≥0, 3x+4y-12=0</li>
-              <li><strong>Vertical/Horizontal:</strong> x=c, y=c</li>
-              <li><strong>Line form:</strong> y=mx+b</li>
-              <li><strong>Operators:</strong> &lt;, &gt;, ≤, ≥, =, !=</li>
+              <li><strong>Single variable:</strong> ax + c [operator] 0</li>
+              <li><strong>Line equation:</strong> y = mx + b</li>
             </ul>
-            <p>Click regions after adding equations to specify solution areas</p>
-            <p>Use Shift+Click on the graph to test if a point is a solution</p>
+            <p>
+              <strong>Operators:</strong> &lt;, &gt;, &lt;=, &gt;=, =
+              <br/>
+              <strong>Unicode symbols:</strong> ≤, ≥, ≠ are also supported!
+            </p>
+            <p>
+              <strong>Examples:</strong> 
+              <br/>x+y&lt;0, 
+              <br/>2x-3y+1≥0, 
+              <br/>y=2x+1
+            </p>
           </div>
         )}
       </form>
