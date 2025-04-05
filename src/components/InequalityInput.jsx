@@ -54,12 +54,24 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
           setError('Your spell must include x and/or y variables to work');
         }
         
-        // Don't show LaTeX preview for invalid input
-        setLatexPreview('');
+        // Still try to display the LaTeX preview even for invalid input
+        try {
+          // Clean the input for LaTeX display 
+          let cleanInput = input
+            .replace(/</g, '\\lt ')
+            .replace(/>/g, '\\gt ')
+            .replace(/<=/g, '\\leq ')
+            .replace(/>=/g, '\\geq ');
+          
+          setLatexPreview(`\\(${cleanInput}\\)`);
+        } catch (e) {
+          // If even this fails, show something basic
+          setLatexPreview(`\\(${input}\\)`);
+        }
       }
       
       // Trigger MathJax rendering for any preview content
-      if (window.MathJax && window.MathJax.typeset && latexPreview) {
+      if (window.MathJax && window.MathJax.typeset) {
         window.MathJax.typeset();
       }
     }, 300); // Delay processing by 300ms
@@ -70,7 +82,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [input, latexPreview]);
+  }, [input]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
