@@ -78,6 +78,11 @@ const AppContent = () => {
     setQuizMessage('');
   };
   
+  // Generate sequential labels for inequalities (d1, d2, ...)
+  const getSequentialLabel = (index) => {
+    return `d${index + 1}`;
+  };
+  
   if (!user) {
     return <Login />;
   }
@@ -143,7 +148,7 @@ const AppContent = () => {
                   <span 
                     className="latex-content"
                     dangerouslySetInnerHTML={{ 
-                      __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
+                      __html: `\\(${getSequentialLabel(index)}:\\; ${ineq.latex}\\)` 
                     }}
                   />
                   <span 

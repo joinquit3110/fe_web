@@ -88,17 +88,7 @@ button, input, select, textarea {
 
 /* Hogwarts Crest */
 .hogwarts-crest {
-  position: absolute;
-  top: 10px;
-  left: 20px;
-  width: 80px;
-  height: 100px;
-  background-image: url('https://i.imgur.com/EMBkRxp.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  z-index: 10;
-  opacity: 0.9;
+  display: none;
 }
 
 /* Moon styling - enhanced */
@@ -197,8 +187,8 @@ button, input, select, textarea {
 .hogwarts-header {
   text-align: center;
   position: relative;
-  padding: 30px 0;
-  margin-bottom: 30px;
+  padding: 15px 0;
+  margin-bottom: 15px;
   z-index: 2;
   width: 100%;
   border-bottom: 2px solid var(--secondary-color);
@@ -226,7 +216,7 @@ button, input, select, textarea {
   margin: 0;
   padding: 0;
   font-weight: 700;
-  font-size: 1.7rem;
+  font-size: 1.4rem;
   letter-spacing: 1px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px rgba(240, 199, 94, 0.3);
 }
@@ -279,25 +269,7 @@ button, input, select, textarea {
 }
 
 .panel-decoration {
-  position: absolute;
-  top: 0;
-  width: 40px;
-  height: 100%;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  opacity: 0.8;
-  pointer-events: none;
-}
-
-.panel-decoration.left {
-  left: 0;
-  background-image: url('https://i.imgur.com/O8QBeM8.png'); /* Wizard staff or wand image */
-}
-
-.panel-decoration.right {
-  right: 0;
-  background-image: url('https://i.imgur.com/O8QBeM8.png'); /* Wizard staff or wand image */
-  transform: scaleX(-1);
+  display: none;
 }
 
 .control-panel-content {
@@ -375,10 +347,10 @@ button, input, select, textarea {
   background: linear-gradient(to bottom, var(--hogwarts-secondary) 0%, #D3A625 100%);
   color: var(--hogwarts-dark);
   border: none;
-  padding: 10px 16px;
+  padding: 8px 12px;
   font-family: 'Cinzel', serif;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -415,10 +387,10 @@ button, input, select, textarea {
   background: linear-gradient(to bottom, #9E2722 0%, #740001 100%);
   color: var(--text-primary);
   border: none;
-  padding: 10px 16px;
+  padding: 8px 12px;
   font-family: 'Cinzel', serif;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -489,26 +461,19 @@ button, input, select, textarea {
 
 /* Enhanced LaTeX preview */
 .latex-preview-container {
-  margin-top: 16px;
-  padding: 12px 16px;
+  margin-top: 12px;
+  padding: 10px;
   background: rgba(10, 14, 35, 0.6);
   border: 1px solid rgba(240, 199, 94, 0.25);
   border-radius: 6px;
-  position: relative;
-  overflow: hidden;
-}
-
-.latex-preview {
+  height: 50px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
 }
 
 .preview-label {
-  color: var(--secondary-color);
-  font-family: 'Cinzel', serif;
-  font-weight: 600;
-  font-size: 0.9rem;
+  display: none;
 }
 
 .preview-content {
@@ -620,23 +585,37 @@ button, input, select, textarea {
   }
 
   .hogwarts-content {
-    grid-template-columns: 1fr 1fr;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: auto auto auto;
     grid-template-areas: 
-      "control inequalities"
-      "coordinate coordinate";
-    gap: 30px;
+      "control coordinate"
+      "message coordinate"
+      "inequalities coordinate";
+    gap: 15px;
   }
-
+  
   .control-panel {
     grid-area: control;
   }
-
+  
+  .message-box {
+    grid-area: message;
+  }
+  
   .coordinate-container {
     grid-area: coordinate;
+    height: calc(100vh - 200px);
+    max-height: 800px;
   }
-
+  
   .inequalities-list {
     grid-area: inequalities;
+  }
+  
+  .coordinate-plane {
+    height: calc(100% - 60px);
+    max-height: none;
   }
 
   .moon-wrapper {
@@ -663,20 +642,6 @@ button, input, select, textarea {
 }
 
 @media (min-width: 1024px) {
-  .hogwarts-content {
-    grid-template-columns: 1fr 2fr 1fr;
-    grid-template-areas: 
-      "control coordinate inequalities";
-  }
-
-  .inequalities-list {
-    max-height: none;
-  }
-
-  .coordinate-container {
-    max-height: none;
-  }
-  
   .hogwarts-crest {
     width: 120px;
     height: 150px;
@@ -904,7 +869,7 @@ h2 {
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   transition: all 0.2s ease;
 }
@@ -1344,28 +1309,19 @@ canvas {
 
 /* LaTeX preview container */
 .latex-preview-container {
-  margin-top: 15px;
-  width: 100%;
+  margin-top: 12px;
   padding: 10px;
-  background: rgba(14, 26, 64, 0.6);
-  border-radius: 8px;
-  border: 1px solid rgba(211, 166, 37, 0.3);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
-}
-
-.latex-preview {
+  background: rgba(10, 14, 35, 0.6);
+  border: 1px solid rgba(240, 199, 94, 0.25);
+  border-radius: 6px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  min-height: 40px;
 }
 
 .preview-label {
-  color: #d3a625;
-  font-weight: bold;
-  margin-right: 10px;
-  font-family: 'Cinzel', serif;
+  display: none;
 }
 
 .preview-content {
@@ -1502,8 +1458,7 @@ canvas {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .coordinate-container {
-    min-height: 350px;
-    padding: 15px;
+    min-height: 300px;
   }
   
   .reset-view-button {
@@ -1973,14 +1928,14 @@ canvas {
 }
 
 .mobile-optimized .wizard-panel {
-  margin-bottom: 15px;
-  padding: 15px;
+  margin-bottom: 12px;
+  padding: 12px;
   border-radius: 8px;
 }
 
 .mobile-optimized .wizard-panel h2 {
-  font-size: 1.2rem;
-  margin-bottom: 15px;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
 }
 
 /* Input container for mobile */
@@ -2010,10 +1965,10 @@ canvas {
 
 .mobile-optimized .button-group button {
   flex: 1;
-  min-height: 50px;
-  font-size: 16px;
+  min-height: 40px;
+  font-size: 14px;
   white-space: nowrap;
-  padding: 12px 15px;
+  padding: 8px 12px;
 }
 
 /* Coordinate plane for mobile */
@@ -2083,4 +2038,20 @@ html, body {
 /* Disable browser handling of all panning and zooming gestures */
 .coordinate-plane canvas {
   touch-action: none;
+}
+
+/* Make the graph larger */
+.coordinate-plane {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1/1;
+  max-height: calc(100vh - 300px);
+  min-height: 350px;
+}
+
+.coordinate-plane canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  touch-action: none; /* Disable panning */
 } 

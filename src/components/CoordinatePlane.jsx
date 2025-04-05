@@ -285,16 +285,23 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   ctx.fill();
 };
 
-// Define a simple color function for backward compatibility
-const getRandomColor = () => {
-  const colors = [
-    '#740001', // Gryffindor Red
-    '#D3A625', // Gryffindor Gold
-    '#1A472A', // Slytherin Green
-    '#0E1A40', // Ravenclaw Blue
-    '#ECB939', // Hufflepuff Yellow
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
+// Define a variety of colors for inequality boundaries
+const INEQUALITY_COLORS = [
+  "#D3263A", // Gryffindor Red
+  "#1A612E", // Slytherin Green
+  "#0E1A40", // Ravenclaw Blue
+  "#F0C75E", // Hufflepuff Yellow
+  "#9C27B0", // Purple
+  "#2196F3", // Blue
+  "#FF9800", // Orange
+  "#009688", // Teal
+  "#795548", // Brown
+  "#607D8B"  // Blue Gray
+];
+
+// Function to get a color for an inequality based on index
+const getColorForInequality = (index) => {
+  return INEQUALITY_COLORS[index % INEQUALITY_COLORS.length];
 };
 
 // Main component
@@ -492,108 +499,59 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
   }, [parsedInequalities, setSelectedPoint, setQuizMessage, inequalities]);
 
-  // Modify drawInequality to correctly set up solution buttons
-  const drawInequality = useCallback((ctx, eq) => {
-    if (!eq) return null;
-
-    const isHighlighted = hoveredEq && hoveredEq.label === eq.label;
-    const lineWidth = isHighlighted ? 4 : 2;
-    const alpha = isHighlighted ? 0.4 : 0.2;
-
-    const [p1, p2] = getBoundaryPoints(eq);
-    const pt1Canvas = toCanvasCoords(p1.x, p1.y);
-    const pt2Canvas = toCanvasCoords(p2.x, p2.y);
-
-    // Draw filled region if solved
-    if (eq.solved) {
-      fillHalfPlane(ctx, eq, eq.color, toCanvasCoords, alpha);
-    }
-
-    // Draw boundary line with highlight effect
-    ctx.strokeStyle = eq.color;
-    ctx.lineWidth = lineWidth;
-    if (isHighlighted) {
-      ctx.shadowColor = eq.color;
-      ctx.shadowBlur = 10;
-    }
-    ctx.beginPath();
-    ctx.moveTo(pt1Canvas.x, pt1Canvas.y);
-    ctx.lineTo(pt2Canvas.x, pt2Canvas.y);
-    ctx.stroke();
+  // Update drawing inequality function to always fill solution domains
+  const drawInequality = useCallback((ctx, ineq, isHovered = false) => {
+    if (!ineq) return null;
     
-    if (isHighlighted) {
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
+    // Always fill solution domains with the inequality's color
+    fillHalfPlane(ctx, ineq, ineq.color || getColorForInequality(0), toCanvasCoords, 0.25);
+    
+    // Draw boundary line with the inequality's color
+    const [p1, p2] = getBoundaryPoints(ineq);
+    const cp1 = toCanvasCoords(p1.x, p1.y);
+    const cp2 = toCanvasCoords(p2.x, p2.y);
+    
+    // Set line style
+    ctx.beginPath();
+    ctx.strokeStyle = isHovered ? '#0077cc' : (ineq.color || getColorForInequality(0));
+    ctx.lineWidth = isHovered ? 3 : 2;
+    
+    // For strict inequalities (<, >), use dashed line
+    if (ineq.operator === '<' || ineq.operator === '>') {
+      ctx.setLineDash([5, 3]);
+    } else {
+      ctx.setLineDash([]);
     }
-
-    // Draw label
-    ctx.font = "bold italic 14px 'STIX Two Math', 'Times New Roman', serif";
-    ctx.fillStyle = eq.color;
-    ctx.fillText(eq.label, pt2Canvas.x + 5, pt2Canvas.y - 5);
-
-    // Only draw buttons if NOT solved
-    if (!eq.solved) {
-      const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      
-      // Calculate offset for buttons
-      const perpX = -dy / length;
-      const perpY = dx / length;
-      const offset = 3;
-      
-      // Calculate button positions
-      const pos1 = toCanvasCoords(
-        mid.x - perpX * offset,
-        mid.y - perpY * offset
-      );
-      const pos2 = toCanvasCoords(
-        mid.x + perpX * offset,
-        mid.y + perpY * offset
-      );
-
-      // Test points to determine which region is the solution
-      const testPoint1 = { 
-        x: mid.x - perpX * offset, 
-        y: mid.y - perpY * offset 
-      };
-      
-      const testPoint2 = { 
-        x: mid.x + perpX * offset, 
-        y: mid.y + perpY * offset 
-      };
-      
-      // Check which point satisfies the inequality
-      const point1Satisfies = checkPointInInequality(eq, testPoint1);
-      const point2Satisfies = checkPointInInequality(eq, testPoint2);
-      
-      // Create buttons with solution status
-      let btn1 = {
-        x: pos1.x - BUTTON_CONFIG.width / 2,
-        y: pos1.y - BUTTON_CONFIG.height / 2,
-        width: BUTTON_CONFIG.width,
-        height: BUTTON_CONFIG.height,
-        sol: point1Satisfies
-      };
-      
-      let btn2 = {
-        x: pos2.x - BUTTON_CONFIG.width / 2,
-        y: pos2.y - BUTTON_CONFIG.height / 2,
-        width: BUTTON_CONFIG.width,
-        height: BUTTON_CONFIG.height,
-        sol: point2Satisfies
-      };
-
-      // Create button renderers with improved visuals
-      const btn1Renderer = drawButton(ctx, btn1.x, btn1.y, btn1.width, btn1.height, 'Region 1', eq.color);
-      const btn2Renderer = drawButton(ctx, btn2.x, btn2.y, btn2.width, btn2.height, 'Region 2', eq.color);
-
-      return { eq, btn1: {...btn1, ...btn1Renderer}, btn2: {...btn2, ...btn2Renderer} };
-    }
-
-    return null;
-  }, [toCanvasCoords, hoveredEq]);
+    
+    ctx.moveTo(cp1.x, cp1.y);
+    ctx.lineTo(cp2.x, cp2.y);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset line style
+    
+    // Calculate position for label near the middle of the visible line
+    const midX = (cp1.x + cp2.x) / 2;
+    const midY = (cp1.y + cp2.y) / 2;
+    
+    // Draw the inequality label
+    ctx.font = "bold italic 16px 'STIX Two Math', 'Times New Roman', serif";
+    ctx.fillStyle = ineq.color || getColorForInequality(0);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    
+    // Calculate offset to prevent label from overlapping with the line
+    const dx = cp2.x - cp1.x;
+    const dy = cp2.y - cp1.y;
+    const angle = Math.atan2(dy, dx);
+    
+    // Offset perpendicular to the line
+    const offsetX = Math.sin(angle) * 20;
+    const offsetY = -Math.cos(angle) * 20;
+    
+    // Draw the label
+    ctx.fillText(ineq.label, midX + offsetX, midY + offsetY);
+    
+    return null; // No solution buttons needed anymore as we always fill
+  }, [toCanvasCoords, fillHalfPlane]);
 
   // Sửa lại hàm checkDuplicateInequality
   const checkDuplicateInequality = useCallback((newEq, existingEq) => {
@@ -683,48 +641,26 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     });
   };
   
-  // Define proper mouse event handlers
-  const handleMouseDown = useCallback((e) => {
+  // Ensure solution domains are filled by default
+  const FILL_SOLUTIONS = true;
+
+  // In the handleMouseDown, handleMouseMove and handleMouseUp functions, disable panning
+  const handleMouseDown = (e) => {
+    // Prevent panning action by not setting startPan and isPanning
+    // Only keep solution domain clicking functionality
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    setDragging(true);
-    setLastPos({ x, y });
-    
-    // Handle point mode if active
-    if (isPointMode) {
-      const worldX = (x - origin.x) / zoom;
-      const worldY = (origin.y - y) / zoom;
-      handlePointSelection({ x: worldX, y: worldY });
-    }
-  }, [origin, zoom, isPointMode, handlePointSelection]);
+    handlePointClick(x, y);
+  };
 
-  const handleMouseMove = useCallback((e) => {
-    if (!dragging) return;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    setLastPos({ x, y });
-    
-    // Check for hovering over intersection points
-    const hoveredPoint = intersectionPoints.find(pt => {
-      const cpt = toCanvasCoords(pt.x, pt.y);
-      const distance = Math.sqrt(
-        Math.pow(x - cpt.x, 2) + 
-        Math.pow(y - cpt.y, 2)
-      );
-      return distance < 8;
-    });
-    
-    setHoveredIntersection(hoveredPoint);
-  }, [dragging, lastPos, intersectionPoints, toCanvasCoords]);
+  const handleMouseMove = (e) => {
+    // Do nothing, panning disabled
+  };
 
-  const handleMouseUp = useCallback(() => {
-    setDragging(false);
-  }, []);
+  const handleMouseUp = (e) => {
+    // Do nothing, panning disabled
+  };
 
   const handleMouseLeave = useCallback(() => {
     setDragging(false);
@@ -852,105 +788,24 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
 
   // Update the redraw function to show correct/incorrect solution regions
   const redraw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    if (!canvasRef.current) return;
     
-    // Clear canvas and draw background
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    // Clear canvas
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
     // Draw grid and axes
     drawGridAndAxes(ctx, canvasWidth, canvasHeight, zoom, origin);
     
-    // Draw inequality regions in this order:
-    // 1. Non-solution regions (red)
-    // 2. Solution regions (green for correct, yellow for incorrect)
-    // 3. Grid/axes again to ensure visibility
-    // 4. Boundary lines
-    
-    // Draw non-solution regions
-    inequalities.forEach(eq => {
-      if (eq.solved) {
-        fillNonSolutionRegion(ctx, eq, toCanvasCoords);
-      }
-    });
-    
-    // Draw solution regions with appropriate colors
-    inequalities.forEach(eq => {
-      if (eq.solved) {
-        // If the selection is correct, use the line color
-        // If incorrect, use a warning color
-        const fillColor = eq.isCorrect ? eq.color : '#f57c00'; // Orange for incorrect
-        const fillAlpha = eq.isCorrect ? 0.3 : 0.2; // Less opacity for incorrect
-        
-        fillHalfPlane(ctx, eq, fillColor, toCanvasCoords, fillAlpha);
-      }
-    });
-    
-    // Redraw grid and axes to ensure visibility
-    drawGridAndAxes(ctx, canvasWidth, canvasHeight, zoom, origin);
-    
-    // Draw boundaries with enhanced highlight
+    // Draw all inequalities
     inequalities.forEach(eq => {
       if (!eq) return;
-      const isActive = activeLines.some(line => line.label === eq.label);
-      const isHighlighted = isActive || (hoveredEq && hoveredEq.label === eq.label);
-      
-      // Draw glow effect for active lines
-      if (isActive) {
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 140, 0, 0.3)'; // Orange glow
-        ctx.lineWidth = 8;
-        const [p1, p2] = getBoundaryPoints(eq);
-        const cp1 = toCanvasCoords(p1);
-        const cp2 = toCanvasCoords(p2);
-        ctx.moveTo(cp1.x, cp1.y);
-        ctx.lineTo(cp2.x, cp2.y);
-        ctx.stroke();
-      }
-      
-      // Draw main line
-      ctx.beginPath();
-      ctx.strokeStyle = isActive ? '#ff6d00' : (isHighlighted ? '#0077cc' : eq.color || '#666');
-      ctx.lineWidth = isActive ? 4 : (isHighlighted ? 3 : 2);
-      
-      const [p1, p2] = getBoundaryPoints(eq);
-      const cp1 = toCanvasCoords(p1);
-      const cp2 = toCanvasCoords(p2);
-      
-      ctx.moveTo(cp1.x, cp1.y);
-      ctx.lineTo(cp2.x, cp2.y);
-      ctx.stroke();
-
-      // Draw label - add additional indicator for correct/incorrect
-      ctx.font = "bold italic 16px 'STIX Two Math', 'Times New Roman', serif";
-      ctx.fillStyle = eq.color || '#666';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'bottom';
-      const midpoint = {
-        x: (cp1.x + cp2.x) / 2,
-        y: (cp1.y + cp2.y) / 2
-      };
-      
-      // Show label with correctness indicator if solved
-      if (eq.solved) {
-        const indicator = eq.isCorrect ? '✓' : '✗';
-        ctx.fillText(`${eq.label} ${indicator}`, midpoint.x + 10, midpoint.y - 10);
-      } else {
-        ctx.fillText(eq.label, midpoint.x + 10, midpoint.y - 10);
-      }
+      const isHighlighted = hoveredEq && hoveredEq.label === eq.label;
+      drawInequality(ctx, eq, isHighlighted);
     });
     
-    // Draw buttons for inequalities
-    const buttons = inequalities.map(eq => {
-      if (!eq) return null;
-      return drawInequality(ctx, eq);
-    }).filter(Boolean);
-    
-    setSolutionButtons(buttons);
-
     // Draw intersection points
     intersectionPoints.forEach(pt => {
       const cpt = toCanvasCoords(pt);
@@ -999,7 +854,28 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
           ctx.fill();
       }
     });
-  }, [inequalities, zoom, drawInequality, toCanvasCoords, fillNonSolutionRegion, canvasWidth, canvasHeight, intersectionPoints, origin, activeLines, hoveredEq]);
+    
+    // Draw selected point if any
+    if (selectedPoint) {
+      const canvasPoint = toCanvasCoords(selectedPoint.x, selectedPoint.y);
+      ctx.beginPath();
+      ctx.arc(canvasPoint.x, canvasPoint.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(211, 166, 37, 0.7)';
+      ctx.fill();
+      ctx.strokeStyle = '#D3A625';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Draw coordinates
+      ctx.font = "bold 14px 'Cinzel', serif";
+      ctx.fillStyle = '#D3A625';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`(${selectedPoint.x.toFixed(1)}, ${selectedPoint.y.toFixed(1)})`, 
+                  canvasPoint.x, canvasPoint.y - 15);
+    }
+  }, [inequalities, zoom, drawInequality, toCanvasCoords, canvasWidth, canvasHeight, 
+      intersectionPoints, origin, hoveredEq, selectedPoint]);
 
   useEffect(() => {
     redraw();
@@ -1184,7 +1060,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     return false;
   };
 
-  // Update useImperativeHandle with modified handleAddInequality function
+  // Update useImperativeHandle to use sequential inequality labels
   useImperativeHandle(ref, () => ({
     handleAddInequality: (inputText) => {
       const result = parseInequality(inputText);
@@ -1203,11 +1079,28 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         return 'EXISTS';
       }
       
-      // Add inequality to list with label from parser
-      setInequalities(prev => [...prev, {
+      // Find the highest index currently in use
+      let maxIndex = 0;
+      inequalities.forEach(ineq => {
+        if (ineq && ineq.label) {
+          // Extract the number from labels like "d1", "d2", etc.
+          const match = ineq.label.match(/d(\d+)/);
+          if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (num > maxIndex) maxIndex = num;
+          }
+        }
+      });
+      
+      // Create a new inequality with the next sequential label
+      const newIneq = {
         ...result,
-        color: getRandomColor()
-      }]);
+        label: `d${maxIndex + 1}`,
+        color: getColorForInequality(maxIndex)
+      };
+      
+      // Add inequality to list
+      setInequalities(prev => [...prev, newIneq]);
       
       // Clear any previous message
       setQuizMessage('');

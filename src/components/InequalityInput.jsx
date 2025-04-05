@@ -5,7 +5,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   const [input, setInput] = useState('');
   const [isValid, setIsValid] = useState(true);
   const [error, setError] = useState('');
-  const [showLatex, setShowLatex] = useState(false);
   const [latexPreview, setLatexPreview] = useState('');
   const [isSpellcasting, setIsSpellcasting] = useState(false);
   const inputRef = useRef(null);
@@ -20,7 +19,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   // Enhanced validation with better feedback and syntax suggestions
   useEffect(() => {
     if (!input.trim()) {
-      setShowLatex(false);
       setIsValid(true);
       setError('');
       setLatexPreview('');
@@ -33,15 +31,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
     if (result) {
       setIsValid(true);
       setError('');
-      setShowLatex(true);
       setLatexPreview(`\\(${result.latex}\\)`);
-      
-      // Trigger MathJax rendering
-      if (window.MathJax && window.MathJax.typeset) {
-        setTimeout(() => {
-          window.MathJax.typeset();
-        }, 100);
-      }
     } else {
       setIsValid(false);
       
@@ -58,8 +48,19 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
         setError('Your spell must include x and/or y variables to work');
       }
       
-      setShowLatex(false);
-      setLatexPreview('');
+      // Still attempt to show the LaTeX preview for any input
+      try {
+        setLatexPreview(`\\(${input}\\)`);
+      } catch (e) {
+        setLatexPreview('');
+      }
+    }
+    
+    // Trigger MathJax rendering for any preview content
+    if (window.MathJax && window.MathJax.typeset) {
+      setTimeout(() => {
+        window.MathJax.typeset();
+      }, 100);
     }
   }, [input]);
 
@@ -81,7 +82,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
       if (result === true) {
         // Successfully added
         setInput('');
-        setShowLatex(false);
         setLatexPreview('');
       } else if (result === 'EXISTS') {
         setQuizMessage('This inequality spell already exists in your spellbook!');
@@ -96,7 +96,6 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   const handleReset = () => {
     resetAll();
     setInput('');
-    setShowLatex(false);
     setLatexPreview('');
     setIsValid(true);
     setError('');
@@ -136,7 +135,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               disabled={!isValid || !input.trim() || isSpellcasting}
             >
               <span className="spell-icon">✨</span>
-              Cast Spell
+              Cast
             </button>
             <button 
               type="button" 
@@ -151,18 +150,15 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
           </div>
         </div>
         
-        {/* LaTeX Preview Area - only show for valid input */}
-        {showLatex && isValid && input.trim() && (
-          <div className="latex-preview-container">
-            <div className="latex-preview">
-              <span className="preview-label">Preview: </span>
-              <span 
-                className="preview-content"
-                dangerouslySetInnerHTML={{ __html: latexPreview }}
-              />
-            </div>
+        {/* LaTeX Preview Area - always show */}
+        <div className="latex-preview-container">
+          <div className="latex-preview">
+            <span 
+              className="preview-content"
+              dangerouslySetInnerHTML={{ __html: latexPreview || '\\(\\)' }}
+            />
           </div>
-        )}
+        </div>
       </form>
     </div>
   );
