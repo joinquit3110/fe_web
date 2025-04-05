@@ -128,6 +128,16 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             )}
           </div>
           
+          {/* LaTeX Preview Area - moved between input and buttons */}
+          <div className="latex-preview-container">
+            <div className="latex-preview">
+              <span 
+                className="preview-content"
+                dangerouslySetInnerHTML={{ __html: latexPreview || '\\(\\)' }}
+              />
+            </div>
+          </div>
+          
           <div className="button-group">
             <button 
               type="submit" 
@@ -135,7 +145,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               disabled={!isValid || !input.trim() || isSpellcasting}
             >
               <span className="spell-icon">✨</span>
-              Cast
+              Cast Spell
             </button>
             <button 
               type="button" 
@@ -145,18 +155,8 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               disabled={isSpellcasting}
             >
               <span className="spell-icon">⚡</span>
-              Reset
+              Finite Incantatem
             </button>
-          </div>
-        </div>
-        
-        {/* LaTeX Preview Area - always show */}
-        <div className="latex-preview-container">
-          <div className="latex-preview">
-            <span 
-              className="preview-content"
-              dangerouslySetInnerHTML={{ __html: latexPreview || '\\(\\)' }}
-            />
           </div>
         </div>
       </form>

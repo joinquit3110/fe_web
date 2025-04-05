@@ -99,7 +99,7 @@ const AppContent = () => {
         {/* 1. Control Panel - Cast Spell at top */}
         <div className="control-panel wizard-panel">
           <div className="control-panel-content">
-            <h2>Professor's Spellbook</h2>
+            <h2>Grand Arcanum of Inequalities</h2>
             <InequalityInput 
               addInequality={handleAddInequality}
               setQuizMessage={setQuizMessage}

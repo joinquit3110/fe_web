@@ -188,8 +188,7 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
 
 // Update fillHalfPlane function to correctly handle all types of inequalities
 const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
-  if (!eq || !eq.solved) return;
-  
+  // Always fill solution domains even when not explicitly marked as solved
   const [p1, p2] = getBoundaryPoints(eq);
   const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   
@@ -269,9 +268,9 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   };
   
   // Convert the boundary points to canvas coordinates for drawing
-  const canvasP1 = toCanvasCoords(p1);
-  const canvasP2 = toCanvasCoords(p2);
-  const canvasFar = toCanvasCoords(farPoint);
+  const canvasP1 = toCanvasCoords(p1.x, p1.y);
+  const canvasP2 = toCanvasCoords(p2.x, p2.y);
+  const canvasFar = toCanvasCoords(farPoint.x, farPoint.y);
   
   // Draw a filled triangle to represent the half-plane
   ctx.beginPath();
@@ -499,7 +498,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     }
   }, [parsedInequalities, setSelectedPoint, setQuizMessage, inequalities]);
 
-  // Update drawing inequality function to always fill solution domains
+  // Update drawing inequality function to show solution domain selection buttons
   const drawInequality = useCallback((ctx, ineq, isHovered = false) => {
     if (!ineq) return null;
     
@@ -528,29 +527,111 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     ctx.stroke();
     ctx.setLineDash([]); // Reset line style
     
-    // Calculate position for label near the middle of the visible line
+    // Draw label near the middle of the visible line
     const midX = (cp1.x + cp2.x) / 2;
     const midY = (cp1.y + cp2.y) / 2;
     
     // Draw the inequality label
     ctx.font = "bold italic 16px 'STIX Two Math', 'Times New Roman', serif";
     ctx.fillStyle = ineq.color || getColorForInequality(0);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     
-    // Calculate offset to prevent label from overlapping with the line
-    const dx = cp2.x - cp1.x;
-    const dy = cp2.y - cp1.y;
-    const angle = Math.atan2(dy, dx);
+    ctx.fillText(ineq.label, midX, midY - 20);
     
-    // Offset perpendicular to the line
-    const offsetX = Math.sin(angle) * 20;
-    const offsetY = -Math.cos(angle) * 20;
+    // If inequality isn't solved (no selected solution domain), add solution buttons
+    if (!ineq.solved) {
+      const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      
+      // Calculate offset for buttons
+      const perpX = -dy / length;
+      const perpY = dx / length;
+      const offset = 3;
+      
+      // Calculate button positions
+      const pos1 = toCanvasCoords(
+        mid.x - perpX * offset,
+        mid.y - perpY * offset
+      );
+      const pos2 = toCanvasCoords(
+        mid.x + perpX * offset,
+        mid.y + perpY * offset
+      );
+
+      // Test points to determine which region is the solution
+      const testPoint1 = { 
+        x: mid.x - perpX * offset, 
+        y: mid.y - perpY * offset 
+      };
+      
+      const testPoint2 = { 
+        x: mid.x + perpX * offset, 
+        y: mid.y + perpY * offset 
+      };
+      
+      // Check which point satisfies the inequality
+      const point1Satisfies = checkPointInInequality(ineq, testPoint1);
+      const point2Satisfies = checkPointInInequality(ineq, testPoint2);
+      
+      // Create buttons with solution status
+      const btn1 = {
+        x: pos1.x - 30,
+        y: pos1.y - 15,
+        width: 60,
+        height: 30,
+        sol: point1Satisfies
+      };
+      
+      const btn2 = {
+        x: pos2.x - 30,
+        y: pos2.y - 15,
+        width: 60,
+        height: 30,
+        sol: point2Satisfies
+      };
+      
+      // Draw buttons
+      ctx.fillStyle = 'rgba(10, 14, 35, 0.8)';
+      ctx.strokeStyle = ineq.color;
+      
+      // Button 1
+      ctx.beginPath();
+      ctx.roundRect(btn1.x, btn1.y, btn1.width, btn1.height, 5);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Button 2
+      ctx.beginPath();
+      ctx.roundRect(btn2.x, btn2.y, btn2.width, btn2.height, 5);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Button text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px "Cinzel", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Region 1', btn1.x + btn1.width/2, btn1.y + btn1.height/2);
+      ctx.fillText('Region 2', btn2.x + btn2.width/2, btn2.y + btn2.height/2);
+      
+      // Calculate contains function for hit testing
+      btn1.contains = (x, y) => (
+        x >= btn1.x && x <= btn1.x + btn1.width && 
+        y >= btn1.y && y <= btn1.y + btn1.height
+      );
+      
+      btn2.contains = (x, y) => (
+        x >= btn2.x && x <= btn2.x + btn2.width && 
+        y >= btn2.y && y <= btn2.y + btn2.height
+      );
+      
+      return { eq: ineq, btn1, btn2 };
+    }
     
-    // Draw the label
-    ctx.fillText(ineq.label, midX + offsetX, midY + offsetY);
-    
-    return null; // No solution buttons needed anymore as we always fill
+    return null;
   }, [toCanvasCoords, fillHalfPlane]);
 
   // Sửa lại hàm checkDuplicateInequality
@@ -666,6 +747,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     setDragging(false);
   }, []);
 
+  // Update handleCanvasClick to handle solution region buttons
   const handleCanvasClick = useCallback((e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -786,7 +868,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     ctx.fill();
   }, []);
 
-  // Update the redraw function to show correct/incorrect solution regions
+  // Update the redraw function to handle solution domain selection
   const redraw = useCallback(() => {
     if (!canvasRef.current) return;
     
@@ -799,16 +881,21 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
     // Draw grid and axes
     drawGridAndAxes(ctx, canvasWidth, canvasHeight, zoom, origin);
     
-    // Draw all inequalities
+    // Draw inequalities and collect solution buttons
+    let buttons = [];
     inequalities.forEach(eq => {
       if (!eq) return;
       const isHighlighted = hoveredEq && hoveredEq.label === eq.label;
-      drawInequality(ctx, eq, isHighlighted);
+      const btnData = drawInequality(ctx, eq, isHighlighted);
+      if (btnData) buttons.push(btnData);
     });
+    
+    // Update solution buttons for click handling
+    setSolutionButtons(buttons);
     
     // Draw intersection points
     intersectionPoints.forEach(pt => {
-      const cpt = toCanvasCoords(pt);
+      const cpt = toCanvasCoords(pt.x, pt.y);
       
       // Draw point glow based on status
       if (pt.status === POINT_STATUS.ACTIVE) {
@@ -875,7 +962,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
                   canvasPoint.x, canvasPoint.y - 15);
     }
   }, [inequalities, zoom, drawInequality, toCanvasCoords, canvasWidth, canvasHeight, 
-      intersectionPoints, origin, hoveredEq, selectedPoint]);
+      intersectionPoints, origin, hoveredEq, selectedPoint, setSolutionButtons]);
 
   useEffect(() => {
     redraw();
