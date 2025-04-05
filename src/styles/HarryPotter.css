@@ -212,13 +212,11 @@ button, input, select, textarea {
 }
 
 .hogwarts-header h1 {
-  color: var(--text-primary);
+  font-size: 1.7rem;
   margin: 0;
-  padding: 0;
-  font-weight: 700;
-  font-size: 1.4rem;
+  color: #D3A625;
+  text-shadow: 0 0 10px rgba(211, 166, 37, 0.7);
   letter-spacing: 1px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px rgba(240, 199, 94, 0.3);
 }
 
 .highlight {
@@ -285,16 +283,18 @@ button, input, select, textarea {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 8px;
-  padding: 15px 20px;
+  padding: 10px;
   margin-bottom: 20px;
   position: relative;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   animation: message-appear 0.5s ease forwards;
-  min-height: 60px;
+  min-height: 40px;
+  max-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  font-size: 0.9rem;
 }
 
 .message-box:before {
@@ -547,14 +547,14 @@ button, input, select, textarea {
 
   .hogwarts-content {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 1fr 3fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "control message"
       "inequalities coordinate";
     gap: 15px;
-    height: calc(100vh - 180px);
-    max-height: 800px;
+    height: calc(100vh - 150px);
+    max-height: 850px;
   }
   
   .control-panel {
@@ -1149,10 +1149,11 @@ h2 {
   background: rgba(14, 26, 64, 0.8);
   border: 2px solid var(--hogwarts-secondary);
   border-radius: 8px;
-  padding: 15px;
+  padding: 10px;
   margin-bottom: 15px;
   text-align: center;
-  min-height: 60px;
+  min-height: 40px;
+  max-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1205,6 +1206,8 @@ canvas {
   margin-top: 0;
   text-align: center;
   color: var(--hogwarts-secondary);
+  font-size: 1.1rem;
+  margin: 8px 0;
 }
 
 .inequality-item {
@@ -1732,7 +1735,7 @@ canvas {
   color: var(--secondary-color);
   margin: 0 0 20px;
   padding-bottom: 10px;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
   text-align: center;
   letter-spacing: 1px;
@@ -1775,11 +1778,12 @@ canvas {
   margin-top: 40px;
   width: 100%;
   text-align: center;
-  padding: 20px 0;
+  padding: 8px 0;
   border-top: 1px solid rgba(240, 199, 94, 0.3);
   position: relative;
   background: rgba(14, 26, 64, 0.4);
   border-radius: 8px 8px 0 0;
+  font-size: 0.85rem;
 }
 
 .hogwarts-footer:before {
@@ -2062,14 +2066,14 @@ canvas {
 @media (min-width: 768px) {
   .hogwarts-content {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 1fr 3fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       "control message"
       "inequalities coordinate";
     gap: 15px;
-    height: calc(100vh - 180px);
-    max-height: 800px;
+    height: calc(100vh - 150px);
+    max-height: 850px;
   }
   
   .control-panel {
