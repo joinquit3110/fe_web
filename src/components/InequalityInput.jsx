@@ -133,7 +133,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
             <div className="latex-preview">
               <span 
                 className="preview-content"
-                dangerouslySetInnerHTML={{ __html: latexPreview || '\\(\\)' }}
+                dangerouslySetInnerHTML={{ __html: latexPreview || '' }}
               />
             </div>
           </div>

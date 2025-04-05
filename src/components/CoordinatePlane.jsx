@@ -7,7 +7,7 @@ const CANVAS_CONFIG = {
   width: 800,
   height: 800,
   minZoom: 20,
-  defaultZoom: 40
+  defaultZoom: 25
 };
 
 const BUTTON_CONFIG = {
