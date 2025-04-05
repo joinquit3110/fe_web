@@ -121,7 +121,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter inequality (e.g., x+y<0)"
+              placeholder="Enter inequality"
               className={!isValid && input ? 'error' : ''}
               autoComplete="off"
             />

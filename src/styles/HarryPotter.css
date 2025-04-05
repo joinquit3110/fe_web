@@ -42,8 +42,8 @@
   /* Magical element effects */
   --magical-glow: 0 0 8px rgba(240, 199, 94, 0.5), 0 0 15px rgba(240, 199, 94, 0.3);
   --spell-glow: 0 0 10px rgba(240, 199, 94, 0.7), 0 0 20px rgba(240, 199, 94, 0.4);
-  --parchment-texture: url('https://www.transparenttextures.com/patterns/parchment.png');
-  --wood-texture: url('https://www.transparenttextures.com/patterns/dark-wood.png');
+  --parchment-texture: radial-gradient(circle at center, rgba(240, 199, 94, 0.05), rgba(14, 26, 64, 0.05));
+  --wood-texture: linear-gradient(45deg, rgba(10, 14, 35, 0.9), rgba(20, 28, 70, 0.7));
 }
 
 /* Base styles with better Typography */
@@ -280,21 +280,18 @@ button, input, select, textarea {
 
 /* Enhanced message box */
 .message-box {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: rgba(14, 26, 64, 0.8);
+  border: 2px solid var(--hogwarts-secondary);
   border-radius: 8px;
   padding: 10px;
-  margin-bottom: 20px;
-  position: relative;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  animation: message-appear 0.5s ease forwards;
+  margin-bottom: 15px;
+  text-align: center;
   min-height: 40px;
   max-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  font-size: 0.9rem;
+  box-shadow: 0 0 15px var(--glow-color);
 }
 
 .message-box:before {
@@ -304,20 +301,19 @@ button, input, select, textarea {
   top: 0;
   width: 100%;
   height: 100%;
-  background-image: url('https://i.imgur.com/YVDu5Hn.png'); /* Parchment background */
-  background-size: cover;
+  background: radial-gradient(circle at center, rgba(211, 166, 37, 0.08), transparent 70%);
   opacity: 0.05;
   pointer-events: none;
 }
 
 .message-box.success {
-  border-color: var(--success-color);
-  background: rgba(30, 125, 53, 0.25);
+  border-color: #1A472A;
+  box-shadow: 0 0 15px rgba(26, 71, 42, 0.7);
 }
 
 .message-box.error {
-  border-color: var(--error-color);
-  background: rgba(205, 42, 42, 0.25);
+  border-color: var(--hogwarts-primary);
+  box-shadow: 0 0 15px rgba(116, 0, 1, 0.7);
 }
 
 .message-box.warning {
@@ -334,7 +330,7 @@ button, input, select, textarea {
   position: relative;
   color: var(--text-primary);
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   font-weight: 500;
   text-align: center;
   padding: 0 10px;
@@ -1172,7 +1168,7 @@ h2 {
 
 .message-content {
   font-family: 'Cinzel', serif;
-  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  font-size: 0.85rem;
 }
 
 /* Coordinate Plane */
