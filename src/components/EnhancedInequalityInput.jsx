@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { parseInequality } from '../utils/inequalityAlgorithms';
-import { themeColors } from '../utils/inequalityAlgorithms';
 
 const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
   const [input, setInput] = useState('');
@@ -8,8 +7,6 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
   const [error, setError] = useState('');
   const [showLatex, setShowLatex] = useState(false);
   const [latexPreview, setLatexPreview] = useState('');
-  const [showHints, setShowHints] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const [animateButton, setAnimateButton] = useState(false);
   const inputRef = useRef(null);
 
@@ -104,28 +101,6 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
     // Provide feedback to the user
     setQuizMessage('The magical plane has been reset. Ready for your next spell!');
   };
-  
-  const getExampleInequality = () => {
-    const examples = [
-      'x+y<0',
-      'x-y>=0',
-      '2x+3y-6<=0',
-      'x=0',
-      'y=0',
-      'y=2x+1',
-      'x+y=1',
-      'x<=2',
-      'y>-1',
-      '3x-4y+12=0'
-    ];
-    const randomExample = examples[Math.floor(Math.random() * examples.length)];
-    setInput(randomExample);
-    // Let the useEffect handle validation and preview
-  };
-
-  const toggleHints = () => {
-    setShowHints(prev => !prev);
-  };
 
   return (
     <div className="enhanced-inequality-input">
@@ -139,9 +114,7 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Cast your inequality spell (e.g., x+y<0)"
-                className={`inequality-input ${!isValid && input ? 'error' : ''} ${isFocused ? 'focused' : ''}`}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                className={`inequality-input ${!isValid && input ? 'error' : ''}`}
                 autoComplete="off"
               />
               <span className="input-focus-border"></span>
@@ -174,29 +147,12 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
             </button>
             <button 
               type="button" 
-              className="example-button"
-              onClick={getExampleInequality}
-              title="Get a random example inequality"
-            >
-              <span className="material-icons">lightbulb</span>
-              Example
-            </button>
-            <button 
-              type="button" 
               className="reset-button"
               onClick={handleReset}
               title="Reset All (Clear All Inequalities)"
             >
               <span className="material-icons">refresh</span>
               Reset All
-            </button>
-            <button
-              type="button"
-              className={`hints-button ${showHints ? 'active' : ''}`}
-              onClick={toggleHints}
-              title="Show Inequality Tips"
-            >
-              <span className="material-icons">help_outline</span>
             </button>
           </div>
         </div>
@@ -212,33 +168,6 @@ const EnhancedInequalityInput = ({ addInequality, setQuizMessage, resetAll }) =>
             dangerouslySetInnerHTML={{ __html: latexPreview }}
           />
         </div>
-        
-        {/* Hints panel with helpful tips */}
-        {showHints && (
-          <div className="hints-panel">
-            <h3>
-              <span className="material-icons">tips_and_updates</span>
-              Inequality Spell Tips
-            </h3>
-            <p>Cast these magical inequality spells in any of these forms:</p>
-            <ul>
-              <li><strong>Standard form:</strong> ax + by + c [operator] 0</li>
-              <li><strong>Single variable:</strong> ax + c [operator] 0</li>
-              <li><strong>Line equation:</strong> y = mx + b</li>
-            </ul>
-            <p>
-              <strong>Operators:</strong> &lt;, &gt;, &lt;=, &gt;=, =
-              <br/>
-              <strong>Unicode symbols:</strong> ≤, ≥, ≠ are also supported!
-            </p>
-            <p>
-              <strong>Examples:</strong> 
-              <br/>x+y&lt;0, 
-              <br/>2x-3y+1≥0, 
-              <br/>y=2x+1
-            </p>
-          </div>
-        )}
       </form>
     </div>
   );

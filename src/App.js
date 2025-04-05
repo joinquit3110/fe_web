@@ -146,7 +146,7 @@ const AppContent = () => {
       </header>
       
       <div className="hogwarts-content mobile-friendly">
-        {/* 1. Enhanced Inequality Input - Cast Spell */}
+        {/* 1. Inequality Input - Cast Spell */}
         <div className="control-panel wizard-panel">
           <div className="panel-decoration left"></div>
           <div className="panel-decoration right"></div>
@@ -165,34 +165,35 @@ const AppContent = () => {
           <div className="message-content">{message.text}</div>
         </div>
 
-        {/* 3. Enhanced Coordinate Plane */}
-        <div className="coordinate-container wizard-panel">
-          <div className="panel-decoration left"></div>
-          <div className="panel-decoration right"></div>
-          <h2>Magical Coordinate Plane</h2>
-          <div className="coordinate-plane">
-            <EnhancedCoordinatePlane
-              ref={coordinatePlaneRef}
+        <div className="main-content-row">
+          {/* 3. Enhanced Coordinate Plane */}
+          <div className="coordinate-container wizard-panel">
+            <div className="panel-decoration left"></div>
+            <div className="panel-decoration right"></div>
+            <h2>Magical Coordinate Plane</h2>
+            <div className="coordinate-plane">
+              <EnhancedCoordinatePlane
+                ref={coordinatePlaneRef}
+                inequalities={inequalities}
+                setInequalities={setInequalities}
+                setQuizMessage={setQuizMessage}
+                hoveredEq={hoveredEq}
+                setHoveredEq={setHoveredEq}
+              />
+            </div>
+          </div>
+
+          {/* 4. Inequality List */}
+          <div className="inequalities-list wizard-panel">
+            <div className="panel-decoration left"></div>
+            <div className="panel-decoration right"></div>
+            <InequalityList
               inequalities={inequalities}
-              setInequalities={setInequalities}
-              setQuizMessage={setQuizMessage}
-              hoveredEq={hoveredEq}
-              setHoveredEq={setHoveredEq}
+              onDelete={handleDeleteInequality}
+              onHover={setHoveredEq}
+              onShowRegionSelect={handleShowRegionSelect}
             />
           </div>
-        </div>
-
-        {/* 4. Inequality List */}
-        <div className="inequalities-list wizard-panel">
-          <div className="panel-decoration left"></div>
-          <div className="panel-decoration right"></div>
-          <h2>Spells Collection</h2>
-          <InequalityList
-            inequalities={inequalities}
-            onDelete={handleDeleteInequality}
-            onHover={setHoveredEq}
-            onShowRegionSelect={handleShowRegionSelect}
-          />
         </div>
       </div>
       

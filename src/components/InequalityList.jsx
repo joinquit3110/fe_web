@@ -14,8 +14,8 @@ const InequalityList = ({
           <div className="empty-icon">
             <span className="material-icons">auto_fix_high</span>
           </div>
-          <p>Cast your first inequality spell to begin your magical journey!</p>
-          <p className="empty-hint">Enter an inequality in the spell input above</p>
+          <p>Cast your first inequality spell to begin!</p>
+          <p className="empty-hint">Your spells will appear here</p>
         </div>
       </div>
     );
@@ -24,8 +24,7 @@ const InequalityList = ({
   return (
     <div className="inequality-list">
       <div className="inequality-list-header">
-        <div className="header-label">Magical Inequality</div>
-        <div className="header-actions">Actions</div>
+        <h3>Spells Collection</h3>
       </div>
       <div className="inequality-list-items">
         {inequalities.map((inequality, index) => (

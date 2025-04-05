@@ -234,7 +234,7 @@
   font-size: 22px;
 }
 
-/* LaTeX Preview */
+/* Enhanced LaTeX preview container */
 .latex-preview-container {
   margin-top: 15px;
   padding: 15px;
@@ -244,15 +244,15 @@
   border: 1px solid rgba(211, 166, 37, 0.3);
   display: flex;
   align-items: center;
-  opacity: 0;
   max-height: 0;
   overflow: hidden;
+  opacity: 0;
   transition: all 0.3s ease;
 }
 
 .latex-preview-container.visible {
-  opacity: 1;
   max-height: 80px;
+  opacity: 1;
 }
 
 .preview-label {
@@ -269,6 +269,7 @@
   font-size: 18px;
   flex: 1;
   font-family: 'STIX Two Math', 'Times New Roman', serif;
+  text-align: center;
 }
 
 /* Hints Panel */
@@ -325,88 +326,53 @@
 .enhanced-coordinate-plane {
   position: relative;
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  background-color: var(--panel-bg);
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--panel-border);
-  overflow: hidden;
+  height: 100%;
 }
 
-.enhanced-coordinate-plane canvas {
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.inequality-canvas {
   display: block;
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  height: 100%;
   border-radius: 8px;
 }
 
-.zoom-controls {
+.control-buttons {
   position: absolute;
   top: 10px;
   right: 10px;
   display: flex;
-  flex-direction: column;
   gap: 5px;
-  z-index: 10;
 }
 
-.zoom-button {
-  width: 36px;
-  height: 36px;
-  background-color: rgba(255, 255, 255, 0.85);
-  border: 1px solid var(--secondary-color);
-  border-radius: 50%;
-  font-size: 18px;
+.reset-button {
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(211, 166, 37, 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: 'Cinzel', serif;
   font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
   color: var(--primary-color);
-  transition: all 0.2s ease;
-}
-
-.zoom-button:hover {
-  background-color: var(--secondary-color);
-  color: #fff;
-}
-
-.zoom-button.reset {
-  background-color: rgba(255, 255, 255, 0.85);
-  border: 1px solid var(--accent-color-2);
-}
-
-.zoom-button.reset:hover {
-  background-color: var(--accent-color-2);
-  color: #fff;
-}
-
-.toggle-controls {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 10;
-}
-
-.toggle-button {
-  width: 36px;
-  height: 36px;
-  background-color: rgba(255, 255, 255, 0.85);
-  border: 1px solid var(--primary-color);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
-  color: var(--primary-color);
   transition: all 0.2s ease;
+  font-size: 14px;
 }
 
-.toggle-button:hover,
-.toggle-button.active {
-  background-color: var(--primary-color);
-  color: #fff;
+.reset-button:hover {
+  background-color: rgba(211, 166, 37, 0.1);
+  transform: translateY(-2px);
 }
 
 /* ===== Inequality List ===== */
@@ -420,27 +386,26 @@
 }
 
 .inequality-list-header {
-  display: flex;
-  padding: 10px 15px;
-  background-color: rgba(14, 26, 64, 0.1);
-  border-bottom: 1px solid rgba(14, 26, 64, 0.2);
-  font-weight: bold;
-  font-family: 'Cinzel', serif;
-}
-
-.header-label {
-  flex: 1;
-}
-
-.header-actions {
-  width: 120px;
+  background-color: rgba(14, 26, 64, 0.8);
+  color: white;
+  padding: 12px 15px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
   text-align: center;
+}
+
+.inequality-list-header h3 {
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  font-size: 18px;
+  color: var(--secondary-color);
 }
 
 .inequality-list-items {
   max-height: 300px;
   overflow-y: auto;
-  padding: 5px;
+  padding: 10px;
 }
 
 .inequality-item {
@@ -515,7 +480,7 @@
   font-family: 'STIX Two Math', 'Times New Roman', serif;
 }
 
-/* New solution badge */
+/* Solution badge */
 .solution-badge {
   display: inline-flex;
   align-items: center;
@@ -579,7 +544,7 @@
   transform: translateY(-2px);
 }
 
-/* Improve the empty state */
+/* Empty state */
 .inequality-list-empty {
   width: 100%;
   height: 200px;
