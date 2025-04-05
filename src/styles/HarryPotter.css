@@ -42,8 +42,8 @@
   /* Magical element effects */
   --magical-glow: 0 0 8px rgba(240, 199, 94, 0.5), 0 0 15px rgba(240, 199, 94, 0.3);
   --spell-glow: 0 0 10px rgba(240, 199, 94, 0.7), 0 0 20px rgba(240, 199, 94, 0.4);
-  --parchment-texture: radial-gradient(circle at center, rgba(240, 199, 94, 0.05), rgba(14, 26, 64, 0.05));
-  --wood-texture: linear-gradient(45deg, rgba(10, 14, 35, 0.9), rgba(20, 28, 70, 0.7));
+  --parchment-texture: url('https://www.transparenttextures.com/patterns/parchment.png');
+  --wood-texture: url('https://www.transparenttextures.com/patterns/dark-wood.png');
 }
 
 /* Base styles with better Typography */
@@ -88,7 +88,17 @@ button, input, select, textarea {
 
 /* Hogwarts Crest */
 .hogwarts-crest {
-  display: none;
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  width: 80px;
+  height: 100px;
+  background-image: url('https://i.imgur.com/EMBkRxp.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 10;
+  opacity: 0.9;
 }
 
 /* Moon styling - enhanced */
@@ -187,8 +197,8 @@ button, input, select, textarea {
 .hogwarts-header {
   text-align: center;
   position: relative;
-  padding: 15px 0;
-  margin-bottom: 15px;
+  padding: 30px 0;
+  margin-bottom: 30px;
   z-index: 2;
   width: 100%;
   border-bottom: 2px solid var(--secondary-color);
@@ -212,11 +222,13 @@ button, input, select, textarea {
 }
 
 .hogwarts-header h1 {
-  font-size: 1.7rem;
+  color: var(--text-primary);
   margin: 0;
-  color: #D3A625;
-  text-shadow: 0 0 10px rgba(211, 166, 37, 0.7);
+  padding: 0;
+  font-weight: 700;
+  font-size: 1.7rem;
   letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px rgba(240, 199, 94, 0.3);
 }
 
 .highlight {
@@ -267,7 +279,25 @@ button, input, select, textarea {
 }
 
 .panel-decoration {
-  display: none;
+  position: absolute;
+  top: 0;
+  width: 40px;
+  height: 100%;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.panel-decoration.left {
+  left: 0;
+  background-image: url('https://i.imgur.com/O8QBeM8.png'); /* Wizard staff or wand image */
+}
+
+.panel-decoration.right {
+  right: 0;
+  background-image: url('https://i.imgur.com/O8QBeM8.png'); /* Wizard staff or wand image */
+  transform: scaleX(-1);
 }
 
 .control-panel-content {
@@ -280,18 +310,19 @@ button, input, select, textarea {
 
 /* Enhanced message box */
 .message-box {
-  background: rgba(14, 26, 64, 0.8);
-  border: 2px solid var(--hogwarts-secondary);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 15px;
-  text-align: center;
-  min-height: 40px;
-  max-height: 60px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  animation: message-appear 0.5s ease forwards;
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 15px var(--glow-color);
+  overflow: hidden;
 }
 
 .message-box:before {
@@ -301,19 +332,20 @@ button, input, select, textarea {
   top: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, rgba(211, 166, 37, 0.08), transparent 70%);
+  background-image: url('https://i.imgur.com/YVDu5Hn.png'); /* Parchment background */
+  background-size: cover;
   opacity: 0.05;
   pointer-events: none;
 }
 
 .message-box.success {
-  border-color: #1A472A;
-  box-shadow: 0 0 15px rgba(26, 71, 42, 0.7);
+  border-color: var(--success-color);
+  background: rgba(30, 125, 53, 0.25);
 }
 
 .message-box.error {
-  border-color: var(--hogwarts-primary);
-  box-shadow: 0 0 15px rgba(116, 0, 1, 0.7);
+  border-color: var(--error-color);
+  background: rgba(205, 42, 42, 0.25);
 }
 
 .message-box.warning {
@@ -330,7 +362,7 @@ button, input, select, textarea {
   position: relative;
   color: var(--text-primary);
   font-family: 'Cormorant Garamond', serif;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   font-weight: 500;
   text-align: center;
   padding: 0 10px;
@@ -340,12 +372,37 @@ button, input, select, textarea {
 
 /* Enhanced buttons */
 .spellcast-button {
+  background: linear-gradient(to bottom, var(--hogwarts-secondary) 0%, #D3A625 100%);
+  color: var(--hogwarts-dark);
+  border: none;
+  padding: 10px 16px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.spellcast-button:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
   width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10px;
-  margin-bottom: 5px;
+  height: 100%;
+  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 70%);
+  animation: sheen 2s infinite;
+}
+
+.spellcast-button:hover {
+  background: linear-gradient(to bottom, #F0C75E 0%, #E6B52E 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 
 .spellcast-button:disabled {
@@ -355,16 +412,25 @@ button, input, select, textarea {
 
 /* Enhanced finite button */
 .finite-button {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10px;
+  background: linear-gradient(to bottom, #9E2722 0%, #740001 100%);
+  color: var(--text-primary);
+  border: none;
+  padding: 10px 16px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
 }
 
-.finite-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.finite-button:hover {
+  background: linear-gradient(to bottom, #B92D27 0%, #902A27 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 /* Enhanced example button */
@@ -423,14 +489,26 @@ button, input, select, textarea {
 
 /* Enhanced LaTeX preview */
 .latex-preview-container {
-  margin: 8px 0;
-  padding: 8px;
-  height: 40px;
-  background: rgba(10, 14, 35, 0.5);
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(10, 14, 35, 0.6);
+  border: 1px solid rgba(240, 199, 94, 0.25);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.latex-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .preview-label {
-  display: none;
+  color: var(--secondary-color);
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .preview-content {
@@ -542,46 +620,23 @@ button, input, select, textarea {
   }
 
   .hogwarts-content {
-    display: grid;
-    grid-template-columns: 1fr 3fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "control message"
-      "inequalities coordinate";
-    gap: 15px;
-    height: calc(100vh - 150px);
-    max-height: 850px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "control inequalities"
+      "coordinate coordinate";
+    gap: 30px;
   }
-  
+
   .control-panel {
     grid-area: control;
   }
-  
-  .message-box {
-    grid-area: message;
-  }
-  
+
   .coordinate-container {
     grid-area: coordinate;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
   }
-  
+
   .inequalities-list {
     grid-area: inequalities;
-    overflow-y: auto;
-  }
-  
-  .coordinate-plane {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    min-height: 400px;
-    position: relative;
   }
 
   .moon-wrapper {
@@ -608,6 +663,20 @@ button, input, select, textarea {
 }
 
 @media (min-width: 1024px) {
+  .hogwarts-content {
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-areas: 
+      "control coordinate inequalities";
+  }
+
+  .inequalities-list {
+    max-height: none;
+  }
+
+  .coordinate-container {
+    max-height: none;
+  }
+  
   .hogwarts-crest {
     width: 120px;
     height: 150px;
@@ -835,7 +904,7 @@ h2 {
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   transition: all 0.2s ease;
 }
@@ -1094,8 +1163,7 @@ h2 {
 }
 
 .input-group {
-  width: 100%;
-  margin-bottom: 10px;
+  flex: 1;
 }
 
 .input-group label {
@@ -1107,14 +1175,13 @@ h2 {
 
 .styled-input {
   width: 100%;
-  padding: 8px 12px;
-  height: 40px;
+  padding: 10px;
   background-color: var(--input-bg);
   border: 1px solid var(--hogwarts-secondary);
   border-radius: 4px;
   color: var(--hogwarts-text);
   font-family: 'Cormorant Garamond', serif;
-  font-size: 14px;
+  font-size: 16px;
   box-sizing: border-box;
 }
 
@@ -1145,11 +1212,10 @@ h2 {
   background: rgba(14, 26, 64, 0.8);
   border: 2px solid var(--hogwarts-secondary);
   border-radius: 8px;
-  padding: 10px;
+  padding: 15px;
   margin-bottom: 15px;
   text-align: center;
-  min-height: 40px;
-  max-height: 60px;
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1168,7 +1234,7 @@ h2 {
 
 .message-content {
   font-family: 'Cinzel', serif;
-  font-size: 0.85rem;
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
 }
 
 /* Coordinate Plane */
@@ -1176,15 +1242,15 @@ h2 {
   position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 canvas {
-  display: block;
+  width: 100%;
+  height: auto;
   max-width: 100%;
-  max-height: 100%;
+  display: block;
   touch-action: none;
 }
 
@@ -1202,8 +1268,6 @@ canvas {
   margin-top: 0;
   text-align: center;
   color: var(--hogwarts-secondary);
-  font-size: 1.1rem;
-  margin: 8px 0;
 }
 
 .inequality-item {
@@ -1254,25 +1318,18 @@ canvas {
   right: 10px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
+  gap: 5px;
+  padding: 8px 12px;
   background: linear-gradient(to bottom, #1A472A, #0d2618);
   color: white;
   border: 1px solid #2E7D32;
-  border-radius: 50%;
+  border-radius: 4px;
   cursor: pointer;
   font-family: 'Cinzel', serif;
+  font-size: 14px;
   z-index: 10;
   transition: all 0.3s ease;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
-}
-
-/* Position at bottom right */
-.reset-view-button.bottom-right {
-  top: auto;
-  bottom: 10px;
 }
 
 .reset-view-button:hover {
@@ -1282,40 +1339,33 @@ canvas {
 }
 
 .reset-view-button .material-icons {
-  font-size: 20px;
-}
-
-/* Responsive adjustments for the reset button */
-@media (max-width: 768px) {
-  .coordinate-container {
-    min-height: 300px;
-  }
-  
-  .reset-view-button {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .reset-view-button .material-icons {
-    font-size: 18px;
-  }
-  
-  .finite-button {
-    font-size: 12px;
-    padding: 8px 12px;
-  }
+  font-size: 16px;
 }
 
 /* LaTeX preview container */
 .latex-preview-container {
-  margin: 8px 0;
+  margin-top: 15px;
+  width: 100%;
+  padding: 10px;
+  background: rgba(14, 26, 64, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(211, 166, 37, 0.3);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.latex-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
-  height: 40px;
-  background: rgba(10, 14, 35, 0.5);
+  min-height: 40px;
 }
 
 .preview-label {
-  display: none;
+  color: #d3a625;
+  font-weight: bold;
+  margin-right: 10px;
+  font-family: 'Cinzel', serif;
 }
 
 .preview-content {
@@ -1362,9 +1412,8 @@ canvas {
 /* Button group for the inequality input */
 .button-group {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 /* Reset button styling for Finite Incantatem */
@@ -1450,6 +1499,247 @@ canvas {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .coordinate-container {
+    min-height: 350px;
+    padding: 15px;
+  }
+  
+  .reset-view-button {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  
+  .finite-button {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+/* Improve inequality list item display */
+.inequality-item {
+  border-left: 4px solid;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  background: rgba(14, 26, 64, 0.6);
+  border-radius: 0 5px 5px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease forwards;
+  animation-delay: calc(0.1s * var(--index, 0));
+  opacity: 0;
+  position: relative;
+}
+
+.inequality-item:hover {
+  transform: translateX(5px);
+  background: rgba(211, 166, 37, 0.2);
+}
+
+/* Inequality item with solution status indicators */
+.inequality-item.correct {
+  border-left-color: #2e7d32 !important;
+  box-shadow: 0 0 5px rgba(46, 125, 50, 0.5);
+}
+
+.inequality-item.incorrect {
+  border-left-color: #c62828 !important;
+  box-shadow: 0 0 5px rgba(198, 40, 40, 0.5);
+}
+
+.inequality-item::before {
+  content: attr(data-status);
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(14, 26, 64, 0.8);
+  color: white;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.3s ease;
+}
+
+.inequality-item.correct::before {
+  content: "✓ Correct";
+  background: rgba(46, 125, 50, 0.8);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.inequality-item.incorrect::before {
+  content: "✗ Incorrect";
+  background: rgba(198, 40, 40, 0.8);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Make the LaTeX content look better */
+.latex-content {
+  max-width: calc(100% - 30px);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  font-family: 'STIX Two Math', 'Times New Roman', serif;
+}
+
+/* Button styling for solution region selection */
+.region-button {
+  background: linear-gradient(to bottom, rgba(14, 26, 64, 0.8), rgba(14, 26, 64, 0.9));
+  border: 2px solid;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.region-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.3),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.region-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Coordinate input styling */
+.coordinate-input-below {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  background: rgba(14, 26, 64, 0.8);
+  padding: 8px 15px;
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  border: 1px solid rgba(211, 166, 37, 0.5);
+}
+
+.coordinate-input-below span {
+  color: #d3a625;
+  font-weight: bold;
+  margin: 0 5px;
+}
+
+.coordinate-box {
+  position: relative;
+  margin: 0 2px;
+}
+
+.coordinate-box input {
+  width: 60px;
+  padding: 5px 8px;
+  border: 1px solid rgba(211, 166, 37, 0.5);
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  border-radius: 4px;
+  text-align: center;
+  font-family: 'STIX Two Math', serif;
+}
+
+.coordinate-box input.correct {
+  border-color: #2e7d32;
+  background: rgba(46, 125, 50, 0.1);
+  box-shadow: 0 0 5px rgba(46, 125, 50, 0.5);
+}
+
+.coordinate-box input.incorrect {
+  border-color: #c62828;
+  background: rgba(198, 40, 40, 0.1);
+  box-shadow: 0 0 5px rgba(198, 40, 40, 0.5);
+}
+
+.coordinate-input-below button {
+  margin-left: 10px;
+  padding: 5px 12px;
+  background: linear-gradient(to bottom, #1A472A, #0d2618);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  transition: all 0.3s ease;
+}
+
+.coordinate-input-below button:hover {
+  background: linear-gradient(to bottom, #2E7D32, #1A472A);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Fade-in animation for inequality items */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Valid message styling */
+.valid-message {
+  color: var(--success-color);
+  font-size: 0.85rem;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  font-style: italic;
+}
+
+.valid-message:before {
+  content: '✨';
+  margin-right: 5px;
+  display: inline-block;
+  animation: small-sparkle 2s infinite;
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: 0.85rem;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  font-style: italic;
+}
+
+.error-message:before {
+  content: '⚠️';
+  margin-right: 5px;
+}
+
+@keyframes small-sparkle {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
 /* Floating magical elements */
 .floating-element {
   position: absolute;
@@ -1520,7 +1810,7 @@ canvas {
   color: var(--secondary-color);
   margin: 0 0 20px;
   padding-bottom: 10px;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 700;
   text-align: center;
   letter-spacing: 1px;
@@ -1563,12 +1853,11 @@ canvas {
   margin-top: 40px;
   width: 100%;
   text-align: center;
-  padding: 8px 0;
+  padding: 20px 0;
   border-top: 1px solid rgba(240, 199, 94, 0.3);
   position: relative;
   background: rgba(14, 26, 64, 0.4);
   border-radius: 8px 8px 0 0;
-  font-size: 0.85rem;
 }
 
 .hogwarts-footer:before {
@@ -1667,213 +1956,4 @@ canvas {
 .spell-icon {
   margin-right: 5px;
   font-size: 16px;
-}
-
-/* Mobile optimization styles */
-.mobile-optimized {
-  max-width: 100%;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: manipulation;
-  padding: 10px;
-}
-
-.mobile-optimized .hogwarts-header h1 {
-  font-size: 1.5rem;
-  padding: 10px 0;
-}
-
-.mobile-optimized .wizard-panel {
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 8px;
-}
-
-.mobile-optimized .wizard-panel h2 {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
-}
-
-/* Input container for mobile */
-.mobile-optimized .input-row {
-  flex-direction: column;
-  width: 100%;
-}
-
-.mobile-optimized .input-group {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.mobile-optimized .input-group input {
-  width: 100%;
-  padding: 15px;
-  font-size: 16px; /* Prevents iOS zoom on focus */
-  height: 50px;
-}
-
-.mobile-optimized .button-group {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.mobile-optimized .button-group button {
-  flex: 1;
-  min-height: 40px;
-  font-size: 14px;
-  white-space: nowrap;
-  padding: 8px 12px;
-}
-
-/* Coordinate plane for mobile */
-.mobile-optimized .coordinate-plane {
-  width: 100%;
-  overflow: hidden;
-  touch-action: pan-x pan-y;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Inequalities list for mobile */
-.mobile-optimized .inequalities-list {
-  padding: 15px;
-}
-
-.mobile-optimized .scroll-container {
-  max-height: 200px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.mobile-optimized .inequality-item {
-  padding: 15px;
-  margin-bottom: 10px;
-}
-
-.mobile-optimized .delete-icon {
-  font-size: 22px;
-}
-
-/* Make message box more visible on mobile */
-.mobile-optimized .message-box {
-  padding: 15px;
-  margin: 10px 0;
-}
-
-.mobile-optimized .message-content {
-  font-size: 16px;
-}
-
-/* Prevent zoom on inputs */
-input, button, select, textarea {
-  font-size: 16px;
-}
-
-/* Media queries for different screen sizes */
-@media (max-width: 576px) {
-  .mobile-optimized .hogwarts-header h1 {
-    font-size: 1.3rem;
-  }
-  
-  .mobile-optimized .button-group button {
-    padding: 12px 10px;
-    font-size: 14px;
-  }
-  
-  .mobile-optimized .wizard-panel {
-    padding: 12px;
-  }
-}
-
-/* Prevent pull-to-refresh behavior */
-html, body {
-  overscroll-behavior-y: contain;
-}
-
-/* Disable browser handling of all panning and zooming gestures */
-.coordinate-plane canvas {
-  touch-action: none;
-}
-
-/* Make the graph larger */
-.coordinate-plane {
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
-  aspect-ratio: 1/1;
-}
-
-.coordinate-plane canvas {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  touch-action: none; /* Disable panning */
-}
-
-/* Enhance coordinate plane container to fit entire panel */
-.coordinate-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-}
-
-.coordinate-plane {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  min-height: 400px;
-  position: relative;
-}
-
-.coordinate-plane-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-canvas {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-  touch-action: none;
-}
-
-/* Grid layout for desktop */
-@media (min-width: 768px) {
-  .hogwarts-content {
-    display: grid;
-    grid-template-columns: 1fr 3fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "control message"
-      "inequalities coordinate";
-    gap: 15px;
-    height: calc(100vh - 150px);
-    max-height: 850px;
-  }
-  
-  .control-panel {
-    grid-area: control;
-  }
-  
-  .message-box {
-    grid-area: message;
-  }
-  
-  .coordinate-container {
-    grid-area: coordinate;
-  }
-  
-  .inequalities-list {
-    grid-area: inequalities;
-  }
 } 
