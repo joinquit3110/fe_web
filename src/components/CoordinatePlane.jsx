@@ -383,41 +383,23 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   const handleTouchStart = useCallback((e) => {
     e.preventDefault();
     const touch = e.touches[0];
-    setDragging(true);
-    setLastPos({ x: touch.clientX, y: touch.clientY });
     
-    // Handle point mode if active
-    if (isPointMode) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      
-      // Convert canvas coordinates to graph coordinates
-      const worldX = (x - origin.x) / zoom;
-      const worldY = (origin.y - y) / zoom;
-      
-      handlePointSelection({ x: worldX, y: worldY });
-    }
-  }, [isPointMode, origin, zoom]);
+    // Handle point interactions
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Use same point click handler as mouse
+    handlePointClick(x, y);
+  }, []);
 
   const handleTouchMove = useCallback((e) => {
-    if (!dragging) return;
+    // Disable panning on touch
     e.preventDefault();
-    
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - lastPos.x;
-    const deltaY = touch.clientY - lastPos.y;
-    
-    setOrigin(prevOrigin => ({
-      x: prevOrigin.x + deltaX,
-      y: prevOrigin.y + deltaY
-    }));
-    
-    setLastPos({ x: touch.clientX, y: touch.clientY });
-  }, [dragging, lastPos]);
+  }, []);
 
   const handleTouchEnd = useCallback(() => {
-    setDragging(false);
+    // No panning to end
   }, []);
 
   // Function to draw a point with hover effect
@@ -736,7 +718,46 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
   };
 
   const handleMouseMove = (e) => {
-    // Do nothing, panning disabled
+    // Only handle hover effects for points/buttons, no panning
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check for solution buttons hover
+    let buttonHovered = false;
+    solutionButtons.forEach(btn => {
+      if ((btn.btn1.contains && btn.btn1.contains(x, y)) || 
+          (btn.btn2.contains && btn.btn2.contains(x, y))) {
+        buttonHovered = true;
+        // Redraw to show hover effect
+        redraw();
+      }
+    });
+    
+    if (!buttonHovered) {
+      // Handle point hover
+      const mathCoords = toMathCoords(x, y);
+      const hoverTolerance = 20 / zoom; // Adjust based on zoom level
+      
+      // Check if hovering over an intersection point
+      let isHovering = false;
+      intersectionPoints.forEach(point => {
+        const dx = point.mathX - mathCoords.x;
+        const dy = point.mathY - mathCoords.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < hoverTolerance) {
+          isHovering = true;
+          setHoveredIntersection(point);
+          redraw();
+        }
+      });
+      
+      if (!isHovering && hoveredIntersection) {
+        setHoveredIntersection(null);
+        redraw();
+      }
+    }
   };
 
   const handleMouseUp = (e) => {
