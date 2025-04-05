@@ -31,8 +31,13 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
 
     // Use a timeout to avoid processing during rapid typing
     typingTimeoutRef.current = setTimeout(() => {
+      // Clean input to normalize operators for both parsing and preview
+      let cleanedInput = input
+        .replace(/=>/g, '>=')  // Support => as >=
+        .replace(/=</g, '<='); // Support =< as <=
+      
       // Try to parse the inequality
-      const result = parseInequality(input);
+      const result = parseInequality(cleanedInput);
       
       if (result) {
         setIsValid(true);
@@ -43,7 +48,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
         // Still try to display the LaTeX preview even for invalid input
         try {
           // Clean the input for LaTeX display 
-          let cleanInput = input
+          let cleanInput = cleanedInput
             .replace(/</g, '\\lt ')
             .replace(/>/g, '\\gt ')
             .replace(/<=/g, '\\leq ')
@@ -52,7 +57,7 @@ const InequalityInput = ({ addInequality, setQuizMessage, resetAll }) => {
           setLatexPreview(`\\(${cleanInput}\\)`);
         } catch (e) {
           // If even this fails, show something basic
-          setLatexPreview(`\\(${input}\\)`);
+          setLatexPreview(`\\(${cleanedInput}\\)`);
         }
       }
       

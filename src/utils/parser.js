@@ -33,10 +33,12 @@ export const parseInequality = (input) => {
                .replace(/\+\-/g, '-')
                .replace(/\-\+/g, '-');
 
-  // Support unicode inequality symbols
+  // Support unicode inequality symbols and alternative formats
   input = input.replace(/≤/g, '<=')
                .replace(/≥/g, '>=')
-               .replace(/≠/g, '!=');
+               .replace(/≠/g, '!=')
+               .replace(/=>/g, '>=')  // Support => as >=
+               .replace(/=</g, '<='); // Support =< as <=
 
   // Main regex for standard form ax + by + c operator 0
   const regex = /^(-?\d*\.?\d*)?x\s*([+-]\s*\d*\.?\d*)?y\s*([+-]\s*\d*\.?\d*)?\s*([<>]=?|!=|=)\s*0$/;
