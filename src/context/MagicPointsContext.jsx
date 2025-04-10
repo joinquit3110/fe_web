@@ -13,6 +13,9 @@ const MagicPointsContext = createContext();
 // Custom hook for using the Magic Points context
 export const useMagicPoints = () => useContext(MagicPointsContext);
 
+// Define MAX_RETRIES as a constant outside the component to avoid reference errors
+const MAX_RETRIES = 5;
+
 export const MagicPointsProvider = ({ children }) => {
   const [magicPoints, setMagicPoints] = useState(100); // Default to 100
   const [isSyncing, setIsSyncing] = useState(false);
@@ -22,7 +25,6 @@ export const MagicPointsProvider = ({ children }) => {
   const [pendingOperations, setPendingOperations] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [syncRetries, setSyncRetries] = useState(0);
-  const MAX_RETRIES = 5;
 
   // Track Revelio attempts for each blank - key is blankId, value is whether it's first attempt
   const [revelioAttempts, setRevelioAttempts] = useState({});
