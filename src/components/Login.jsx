@@ -17,7 +17,7 @@ import {
   useColorModeValue
 } from '@chakra-ui/react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -36,13 +36,9 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const response = await login(email, password);
+      const response = await login({ email, password });
       
-      if (response && response.token) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('authToken', response.token);
-        localStorage.setItem('isAuthenticated', 'true');
-        
+      if (response) {
         navigate('/dashboard');
       } else {
         throw new Error('Login failed. Please try again.');

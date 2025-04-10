@@ -5,7 +5,8 @@ import TabNavigation from "./components/TabNavigation";
 import Activity1 from "./components/Activity1";
 import './styles/App.css';
 import './styles/HarryPotter.css';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+// Fix AuthContext import to use consistent path
+import { AuthProvider } from './contexts/AuthContext';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
@@ -371,11 +372,9 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <ChakraProvider theme={theme}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ChakraProvider>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

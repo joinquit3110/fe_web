@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';  // This import now points to an existing file
 import App from './App';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { MagicPointsProvider } from './context/MagicPointsContext';
