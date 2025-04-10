@@ -1,156 +1,152 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { 
+  Box, 
+  Button, 
+  FormControl, 
+  FormLabel, 
+  Input, 
+  VStack, 
+  Heading, 
+  Text, 
+  InputGroup, 
+  InputRightElement,
+  IconButton,
+  Alert,
+  AlertIcon,
+  Link,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { ViewIcon, ViewOffIcon, LockIcon, EmailIcon } from '@chakra-ui/icons';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { BackgroundWrapper } from './BackgroundWrapper';
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, register } = useAuth();
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleTogglePassword = () => setShowPassword(!showPassword);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setIsLoading(true);
     
     try {
-      if (!formData.username || !formData.password) {
-        setError('Please enter your wizard name and secret spell');
-        setLoading(false);
-        return;
-      }
-
-      if (isLogin) {
-        await login(formData.username, formData.password);
+      // Send login credentials without additional JSON.stringify
+      const response = await login(email, password);
+      
+      if (response && response.token) {
+        // Store the token correctly
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('isAuthenticated', 'true');
+        
+        // Navigate after successful login
+        navigate('/dashboard');
       } else {
-        if (!formData.email) {
-          setError('Please enter your owl mail address');
-          setLoading(false);
-          return;
-        }
-        await register(formData.username, formData.email, formData.password);
+        throw new Error('Login failed. Please try again.');
       }
-    } catch (err) {
-      console.error('Auth error:', err);
-      setError(err.message || 'A magical mishap occurred, please try again');
-      setLoading(false);
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="login-container">
-      <div className="stars">
-        <div className="small-stars">
-          {[...Array(40)].map((_, i) => (
-            <div key={i} className="star" style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`
-            }} />
-          ))}
-        </div>
-        <div className="medium-stars">
-          {[...Array(20)].map((_, i) => (
-            <div key={i} className="star" style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`
-            }} />
-          ))}
-        </div>
-      </div>
-      
-      {/* Hogwarts Crest */}
-      <div className="hogwarts-crest login-crest"></div>
-      
-      <div className="login-box">
-        <div className="login-header">
-          <h2>{isLogin ? 'Welcome to Hogwarts' : 'Join Hogwarts School'}</h2>
-          <p className="subtitle">{isLogin ? 'Sign in to continue your magical journey' : 'Register to start your wizarding education'}</p>
-        </div>
+  const bgColor = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
 
-        {error && (
-          <div className="error-message">
-            <i className="material-icons">error</i>
-            <span>{error}</span>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <i className="material-icons">person</i>
-            <input
-              type="text"
-              placeholder="Wizard Name"
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
-            />
-          </div>
+  return (
+    <BackgroundWrapper>
+      <Box 
+        p={8} 
+        maxWidth="400px" 
+        borderWidth={1} 
+        borderRadius="lg" 
+        boxShadow="lg"
+        bg={bgColor}
+        borderColor={borderColor}
+        mx="auto"
+        mt={12}
+      >
+        <VStack spacing={4} align="flex-start">
+          <Heading as="h2" size="xl">Welcome to Hogwarts</Heading>
+          <Text>Sign in to continue your magical journey</Text>
           
-          {!isLogin && (
-            <div className="form-group">
-              <i className="material-icons">email</i>
-              <input
-                type="email"
-                placeholder="Owl Mail Address"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-              />
-            </div>
+          {error && (
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              {error}
+            </Alert>
           )}
           
-          <div className="form-group">
-            <i className="material-icons">lock</i>
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Secret Spell"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-            />
-            <button 
-              type="button" 
-              className="password-toggle" 
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              <i className="material-icons">{showPassword ? "visibility_off" : "visibility"}</i>
-            </button>
-          </div>
+          <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+            <VStack spacing={4} align="flex-start" width="100%">
+              <FormControl isRequired>
+                <FormLabel>Email or Username</FormLabel>
+                <InputGroup>
+                  <Input
+                    id="email"
+                    type="text"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email or username"
+                    leftIcon={<EmailIcon />}
+                  />
+                </InputGroup>
+              </FormControl>
+              
+              <FormControl isRequired>
+                <FormLabel>Password</FormLabel>
+                <InputGroup>
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    leftIcon={<LockIcon />}
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      size="sm"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                      onClick={handleTogglePassword}
+                      variant="ghost"
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+              
+              <Button
+                width="100%"
+                type="submit"
+                colorScheme="blue"
+                isLoading={isLoading}
+                leftIcon={<LockIcon />}
+              >
+                Enter Hogwarts
+              </Button>
+            </VStack>
+          </form>
           
-          <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? (
-              <>
-                <div className="loading-spinner-small"></div>
-                <span>Casting Spell...</span>
-              </>
-            ) : (
-              <>
-                <span>{isLogin ? 'Enter Hogwarts' : 'Enroll Now'}</span>
-                <i className="material-icons">auto_fix_high</i>
-              </>
-            )}
-          </button>
-        </form>
-        
-        <div className="login-footer">
-          <p>
-            {isLogin ? 'First year at Hogwarts?' : 'Already a Hogwarts student?'}
-            <button 
-              className="switch-btn" 
-              onClick={() => setIsLogin(!isLogin)}
-              disabled={loading}
-            >
-              {isLogin ? 'Enroll Now' : 'Sign In'}
-            </button>
-          </p>
-        </div>
-      </div>
-    </div>
+          <Text alignSelf="center">
+            First year at Hogwarts?{' '}
+            <Link as={RouterLink} to="/register" color="blue.500">
+              Enroll Now
+            </Link>
+          </Text>
+        </VStack>
+      </Box>
+    </BackgroundWrapper>
   );
 };
 
