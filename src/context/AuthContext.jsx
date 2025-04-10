@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+// Define BACKEND_URL constant
+const BACKEND_URL = 'https://be-web-6c4k.onrender.com';
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
