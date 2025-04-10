@@ -6,7 +6,7 @@ import Activity1 from "./components/Activity1";
 import './styles/App.css';
 import './styles/HarryPotter.css';
 // Fix AuthContext import to use consistent path
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';

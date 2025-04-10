@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';  // Make sure path is consistent
 
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
