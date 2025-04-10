@@ -43,6 +43,16 @@ export const MagicPointsProvider = ({ children }) => {
         if (authStatus.authenticated) {
           setIsAuthenticated(true);
           localStorage.setItem('isAuthenticated', 'true');
+          
+          // If authenticated, check for pending operations to auto-sync
+          const pendingOps = localStorage.getItem('pendingOperations');
+          if (pendingOps && JSON.parse(pendingOps).length > 0) {
+            console.log('[POINTS] Found pending operations on load, triggering auto-sync');
+            // Use a slight delay to ensure all states are properly initialized
+            setTimeout(() => syncToServer(), 1500);
+          } else {
+            console.log('[POINTS] No pending operations found on load');
+          }
         } else {
           console.warn(`[POINTS] Auth verification failed: ${authStatus.reason}`);
           // Don't immediately set to false - we'll rely on API call failures for that
@@ -52,7 +62,7 @@ export const MagicPointsProvider = ({ children }) => {
       }
     };
     
-    if (authState === 'true') {
+    if (authState === 'true' && navigator.onLine) {
       verifyAuth();
     }
 
@@ -109,6 +119,20 @@ export const MagicPointsProvider = ({ children }) => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Also add an initial sync attempt at the end of the useEffect
+  useEffect(() => {
+    // Auto-sync on app load if online and authenticated
+    if (isOnline && isAuthenticated && pendingOperations.length > 0) {
+      console.log('[POINTS] Auto-syncing points on app initialization');
+      // Use timeout to ensure the component is fully mounted
+      const autoSyncTimeout = setTimeout(() => {
+        syncToServer();
+      }, 2000);
+      
+      return () => clearTimeout(autoSyncTimeout);
+    }
+  }, [isOnline, isAuthenticated, pendingOperations.length, syncToServer]);
 
   // Sync to server with enhanced reliability
   const syncToServer = useCallback(async () => {
@@ -267,11 +291,13 @@ export const MagicPointsProvider = ({ children }) => {
   const addPoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
     
+    // First, immediately update local state and storage for responsiveness
     const newPoints = magicPoints + amount;
     setMagicPoints(newPoints);
     localStorage.setItem('magicPoints', newPoints);
     setPendingChanges(true);
     
+    // Create operation record
     const operation = {
       type: 'add',
       amount,
@@ -279,15 +305,16 @@ export const MagicPointsProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     };
     
+    // Update pending operations in local storage first
     setPendingOperations(prev => {
       const updated = [...prev, operation];
       localStorage.setItem('pendingOperations', JSON.stringify(updated));
       return updated;
     });
     
-    // Only attempt to sync if we're online and authenticated
+    // Only attempt to sync if we're online and authenticated - but do it on next tick to avoid UI lag
     if (isOnline && isAuthenticated) {
-      syncToServer();
+      setTimeout(() => syncToServer(), 0);
     } else {
       console.log('[POINTS] Working in offline mode, changes will sync when online');
     }
@@ -296,7 +323,7 @@ export const MagicPointsProvider = ({ children }) => {
   const removePoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
     
-    // Ensure we're working with the most current points value
+    // First, immediately update local state and storage
     const currentPoints = parseInt(localStorage.getItem('magicPoints') || magicPoints.toString(), 10);
     const newPoints = Math.max(0, currentPoints - amount);
     
@@ -304,7 +331,7 @@ export const MagicPointsProvider = ({ children }) => {
     
     // Update state and localStorage in a consistent way
     setMagicPoints(newPoints);
-    localStorage.setItem('magicPoints', newPoints.toString());
+    localStorage.setItem('magicPoints', newPoints);
     setPendingChanges(true);
     
     const operation = {
@@ -314,7 +341,7 @@ export const MagicPointsProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     };
     
-    // Ensure pendingOperations update is atomic
+    // Ensure pendingOperations update is atomic and stored locally first
     setPendingOperations(prev => {
       const updated = [...prev, operation];
       try {
@@ -325,9 +352,9 @@ export const MagicPointsProvider = ({ children }) => {
       return updated;
     });
     
-    // Only attempt to sync if we're online and authenticated
+    // Only attempt to sync if we're online and authenticated - but do it on next tick to avoid UI lag
     if (isOnline && isAuthenticated) {
-      syncToServer();
+      setTimeout(() => syncToServer(), 0);
     } else {
       console.log('[POINTS] Working in offline mode, changes will sync when online');
     }
@@ -650,7 +677,7 @@ export const MagicPointsProvider = ({ children }) => {
   const resetPoints = useCallback(async () => {
     console.log('[POINTS DEBUG] Resetting points to 100');
     
-    // Reset local state
+    // Reset local state immediately
     setMagicPoints(100);
     localStorage.setItem('magicPoints', '100');
     
@@ -662,25 +689,27 @@ export const MagicPointsProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     };
     
+    // Update pending operations in local storage first
     setPendingOperations(prev => {
       const updated = [...prev, resetOperation];
       localStorage.setItem('pendingOperations', JSON.stringify(updated));
       return updated;
     });
     
-    // Force sync if online
+    // Force sync if online in the background
     if (isOnline && isAuthenticated) {
-      try {
-        await syncToServer();
-        return true;
-      } catch (error) {
-        console.error('[POINTS DEBUG] Error syncing after reset:', error);
-        return false;
-      }
+      setTimeout(async () => {
+        try {
+          await syncToServer();
+        } catch (error) {
+          console.error('[POINTS DEBUG] Error syncing after reset:', error);
+        }
+      }, 0);
     } else {
       console.log('[POINTS DEBUG] Working offline, changes will sync when online');
-      return true;
     }
+    
+    return true; // Return immediately after local update for better responsiveness
   }, [isOnline, isAuthenticated, syncToServer]);
   
   // Update authentication status (for debugging purposes)
