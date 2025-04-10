@@ -16,7 +16,6 @@ import {
   Link,
   useColorModeValue
 } from '@chakra-ui/react';
-import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -120,7 +119,7 @@ const Login = () => {
                     <IconButton
                       size="sm"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                      icon={<Text fontSize="xs">{showPassword ? 'Hide' : 'Show'}</Text>}
                       onClick={handleTogglePassword}
                       variant="ghost"
                     />
