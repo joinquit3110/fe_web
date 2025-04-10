@@ -16,10 +16,9 @@ import {
   Link,
   useColorModeValue
 } from '@chakra-ui/react';
-import { ViewIcon, ViewOffIcon, LockIcon, EmailIcon } from '@chakra-ui/icons';
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BackgroundWrapper } from './BackgroundWrapper';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -38,16 +37,13 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Send login credentials without additional JSON.stringify
       const response = await login(email, password);
       
       if (response && response.token) {
-        // Store the token correctly
         localStorage.setItem('token', response.token);
         localStorage.setItem('authToken', response.token);
         localStorage.setItem('isAuthenticated', 'true');
         
-        // Navigate after successful login
         navigate('/dashboard');
       } else {
         throw new Error('Login failed. Please try again.');
@@ -64,7 +60,16 @@ const Login = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   return (
-    <BackgroundWrapper>
+    <Box 
+      width="100%" 
+      minHeight="100vh"
+      bg="gray.50"
+      backgroundImage="linear-gradient(to bottom right, #2a4365, #1a202c)"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      padding={4}
+    >
       <Box 
         p={8} 
         maxWidth="400px" 
@@ -73,8 +78,7 @@ const Login = () => {
         boxShadow="lg"
         bg={bgColor}
         borderColor={borderColor}
-        mx="auto"
-        mt={12}
+        width="100%"
       >
         <VStack spacing={4} align="flex-start">
           <Heading as="h2" size="xl">Welcome to Hogwarts</Heading>
@@ -98,7 +102,6 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email or username"
-                    leftIcon={<EmailIcon />}
                   />
                 </InputGroup>
               </FormControl>
@@ -112,7 +115,6 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    leftIcon={<LockIcon />}
                   />
                   <InputRightElement>
                     <IconButton
@@ -131,7 +133,6 @@ const Login = () => {
                 type="submit"
                 colorScheme="blue"
                 isLoading={isLoading}
-                leftIcon={<LockIcon />}
               >
                 Enter Hogwarts
               </Button>
@@ -146,7 +147,7 @@ const Login = () => {
           </Text>
         </VStack>
       </Box>
-    </BackgroundWrapper>
+    </Box>
   );
 };
 
