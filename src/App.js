@@ -8,6 +8,7 @@ import './styles/HarryPotter.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
+import MagicPointsDebug from './components/MagicPointsDebug';
 
 const AppContent = () => {
   const { user } = useAuth();
@@ -324,6 +325,9 @@ const AppContent = () => {
           </>
         )}
       </div>
+      
+      {/* Add the debug component */}
+      <MagicPointsDebug />
       
       <footer className="hogwarts-footer">
         <div className="footer-content">

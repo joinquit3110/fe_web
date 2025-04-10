@@ -511,6 +511,109 @@ export const MagicPointsProvider = ({ children }) => {
     return syncToServer();
   }, [isOnline, syncToServer]);
 
+  // Add debugging utility functions
+  const debugPointsState = useCallback(() => {
+    console.log('[POINTS DEBUG] Current state:');
+    console.log(`- Magic Points: ${magicPoints}`);
+    console.log(`- Online Status: ${isOnline ? 'Online' : 'Offline'}`);
+    console.log(`- Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
+    console.log(`- Syncing Status: ${isSyncing ? 'Syncing' : 'Idle'}`);
+    console.log(`- Pending Operations: ${pendingOperations.length}`);
+    console.log(`- Last Synced: ${lastSynced || 'Never'}`);
+    
+    // Return debug data for UI display
+    return {
+      magicPoints,
+      isOnline,
+      isAuthenticated,
+      isSyncing,
+      pendingOperations,
+      lastSynced,
+      revelioAttempts,
+      correctBlanks
+    };
+  }, [magicPoints, isOnline, isAuthenticated, isSyncing, pendingOperations, lastSynced, revelioAttempts, correctBlanks]);
+  
+  // Force sync with debug information
+  const forceSyncWithDebug = useCallback(async () => {
+    console.log('[POINTS DEBUG] Force syncing with debug info...');
+    
+    // Log auth state
+    const token = localStorage.getItem('token');
+    console.log(`[POINTS DEBUG] Auth token: ${token ? 'Present' : 'Missing'}`);
+    
+    // Log pending operations
+    console.log(`[POINTS DEBUG] Pending operations: ${pendingOperations.length}`);
+    if (pendingOperations.length > 0) {
+      console.log(pendingOperations);
+    }
+    
+    try {
+      await syncToServer();
+      return true;
+    } catch (error) {
+      console.error('[POINTS DEBUG] Sync error:', error);
+      return false;
+    }
+  }, [pendingOperations, syncToServer]);
+  
+  // Reset points to 100
+  const resetPoints = useCallback(async () => {
+    console.log('[POINTS DEBUG] Resetting points to 100');
+    
+    // Reset local state
+    setMagicPoints(100);
+    localStorage.setItem('magicPoints', '100');
+    
+    // Add a reset operation
+    const resetOperation = {
+      type: 'set',
+      amount: 100,
+      source: 'debug_reset',
+      timestamp: new Date().toISOString()
+    };
+    
+    setPendingOperations(prev => {
+      const updated = [...prev, resetOperation];
+      localStorage.setItem('pendingOperations', JSON.stringify(updated));
+      return updated;
+    });
+    
+    // Force sync if online
+    if (isOnline && isAuthenticated) {
+      try {
+        await syncToServer();
+        return true;
+      } catch (error) {
+        console.error('[POINTS DEBUG] Error syncing after reset:', error);
+        return false;
+      }
+    } else {
+      console.log('[POINTS DEBUG] Working offline, changes will sync when online');
+      return true;
+    }
+  }, [isOnline, isAuthenticated, syncToServer]);
+  
+  // Update authentication status (for debugging purposes)
+  const updateAuthentication = useCallback((authData) => {
+    if (authData) {
+      console.log('[POINTS DEBUG] Setting authenticated state');
+      setIsAuthenticated(true);
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('authToken', authData.token);
+      localStorage.setItem('token', authData.token);
+    } else {
+      console.log('[POINTS DEBUG] Clearing authenticated state');
+      setIsAuthenticated(false);
+      localStorage.setItem('isAuthenticated', 'false');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('token');
+    }
+  }, []);
+  
+  // Add offline mode detection property
+  const isOfflineMode = USE_OFFLINE_MODE || !isOnline || !isAuthenticated;
+
   return (
     <MagicPointsContext.Provider value={{
       magicPoints,
@@ -531,7 +634,13 @@ export const MagicPointsProvider = ({ children }) => {
       processBlankSubmission, // Keep for backward compatibility
       processMultipleBlanks,  // Keep for backward compatibility
       logCurrentPoints,
-      forceSync
+      forceSync,
+      debugPointsState,
+      forceSyncWithDebug,
+      resetPoints,
+      updateAuthentication,
+      isOfflineMode,
+      isAuthenticated
     }}>
       {children}
     </MagicPointsContext.Provider>

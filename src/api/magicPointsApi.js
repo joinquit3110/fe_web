@@ -174,6 +174,7 @@ export const syncMagicPointsOperations = async (operations) => {
     
     // Log the request data for debugging
     console.log('[API] Request payload:', JSON.stringify({ operations }).slice(0, 200) + '...');
+    console.log('[API] Using auth token:', getAuthToken() ? 'Present' : 'Missing');
     
     const response = await fetch(`${BACKEND_URL}/api/user/magic-points/sync`, {
       method: 'POST',
