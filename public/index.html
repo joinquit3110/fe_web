@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0E1A40" />
+    <meta
+      name="description"
+      content="Hogwarts School of Inequality Magic - An interactive inequality visualization app"
+    />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Google Fonts for Harry Potter Theme -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Material Icons for UI elements -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- KaTeX Stylesheet -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    
+    <!-- MathJax for LaTeX equations - Enhanced configuration -->
+    <script type="text/javascript">
+      window.MathJax = {
+        tex: {
+          inlineMath: [['\\(', '\\)'], ['$', '$']],
+          processEscapes: true,
+          packages: ['base', 'ams', 'noerrors', 'noundefined']
+        },
+        options: {
+          enableMenu: false,
+          renderActions: {
+            addMenu: [], 
+            checkLoading: []
+          },
+          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'annotation', 'annotation-xml', 'span.katex'],
+          ignoreHtmlClass: 'preview-content',
+          processHtmlClass: 'tex2jax_process|mathjax',
+          menuOptions: {
+            settings: {
+              zoom: "Click",
+              zscale: "200%"
+            }
+          },
+          enableFastPreview: true,
+          processSectionDelay: 0,
+          messageStyle: 'none'
+        },
+        svg: {
+          fontCache: 'global'
+        },
+        startup: {
+          typeset: true,
+          ready: () => {
+            MathJax.startup.defaultReady();
+            console.log('MathJax initialized and ready');
+          },
+          pageReady: () => {
+            return MathJax.startup.defaultPageReady().then(() => {
+              // Preload common expressions
+              try {
+                MathJax.typesetPromise([
+                  '\\(x + y < 0\\)', 
+                  '\\(x >= 0\\)', 
+                  '\\(y <= 0\\)',
+                  '\\(2x - 3y + 4 \\leq 0\\)'
+                ]).catch(err => {
+                  console.error('MathJax preload error:', err);
+                });
+              } catch (e) {
+                console.error('MathJax pageReady error:', e);
+              }
+            });
+          }
+        }
+      };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    
+    <title>Hogwarts School of Inequality Magic</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

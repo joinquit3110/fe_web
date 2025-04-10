@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Inequalities Web</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #14172e;
+      color: #f0c75e;
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .container {
+      max-width: 600px;
+      background-color: rgba(20, 23, 46, 0.8);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(211, 166, 37, 0.3);
+    }
+    
+    h1 {
+      color: #d3a625;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    
+    .icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+    
+    .retry-button {
+      background: linear-gradient(to bottom, #2e7d32, #1b5e20);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .retry-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>You're Currently Offline</h1>
+    <p>Don't worry! If you've previously logged in, you can still use most features of the app. Your Magic Points changes will be saved locally and will automatically sync when you're back online.</p>
+    <p>If this is your first visit or you haven't logged in yet, you'll need an internet connection to access the full application.</p>
+    <button class="retry-button" onclick="window.location.reload()">Try Again</button>
+  </div>
+  
+  <script>
+    // Check for online status changes
+    window.addEventListener('online', () => {
+      // Try to reload the page when connection is restored
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>
