@@ -102,6 +102,11 @@ const Login = () => {
   }, []);
 
   const handleTogglePassword = () => setShowPassword(!showPassword);
+  
+  const handleEnrollClick = () => {
+    // Redirect to signup/registration page
+    navigate('/signup');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,7 +178,7 @@ const Login = () => {
           <form onSubmit={handleSubmit} style={{ width: '100%' }}>
             <VStack spacing={5} align="flex-start" width="100%">
               <FormControl isRequired>
-                <FormLabel color="var(--hogwarts-secondary)" fontWeight="bold">Wizard Name</FormLabel>
+                <FormLabel className="wizard-input-label">Wizard Name</FormLabel>
                 <InputGroup>
                   <Input
                     id="email"
@@ -191,7 +196,7 @@ const Login = () => {
               </FormControl>
               
               <FormControl isRequired>
-                <FormLabel color="var(--hogwarts-secondary)" fontWeight="bold">Secret Spell</FormLabel>
+                <FormLabel className="wizard-input-label">Secret Spell</FormLabel>
                 <InputGroup>
                   <Input
                     id="password"
@@ -250,11 +255,16 @@ const Login = () => {
             </VStack>
           </form>
           
-          <Text className="message-content" alignSelf="center" mt={4}>
+          <Text className="hogwarts-text" alignSelf="center" mt={4}>
             First year at Hogwarts?{' '}
-            <Link as={RouterLink} to="/register" color="var(--light-accent)" _hover={{ textDecoration: 'underline' }}>
+            <Button 
+              className="enroll-button" 
+              variant="link" 
+              onClick={handleEnrollClick}
+              _hover={{ textDecoration: 'none' }}
+            >
               Enroll Now
-            </Link>
+            </Button>
           </Text>
         </VStack>
       </Box>

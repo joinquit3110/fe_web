@@ -30,6 +30,64 @@
   left: 10%;
 }
 
+/* Hogwarts text styling */
+.hogwarts-text {
+  font-family: 'Cormorant Garamond', serif !important;
+  color: var(--text-primary) !important;
+  font-size: 1.1rem !important;
+}
+
+/* Wizard input label styling */
+.wizard-input-label {
+  font-family: 'Cinzel', serif !important;
+  color: var(--hogwarts-secondary) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+  font-size: 1.1rem !important;
+  margin-bottom: 0.3rem !important;
+}
+
+/* Enroll button styling */
+.enroll-button {
+  font-family: 'Tangerine', cursive !important;
+  color: var(--hogwarts-secondary) !important;
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  padding: 0 !important;
+  position: relative;
+  display: inline-block;
+  transform: translateY(2px);
+}
+
+.enroll-button::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(to right, 
+    rgba(240, 199, 94, 0) 0%,
+    rgba(240, 199, 94, 0.7) 50%,
+    rgba(240, 199, 94, 0) 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+  transform-origin: bottom right;
+}
+
+.enroll-button:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+.enroll-button:hover {
+  text-shadow: 0 0 8px rgba(240, 199, 94, 0.6);
+}
+
+.enroll-button:active {
+  transform: translateY(3px);
+}
+
 /* Animated floating elements */
 .floating-element {
   position: absolute;
