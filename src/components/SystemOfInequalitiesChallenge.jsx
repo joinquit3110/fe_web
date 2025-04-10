@@ -147,9 +147,9 @@ const SystemOfInequalitiesChallenge = () => {
     
     // Update magic points based on results
     handleInequalitySolutionCheck(
-      systemHasSolution,  // Whether system has any solution
-      true,               // User selected "No Solution"
-      false               // Not applicable when declaring no solution
+      systemHasSolution,      // Whether system has any solution
+      true,                   // User selected "No Solution"
+      false                   // Point correctness doesn't apply here
     );
     
     // Update UI

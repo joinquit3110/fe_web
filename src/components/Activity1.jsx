@@ -8,7 +8,6 @@ const ActivityContent = () => {
   const { blankActivityState, updateBlankActivityState } = useActivityState();
   const [revelioResetDone, setRevelioResetDone] = useState(false);
   const { 
-    removePointsWithLog, 
     handleInequalityFormatCheck,
     handleInequalitySolutionCheck,
     handleBlankRevelioAttempt,
@@ -29,10 +28,8 @@ const ActivityContent = () => {
   const handleCharmBlanksSubmission = (blanksResults) => {
     console.log('[ACTIVITY1] Charm the Blanks submission:', blanksResults);
     
-    // Process each blank's result according to the rules
-    Object.entries(blanksResults).forEach(([blankId, isCorrect]) => {
-      handleBlankRevelioAttempt(blankId, isCorrect);
-    });
+    // Use the new handleMultipleRevelioAttempts function
+    handleMultipleRevelioAttempts(blanksResults);
   };
 
   // Handler for inequality solution inputs
@@ -42,7 +39,7 @@ const ActivityContent = () => {
       Selected no solution: ${selectedNoSolution}, 
       Is correct: ${isSolutionCorrect}`);
       
-    // Use the context function for inequality solution checks
+    // Use the new handleInequalitySolutionCheck function
     handleInequalitySolutionCheck(systemHasSolution, selectedNoSolution, isSolutionCorrect);
   };
 

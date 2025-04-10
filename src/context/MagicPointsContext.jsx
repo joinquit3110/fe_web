@@ -383,6 +383,134 @@ export const MagicPointsProvider = ({ children }) => {
     return Promise.all(processingPromises);
   }, [processBlankSubmission, addPointsWithLog]);
 
+  // Handle Revelio attempts for fill-in-the-blank activities
+  const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
+    console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
+    
+    // Check if this blank has already been answered correctly previously
+    if (correctBlanks[blankId]) {
+      console.log(`[POINTS] Blank ${blankId} was already answered correctly, skipping scoring`);
+      return isCorrect;
+    }
+    
+    // Check if this is the first attempt for this blank
+    const isFirstAttempt = revelioAttempts[blankId] === undefined || revelioAttempts[blankId] === true;
+    console.log(`[POINTS] Is first attempt for ${blankId}: ${isFirstAttempt}`);
+    
+    // Scoring rules:
+    // - First attempt: -10 points for wrong, no points for correct
+    // - Second+ attempt: +10 points for correcting previously wrong, -10 points for any wrong
+    
+    if (isCorrect) {
+      if (!isFirstAttempt) {
+        // This is a correction of a previously wrong answer, award points
+        console.log(`[POINTS] Blank ${blankId} corrected after initial wrong attempt, adding 10 points`);
+        addPointsWithLog(10, `revelio_correction_${blankId}`);
+      } else {
+        console.log(`[POINTS] Blank ${blankId} correctly answered on first attempt, no points awarded`);
+      }
+      
+      // Add to correct blanks to avoid double counting
+      const newCorrectBlanks = { ...correctBlanks, [blankId]: true };
+      setCorrectBlanks(newCorrectBlanks);
+      localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
+    } else {
+      // Always deduct points for wrong answers
+      console.log(`[POINTS] Blank ${blankId} answered incorrectly, removing 10 points`);
+      removePointsWithLog(10, `revelio_incorrect_${blankId}`);
+      
+      // Mark as no longer first attempt
+      console.log(`[POINTS] Marking ${blankId} as no longer first attempt`);
+      const newRevelioAttempts = { ...revelioAttempts, [blankId]: false };
+      setRevelioAttempts(newRevelioAttempts);
+      localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
+    }
+    
+    console.log('[POINTS] Updated revelioAttempts:', revelioAttempts);
+    console.log('[POINTS] Updated correctBlanks:', correctBlanks);
+    
+    return isCorrect;
+  }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog]);
+  
+  // Handle multiple blanks submission for Charm the Blanks activity
+  const handleMultipleRevelioAttempts = useCallback((results) => {
+    console.log('[POINTS] Processing multiple blanks submission:', results);
+    
+    let processingPromises = [];
+    
+    // Process each blank
+    Object.entries(results).forEach(([blankId, isCorrect]) => {
+      processingPromises.push(handleBlankRevelioAttempt(blankId, isCorrect));
+    });
+    
+    return Promise.all(processingPromises);
+  }, [handleBlankRevelioAttempt]);
+  
+  // Handle inequality format checks
+  const handleInequalityFormatCheck = useCallback((isValid, index) => {
+    console.log(`[POINTS] Checking inequality ${index} format: ${isValid ? 'valid' : 'invalid'}`);
+    
+    if (!isValid) {
+      // Deduct points for invalid format
+      removePointsWithLog(10, `inequality_format_invalid_${index}`);
+      return false;
+    }
+    
+    // No points awarded for correct format
+    console.log(`[POINTS] Inequality ${index} format is valid, no points awarded`);
+    return true;
+  }, [removePointsWithLog]);
+  
+  // Handle inequality solution checks
+  const handleInequalitySolutionCheck = useCallback((systemHasSolution, selectedNoSolution, isSolutionCorrect) => {
+    console.log(`[POINTS] Checking inequality solution:
+      System has solution: ${systemHasSolution}
+      Selected No Solution: ${selectedNoSolution}
+      Is solution correct: ${isSolutionCorrect}`);
+    
+    // Case 1: System has no solution but user didn't select "No solution"
+    if (!systemHasSolution && !selectedNoSolution) {
+      removePointsWithLog(10, 'inequality_missed_no_solution');
+      return false;
+    }
+    
+    // Case 2: System has solution but user either selected "No solution" or entered wrong coordinates
+    if (systemHasSolution && (!isSolutionCorrect || selectedNoSolution)) {
+      removePointsWithLog(10, 'inequality_wrong_solution');
+      return false;
+    }
+    
+    // No points awarded for correct solution
+    console.log('[POINTS] Inequality solution is correct, no points awarded');
+    return true;
+  }, [removePointsWithLog]);
+
+  // Utility function to log current points state (for debugging)
+  const logCurrentPoints = useCallback(() => {
+    console.log(`[POINTS] Current magic points: ${magicPoints}`);
+    console.log(`[POINTS] Pending operations: ${pendingOperations.length}`);
+    console.log(`[POINTS] Last synced: ${lastSynced || 'never'}`);
+    console.log(`[POINTS] Is online: ${isOnline}, Is syncing: ${isSyncing}`);
+    return {
+      magicPoints,
+      pendingOperations,
+      lastSynced,
+      isOnline,
+      isSyncing
+    };
+  }, [magicPoints, pendingOperations, lastSynced, isOnline, isSyncing]);
+
+  // Force a sync to the server (manual trigger)
+  const forceSync = useCallback(() => {
+    if (!isOnline) {
+      console.log('[POINTS] Cannot force sync - device is offline');
+      return;
+    }
+    
+    console.log('[POINTS] Force syncing points to server');
+    return syncToServer();
+  }, [isOnline, syncToServer]);
+
   return (
     <MagicPointsContext.Provider value={{
       magicPoints,
@@ -396,8 +524,14 @@ export const MagicPointsProvider = ({ children }) => {
       pendingChanges,
       pendingOperations,
       resetRevelioAttempts,
-      processBlankSubmission,
-      processMultipleBlanks
+      handleBlankRevelioAttempt,
+      handleMultipleRevelioAttempts,
+      handleInequalityFormatCheck,
+      handleInequalitySolutionCheck,
+      processBlankSubmission, // Keep for backward compatibility
+      processMultipleBlanks,  // Keep for backward compatibility
+      logCurrentPoints,
+      forceSync
     }}>
       {children}
     </MagicPointsContext.Provider>
