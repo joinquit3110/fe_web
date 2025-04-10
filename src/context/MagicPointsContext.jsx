@@ -247,9 +247,15 @@ export const MagicPointsProvider = ({ children }) => {
   const removePoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
     
-    const newPoints = Math.max(0, magicPoints - amount);
+    // Ensure we're working with the most current points value
+    const currentPoints = parseInt(localStorage.getItem('magicPoints') || magicPoints.toString(), 10);
+    const newPoints = Math.max(0, currentPoints - amount);
+    
+    console.log(`[POINTS] Removing ${amount} points from ${currentPoints}. New total: ${newPoints} (${source})`);
+    
+    // Update state and localStorage in a consistent way
     setMagicPoints(newPoints);
-    localStorage.setItem('magicPoints', newPoints);
+    localStorage.setItem('magicPoints', newPoints.toString());
     setPendingChanges(true);
     
     const operation = {
@@ -259,9 +265,14 @@ export const MagicPointsProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     };
     
+    // Ensure pendingOperations update is atomic
     setPendingOperations(prev => {
       const updated = [...prev, operation];
-      localStorage.setItem('pendingOperations', JSON.stringify(updated));
+      try {
+        localStorage.setItem('pendingOperations', JSON.stringify(updated));
+      } catch (error) {
+        console.error('[POINTS] Error storing pending operations:', error);
+      }
       return updated;
     });
     
@@ -383,7 +394,7 @@ export const MagicPointsProvider = ({ children }) => {
     return Promise.all(processingPromises);
   }, [processBlankSubmission, addPointsWithLog]);
 
-  // Handle Revelio attempts for fill-in-the-blank activities
+  // Handle Revelio attempts for fill-in-the-blank activities with improved logging
   const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
     console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
     
@@ -396,6 +407,10 @@ export const MagicPointsProvider = ({ children }) => {
     // Check if this is the first attempt for this blank
     const isFirstAttempt = revelioAttempts[blankId] === undefined || revelioAttempts[blankId] === true;
     console.log(`[POINTS] Is first attempt for ${blankId}: ${isFirstAttempt}`);
+    
+    // Current magic points before processing
+    const pointsBefore = magicPoints;
+    console.log(`[POINTS] Current points before processing: ${pointsBefore}`);
     
     // Scoring rules:
     // - First attempt: -10 points for wrong, no points for correct
@@ -416,7 +431,7 @@ export const MagicPointsProvider = ({ children }) => {
       localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
     } else {
       // Always deduct points for wrong answers
-      console.log(`[POINTS] Blank ${blankId} answered incorrectly, removing 10 points`);
+      console.log(`[POINTS] Blank ${blankId} answered incorrectly, removing 10 points from ${magicPoints}`);
       removePointsWithLog(10, `revelio_incorrect_${blankId}`);
       
       // Mark as no longer first attempt
@@ -426,11 +441,14 @@ export const MagicPointsProvider = ({ children }) => {
       localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
     }
     
+    // Log the point change
+    console.log(`[POINTS] Points after processing ${blankId}: ${magicPoints} (change: ${magicPoints - pointsBefore})`);
+    
     console.log('[POINTS] Updated revelioAttempts:', revelioAttempts);
     console.log('[POINTS] Updated correctBlanks:', correctBlanks);
     
     return isCorrect;
-  }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog]);
+  }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog, magicPoints]);
   
   // Handle multiple blanks submission for Charm the Blanks activity
   const handleMultipleRevelioAttempts = useCallback((results) => {
@@ -534,7 +552,7 @@ export const MagicPointsProvider = ({ children }) => {
     };
   }, [magicPoints, isOnline, isAuthenticated, isSyncing, pendingOperations, lastSynced, revelioAttempts, correctBlanks]);
   
-  // Force sync with debug information
+  // Force sync with debug information and improved error handling
   const forceSyncWithDebug = useCallback(async () => {
     console.log('[POINTS DEBUG] Force syncing with debug info...');
     
@@ -542,8 +560,23 @@ export const MagicPointsProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     console.log(`[POINTS DEBUG] Auth token: ${token ? 'Present' : 'Missing'}`);
     
+    // Verify local storage
+    console.log(`[POINTS DEBUG] Local magic points: ${localStorage.getItem('magicPoints')}`);
+    console.log(`[POINTS DEBUG] State magic points: ${magicPoints}`);
+    
     // Log pending operations
-    console.log(`[POINTS DEBUG] Pending operations: ${pendingOperations.length}`);
+    const storedOps = localStorage.getItem('pendingOperations');
+    const parsedOps = storedOps ? JSON.parse(storedOps) : [];
+    console.log(`[POINTS DEBUG] Pending operations in localStorage: ${parsedOps.length}`);
+    console.log(`[POINTS DEBUG] Pending operations in state: ${pendingOperations.length}`);
+    
+    // Check for discrepancies
+    if (pendingOperations.length !== parsedOps.length) {
+      console.warn('[POINTS DEBUG] Discrepancy between state and localStorage operations!');
+      // Sync the state from localStorage to ensure consistency
+      setPendingOperations(parsedOps);
+    }
+    
     if (pendingOperations.length > 0) {
       console.log(pendingOperations);
     }
@@ -555,7 +588,7 @@ export const MagicPointsProvider = ({ children }) => {
       console.error('[POINTS DEBUG] Sync error:', error);
       return false;
     }
-  }, [pendingOperations, syncToServer]);
+  }, [pendingOperations, syncToServer, magicPoints]);
   
   // Reset points to 100
   const resetPoints = useCallback(async () => {

@@ -134,17 +134,18 @@ const MagicPointsDebug = () => {
       bottom="10px" 
       right="10px" 
       zIndex={1000} 
-      bg="white" 
+      bg="gray.800" 
       boxShadow="lg" 
       borderRadius="md" 
       p={4} 
       maxW="400px"
       maxH="80vh"
       overflowY="auto"
+      color="white"
     >
       <VStack align="stretch" spacing={3}>
         <HStack justifyContent="space-between">
-          <Heading size="md">Magic Points Debug</Heading>
+          <Heading size="md" color="white">Magic Points Debug</Heading>
           <Button size="xs" onClick={() => setShowDebug(false)}>Close</Button>
         </HStack>
         
@@ -172,20 +173,20 @@ const MagicPointsDebug = () => {
         </HStack>
         
         <Box>
-          <Text fontWeight="bold">Current Points: {magicPoints}</Text>
-          <Text fontSize="sm">Last Synced: {lastSynced || 'Never'}</Text>
-          <Text fontSize="sm">Auth Token: {localStorage.getItem('authToken') ? 'Present' : 'Missing'}</Text>
-          <Text fontSize="sm">Retry Count: {localStorage.getItem('syncRetryCount') || '0'}</Text>
+          <Text fontWeight="bold" color="white">Current Points: {magicPoints}</Text>
+          <Text fontSize="sm" color="gray.200">Last Synced: {lastSynced || 'Never'}</Text>
+          <Text fontSize="sm" color="gray.200">Auth Token: {localStorage.getItem('authToken') ? 'Present' : 'Missing'}</Text>
+          <Text fontSize="sm" color="gray.200">Retry Count: {localStorage.getItem('syncRetryCount') || '0'}</Text>
         </Box>
         
         {debugData && (
           <>
-            <Text fontWeight="bold">Pending Operations: {debugData.pendingOperations.length}</Text>
+            <Text fontWeight="bold" color="white">Pending Operations: {debugData.pendingOperations.length}</Text>
             {debugData.pendingOperations.length > 0 && (
-              <Box bg="gray.100" p={2} borderRadius="md" fontSize="sm">
-                <Code>{JSON.stringify(debugData.pendingOperations.slice(0, 5), null, 2)}</Code>
+              <Box bg="gray.700" p={2} borderRadius="md" fontSize="sm">
+                <Code bg="gray.700" color="green.300">{JSON.stringify(debugData.pendingOperations.slice(0, 5), null, 2)}</Code>
                 {debugData.pendingOperations.length > 5 && (
-                  <Text>...and {debugData.pendingOperations.length - 5} more</Text>
+                  <Text color="gray.300">...and {debugData.pendingOperations.length - 5} more</Text>
                 )}
               </Box>
             )}
