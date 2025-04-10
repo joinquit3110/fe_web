@@ -9,6 +9,9 @@ const BACKEND_URL = 'https://be-web-6c4k.onrender.com';
 // Flag to enable offline mode for development
 const USE_OFFLINE_MODE = false;
 
+// Export USE_OFFLINE_MODE for use in other modules
+export { USE_OFFLINE_MODE };
+
 // Helper for getting authentication token
 const getAuthToken = () => {
   // Use the main auth token directly like the profile update does

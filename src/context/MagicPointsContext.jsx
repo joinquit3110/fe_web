@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { fetchMagicPoints, updateMagicPoints, syncMagicPointsOperations } from "../api/magicPointsApi";
+import { fetchMagicPoints, updateMagicPoints, syncMagicPointsOperations, USE_OFFLINE_MODE } from "../api/magicPointsApi";
 
 // Create context
 const MagicPointsContext = createContext();
