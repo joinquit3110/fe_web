@@ -136,7 +136,13 @@ const Register = () => {
       navigate('/');
     } catch (error) {
       console.error('Registration form error:', error);
-      setError(error.message || 'Registration failed. Please check your information and try again.');
+      
+      // Enhanced error handling
+      if (error.message === 'Failed to fetch') {
+        setError('Unable to connect to Hogwarts registration system. Please try again later or contact a professor for assistance.');
+      } else {
+        setError(error.message || 'Registration failed. Please check your information and try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -204,6 +210,7 @@ const Register = () => {
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
                     borderColor="var(--panel-border)"
                     background="var(--input-bg)"
+                    autoComplete="username"
                   />
                 </InputGroup>
               </FormControl>
@@ -222,6 +229,7 @@ const Register = () => {
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
                     borderColor="var(--panel-border)"
                     background="var(--input-bg)"
+                    autoComplete="email"
                   />
                 </InputGroup>
               </FormControl>
@@ -240,6 +248,7 @@ const Register = () => {
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
                     borderColor="var(--panel-border)"
                     background="var(--input-bg)"
+                    autoComplete="new-password"
                   />
                   <InputRightElement>
                     <IconButton
@@ -268,6 +277,7 @@ const Register = () => {
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
                     borderColor="var(--panel-border)"
                     background="var(--input-bg)"
+                    autoComplete="new-password"
                   />
                   <InputRightElement>
                     <IconButton

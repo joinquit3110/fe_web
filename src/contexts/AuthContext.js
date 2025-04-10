@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-// Use a relative API URL for better deployment flexibility
+// Use a consistent API URL for all requests
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 export const AuthProvider = ({ children }) => {
@@ -10,9 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState(null);
-  
-  // API URL from environment or default
-  const API_URL_ENV = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
   
   // Check if user is already authenticated on component mount
   useEffect(() => {
@@ -53,7 +50,7 @@ export const AuthProvider = ({ children }) => {
         password: credentials.password
       };
       
-      const response = await fetch(`${API_URL_ENV}/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -97,7 +94,7 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (userData) => {
     try {
-      const response = await fetch(`${API_URL_ENV}/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -119,7 +116,7 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL_ENV}/auth/profile`, {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +144,7 @@ export const AuthProvider = ({ children }) => {
   const updatePassword = async (currentPassword, newPassword) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL_ENV}/auth/password`, {
+      const response = await fetch(`${API_URL}/auth/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

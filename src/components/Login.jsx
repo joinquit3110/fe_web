@@ -126,7 +126,13 @@ const Login = () => {
       navigate('/dashboard');
     } catch (error) {
       console.error('Login form error:', error);
-      setError(error.message || 'Login failed. Please check your credentials.');
+      
+      // Enhanced error handling for CORS issues
+      if (error.message === 'Failed to fetch') {
+        setError('Unable to connect to Hogwarts authentication system. Please try again later.');
+      } else {
+        setError(error.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -194,6 +200,7 @@ const Login = () => {
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
                     borderColor="var(--panel-border)"
                     background="var(--input-bg)"
+                    autoComplete="username"
                   />
                 </InputGroup>
               </FormControl>
@@ -212,6 +219,7 @@ const Login = () => {
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
                     borderColor="var(--panel-border)"
                     background="var(--input-bg)"
+                    autoComplete="current-password"
                   />
                   <InputRightElement>
                     <IconButton
