@@ -1,0 +1,321 @@
+/* Harry Potter Login Page Specific Styles */
+
+/* Hogwarts background */
+.hogwarts-app {
+  background-color: var(--hogwarts-dark);
+  background-image: linear-gradient(to bottom, rgba(14, 26, 64, 0.95), rgba(10, 14, 35, 0.98));
+  animation: gentle-float 10s ease-in-out infinite;
+}
+
+/* Hogwarts title styling */
+.hogwarts-title {
+  font-family: 'MedievalSharp', cursive !important;
+  color: var(--hogwarts-secondary) !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 2.5rem !important;
+  position: relative;
+  text-shadow: 0 0 10px rgba(240, 199, 94, 0.5);
+  margin-bottom: 0.5rem !important;
+}
+
+.hogwarts-title::after {
+  content: "";
+  display: block;
+  width: 80%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--hogwarts-secondary), transparent);
+  position: absolute;
+  bottom: -8px;
+  left: 10%;
+}
+
+/* Animated floating elements */
+.floating-element {
+  position: absolute;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 10px rgba(240, 199, 94, 0.4));
+  z-index: 0;
+}
+
+.floating-element.wand {
+  width: 12px;
+  height: 80px;
+  background: linear-gradient(to bottom, var(--hogwarts-secondary), var(--hogwarts-secondary) 90%, var(--hogwarts-primary) 90%);
+  border-radius: 2px;
+  animation: float-wand 8s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.floating-element.wand::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, var(--hogwarts-secondary) 0%, transparent 70%);
+  top: -5px;
+  left: -4px;
+  border-radius: 50%;
+}
+
+.floating-element.spellbook {
+  width: 60px;
+  height: 80px;
+  background: var(--hogwarts-primary);
+  border: 2px solid var(--hogwarts-secondary);
+  border-radius: 3px;
+  animation: float-book 6s ease-in-out infinite;
+}
+
+.floating-element.spellbook::before {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 2px;
+  background: var(--hogwarts-secondary);
+  top: 20px;
+  left: 10px;
+  box-shadow: 0 10px 0 var(--hogwarts-secondary), 
+              0 20px 0 var(--hogwarts-secondary), 
+              0 30px 0 var(--hogwarts-secondary), 
+              0 40px 0 var(--hogwarts-secondary);
+}
+
+.floating-element.potion {
+  width: 40px;
+  height: 60px;
+  background: linear-gradient(to bottom, 
+    var(--hogwarts-secondary) 0%,
+    var(--hogwarts-secondary) 20%,
+    var(--hogwarts-accent) 20%,
+    var(--hogwarts-accent) 100%);
+  border-radius: 2px 2px 20px 20px;
+  animation: float-potion 7s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.floating-element.potion::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 10px;
+  background: var(--hogwarts-secondary);
+  top: -5px;
+  left: 10px;
+  border-radius: 5px;
+}
+
+/* Enhanced spell effect for the login button */
+.spellcast-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease-out !important;
+  letter-spacing: 1px;
+  font-family: 'Cinzel', serif !important;
+  text-transform: uppercase;
+  background: linear-gradient(to right, var(--hogwarts-primary), var(--hogwarts-accent)) !important;
+  border: 1px solid var(--hogwarts-secondary) !important;
+  color: var(--hogwarts-secondary) !important;
+  padding: 0.8rem 1.5rem !important;
+  box-shadow: 0 0 15px rgba(240, 199, 94, 0.2) !important;
+}
+
+.spellcast-button:hover {
+  background: linear-gradient(to right, var(--hogwarts-accent), var(--hogwarts-primary)) !important;
+  box-shadow: 0 0 20px rgba(240, 199, 94, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+.spellcast-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 10px rgba(240, 199, 94, 0.3) !important;
+}
+
+.spellcast-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(240, 199, 94, 0.4),
+    transparent
+  );
+  transition: all 0.4s;
+  z-index: 1;
+}
+
+.spellcast-button:hover::before {
+  left: 100%;
+  transition: 0.7s;
+}
+
+.spellcast-button::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to bottom right,
+    rgba(240, 199, 94, 0) 0%,
+    rgba(240, 199, 94, 0.4) 50%,
+    rgba(240, 199, 94, 0) 100%
+  );
+  transform: rotate(45deg);
+  animation: spell-shine 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Spell particles */
+.spell-particles-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.spell-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle, rgba(240, 199, 94, 0.8) 0%, rgba(240, 199, 94, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.spellcast-button:hover + .spell-particles-container .spell-particle {
+  animation: particle-fly 2s ease-out forwards;
+}
+
+/* Hogwarts houses colors for input focus */
+.inequality-input-field:focus {
+  box-shadow: 0 0 0 1px var(--hogwarts-primary),
+              0 0 0 3px rgba(240, 199, 94, 0.3),
+              0 0 10px rgba(240, 199, 94, 0.2) !important;
+  border-color: var(--hogwarts-secondary) !important;
+}
+
+/* Animation keyframes */
+@keyframes gentle-float {
+  0%, 100% {
+    background-position: center;
+  }
+  50% {
+    background-position: center 10px;
+  }
+}
+
+@keyframes float-wand {
+  0%, 100% {
+    transform: translateY(0) rotate(30deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(35deg);
+  }
+}
+
+@keyframes float-book {
+  0%, 100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes float-potion {
+  0%, 100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+@keyframes spell-shine {
+  0% {
+    top: -200%;
+    left: -150%;
+  }
+  100% {
+    top: 200%;
+    left: 150%;
+  }
+}
+
+@keyframes particle-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x, 100px), var(--y, -100px)) scale(0);
+  }
+}
+
+/* Custom form field styling */
+.wizard-input-label {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--hogwarts-secondary);
+}
+
+/* Parchment texture for wizard panel */
+.wizard-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(240, 199, 94, 0.03) 0%, rgba(240, 199, 94, 0.01) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .floating-element {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .floating-element.wand {
+    top: 10% !important;
+    left: 5% !important;
+  }
+  
+  .floating-element.spellbook {
+    bottom: 10% !important;
+    right: 5% !important;
+  }
+  
+  .floating-element.potion {
+    top: 15% !important;
+    right: 10% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .floating-element {
+    display: none;
+  }
+  
+  .hogwarts-app {
+    background-size: 400px;
+  }
+} 
