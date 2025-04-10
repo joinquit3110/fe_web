@@ -22,16 +22,19 @@ import { useAuth } from '../contexts/AuthContext';
 import '../styles/HarryPotter.css';
 import '../styles/LoginHogwarts.css';
 
-const Login = () => {
+const Register = () => {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  // Add stars to the background
+  // Add stars to the background (same as in Login component)
   useEffect(() => {
     const createStars = () => {
       const starsContainer = document.createElement('div');
@@ -102,31 +105,38 @@ const Login = () => {
   }, []);
 
   const handleTogglePassword = () => setShowPassword(!showPassword);
-  
-  const handleEnrollClick = () => {
-    // Redirect to registration page - use register path instead of signup
-    navigate('/register');
-    
-    // For debugging
-    console.log('Enrollment button clicked. Navigating to /register');
-  };
+  const handleToggleConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Password validation
+    if (password !== confirmPassword) {
+      setError('Your spells do not match! Please make sure your secret spells are identical.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Your secret spell is too weak! It must be at least 6 characters long.');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      // Use the credentials object format expected by the API
-      await login({
-        username: email, // Server expects username
-        password: password
+      // Use the register function from AuthContext
+      await register({
+        username,
+        email,
+        password
       });
       
-      navigate('/dashboard');
+      // Redirect to login page after successful registration
+      navigate('/');
     } catch (error) {
-      console.error('Login form error:', error);
-      setError(error.message || 'Login failed. Please check your credentials.');
+      console.error('Registration form error:', error);
+      setError(error.message || 'Registration failed. Please check your information and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -165,11 +175,11 @@ const Login = () => {
           </Heading>
           
           <Heading as="h2" size="lg" className="highlight" textAlign="center">
-            Welcome, Wizard
+            New Student Enrollment
           </Heading>
           
           <Text fontSize="lg" className="message-content" textAlign="center">
-            Enter your credentials to continue your magical journey
+            Fill in your details to begin your magical journey
           </Text>
           
           {error && (
@@ -184,11 +194,29 @@ const Login = () => {
                 <FormLabel className="wizard-input-label">Wizard Name</FormLabel>
                 <InputGroup>
                   <Input
-                    id="email"
+                    id="username"
                     type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Choose your wizard name"
+                    className="inequality-input-field"
+                    color="var(--text-primary)"
+                    _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
+                    borderColor="var(--panel-border)"
+                    background="var(--input-bg)"
+                  />
+                </InputGroup>
+              </FormControl>
+              
+              <FormControl isRequired>
+                <FormLabel className="wizard-input-label">Owl Mail Address</FormLabel>
+                <InputGroup>
+                  <Input
+                    id="email"
+                    type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your wizard name"
+                    placeholder="Enter your owl mail address"
                     className="inequality-input-field"
                     color="var(--text-primary)"
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
@@ -206,7 +234,7 @@ const Login = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your secret spell"
+                    placeholder="Create your secret spell"
                     className="inequality-input-field"
                     color="var(--text-primary)"
                     _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
@@ -226,16 +254,44 @@ const Login = () => {
                 </InputGroup>
               </FormControl>
               
+              <FormControl isRequired>
+                <FormLabel className="wizard-input-label">Confirm Secret Spell</FormLabel>
+                <InputGroup>
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat your secret spell"
+                    className="inequality-input-field"
+                    color="var(--text-primary)"
+                    _placeholder={{ color: 'var(--text-secondary)', opacity: 0.7 }}
+                    borderColor="var(--panel-border)"
+                    background="var(--input-bg)"
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      size="sm"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      icon={<Text fontSize="xs" color="var(--text-secondary)">{showConfirmPassword ? 'Hide' : 'Show'}</Text>}
+                      onClick={handleToggleConfirmPassword}
+                      variant="ghost"
+                      _hover={{ bg: 'transparent', color: 'var(--light-accent)' }}
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+              
               <Box position="relative" width="100%">
                 <Button
                   width="100%"
                   type="submit"
                   className="spellcast-button"
                   isLoading={isLoading}
-                  loadingText="Casting Spell..."
+                  loadingText="Enchanting..."
                   mt={2}
                 >
-                  Alohomora
+                  Enroll at Hogwarts
                 </Button>
                 
                 {/* Spell particles */}
@@ -259,14 +315,14 @@ const Login = () => {
           </form>
           
           <Text className="hogwarts-text" alignSelf="center" mt={4}>
-            First year at Hogwarts?{' '}
+            Already a student at Hogwarts?{' '}
             <Button 
               className="enroll-button" 
               variant="link" 
-              onClick={handleEnrollClick}
+              onClick={() => navigate('/')}
               _hover={{ textDecoration: 'none' }}
             >
-              Enroll Now
+              Return to Login
             </Button>
           </Text>
         </VStack>
@@ -275,4 +331,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register; 

@@ -10,39 +10,34 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState(null);
-
+  
+  // API URL from environment or default
+  const API_URL_ENV = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+  
+  // Check if user is already authenticated on component mount
   useEffect(() => {
-    // Check local storage for token
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
+    const checkAuth = async () => {
       try {
-        setUser(JSON.parse(userData));
-        setIsAuthenticated(true);
-        localStorage.setItem('isAuthenticated', 'true');
-      } catch (err) {
-        console.error('Error parsing user data:', err);
-        localStorage.removeItem('user');
+        const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+        const storedIsAuthenticated = localStorage.getItem('isAuthenticated');
+        
+        if (token && storedUser && storedIsAuthenticated === 'true') {
+          setUser(JSON.parse(storedUser));
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Authentication check error:', error);
+        // Clear potentially corrupted auth data
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('isAuthenticated');
+      } finally {
+        setLoading(false);
       }
-    }
-    else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      // Auto-login for local development
-      const autoUser = {
-        id: 'local-dev-user',
-        username: 'HogwartsWizard',
-        email: 'wizard@hogwarts.edu',
-        role: 'user'
-      };
-      localStorage.setItem('token', 'dev-token');
-      localStorage.setItem('user', JSON.stringify(autoUser));
-      localStorage.setItem('isAuthenticated', 'true');
-      setUser(autoUser);
-      setIsAuthenticated(true);
-    }
+    };
     
-    setLoading(false);
+    checkAuth();
   }, []);
   
   // Login function
@@ -58,7 +53,7 @@ export const AuthProvider = ({ children }) => {
         password: credentials.password
       };
       
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL_ENV}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -102,7 +97,7 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (userData) => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const response = await fetch(`${API_URL_ENV}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -124,7 +119,7 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/auth/profile`, {
+      const response = await fetch(`${API_URL_ENV}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +147,7 @@ export const AuthProvider = ({ children }) => {
   const updatePassword = async (currentPassword, newPassword) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/auth/password`, {
+      const response = await fetch(`${API_URL_ENV}/auth/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

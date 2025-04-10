@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Routes, Route, Navigate } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
@@ -8,6 +9,7 @@ import './styles/HarryPotter.css';
 // Fix AuthContext import
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
+import Register from './components/Register';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
@@ -42,8 +44,21 @@ const theme = extendTheme({
   }
 });
 
+// Private Route component for protected routes
+const PrivateRoute = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // Allow bypassing auth in development mode
+  if (!isAuthenticated && !isDevelopment) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
 const AppContent = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('activity1'); // Default to Activity 1 instead of Activity 2
   const [inequalities, setInequalities] = useState([]);
   const [message, setMessage] = useState({ 
@@ -228,16 +243,6 @@ const AppContent = () => {
     grade: 'Advanced',
   };
   
-  if (!user) {
-    // Bỏ qua màn hình đăng nhập khi chạy trên localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.log('Development mode: Bypassing login screen');
-      // Không return ở đây để tiếp tục render app
-    } else {
-      return <Login />;
-    }
-  }
-
   // Handle tab change and ensure MathJax is reprocessed
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
@@ -251,112 +256,126 @@ const AppContent = () => {
   };
 
   return (
-    <div className="app mobile-optimized">
-      {/* UserProfile component */}
-      <UserProfile user={user || (window.location.hostname === 'localhost' ? localUser : null)} />
-      
-      <header className="hogwarts-header">
-        <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
-      </header>
-      
-      {/* Tab Navigation */}
-      <TabNavigation activeTab={activeTab} setActiveTab={handleTabChange} />
-      
-      <div className="hogwarts-content">
-        {/* Render different content based on active tab */}
-        {activeTab === 'activity1' ? (
-          <Activity1 />
-        ) : (
-          <>
-            {/* 1. Control Panel - Cast Spell at top */}
-            <div className="control-panel wizard-panel">
-              <div className="control-panel-content">
-                <h2>Grand Arcanum of<br />Inequality</h2>
-                <InequalityInput 
-                  addInequality={handleAddInequality}
-                  setQuizMessage={setQuizMessage}
-                  resetAll={resetAll}
-                />
-              </div>
-            </div>
+    <div className="app">
+      <Routes>
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/" 
+          element={
+            <PrivateRoute>
+              <div className="hogwarts-app">
+                {/* UserProfile component */}
+                <UserProfile user={user || (window.location.hostname === 'localhost' ? localUser : null)} />
+                
+                <header className="hogwarts-header">
+                  <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
+                </header>
+                
+                {/* Tab Navigation */}
+                <TabNavigation activeTab={activeTab} setActiveTab={handleTabChange} />
+                
+                <div className="hogwarts-content">
+                  {/* Render different content based on active tab */}
+                  {activeTab === 'activity1' ? (
+                    <Activity1 />
+                  ) : (
+                    <>
+                      {/* 1. Control Panel - Cast Spell at top */}
+                      <div className="control-panel wizard-panel">
+                        <div className="control-panel-content">
+                          <h2>Grand Arcanum of<br />Inequality</h2>
+                          <InequalityInput 
+                            addInequality={handleAddInequality}
+                            setQuizMessage={setQuizMessage}
+                            resetAll={resetAll}
+                          />
+                        </div>
+                      </div>
 
-            {/* 2. Message Box - Always show a message */}
-            <div className={`message-box ${message.type}`}>
-              <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
-            </div>
+                      {/* 2. Message Box - Always show a message */}
+                      <div className={`message-box ${message.type}`}>
+                        <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
+                      </div>
 
-            {/* 3. Coordinate Plane */}
-            <div className="coordinate-container wizard-panel">
-              <h2>Magical Coordinate Plane</h2>
-              <div className="coordinate-plane">
-                <CoordinatePlane
-                  ref={coordinatePlaneRef}
-                  inequalities={inequalities}
-                  setInequalities={setInequalities}
-                  setQuizMessage={setQuizMessage}
-                  hoveredEq={hoveredEq}
-                  setHoveredEq={setHoveredEq}
-                  onInequalityClick={scrollToInequality}
-                  setRelatedToIntersection={setRelatedToIntersection}
-                />
-              </div>
-            </div>
+                      {/* 3. Coordinate Plane */}
+                      <div className="coordinate-container wizard-panel">
+                        <h2>Magical Coordinate Plane</h2>
+                        <div className="coordinate-plane">
+                          <CoordinatePlane
+                            ref={coordinatePlaneRef}
+                            inequalities={inequalities}
+                            setInequalities={setInequalities}
+                            setQuizMessage={setQuizMessage}
+                            hoveredEq={hoveredEq}
+                            setHoveredEq={setHoveredEq}
+                            onInequalityClick={scrollToInequality}
+                            setRelatedToIntersection={setRelatedToIntersection}
+                          />
+                        </div>
+                      </div>
 
-            {/* 4. Inequalities List at bottom */}
-            <div className="inequalities-list wizard-panel">
-              <h2>Spells Collection</h2>
-              <div className="scroll-container" ref={inequalityListRef}>
-                {inequalities.length > 0 ? (
-                  inequalities.map((ineq, index) => (
-                    <div
-                      key={index}
-                      className={`inequality-item ${relatedToIntersection.some(eq => eq.label === ineq.label) 
-                        ? 'related-intersection' 
-                        : (hoveredEq?.label === ineq.label ? 'highlighted' : '')}`}
-                      style={{ 
-                        borderLeftColor: ineq.color,
-                        background: relatedToIntersection.some(eq => eq.label === ineq.label)
-                          ? 'rgba(46, 125, 50, 0.3)' // Green background for related to intersection
-                          : (hoveredEq?.label === ineq.label 
-                            ? 'rgba(211, 166, 37, 0.4)'
-                            : 'rgba(14, 26, 64, 0.7)'),
-                        boxShadow: relatedToIntersection.some(eq => eq.label === ineq.label)
-                          ? '0 0 10px rgba(46, 125, 50, 0.5)' // Green glow for related to intersection
-                          : (hoveredEq?.label === ineq.label 
-                            ? '0 0 10px rgba(211, 166, 37, 0.5)'
-                            : 'none'),
-                        transform: (relatedToIntersection.some(eq => eq.label === ineq.label) || hoveredEq?.label === ineq.label)
-                          ? 'translateX(8px)'
-                          : 'none',
-                        transition: 'all 0.3s ease',
-                        '--index': index
-                      }}
-                      onMouseEnter={() => handleListItemHover(ineq)}
-                      onMouseLeave={() => handleListItemHover(null)}
-                      onClick={() => handleListItemClick(ineq)}
-                    >
-                      <span 
-                        className="latex-content"
-                        dangerouslySetInnerHTML={{ 
-                          __html: `\\(${getSequentialLabel(index)}:\\; ${ineq.latex}\\)` 
-                        }}
-                      />
-                      <span 
-                        className="delete-icon material-icons"
-                        onClick={(e) => handleDelete(e, ineq)}
-                      >
-                        delete
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="empty-spells">Cast your first inequality spell!</div>
-                )}
+                      {/* 4. Inequalities List at bottom */}
+                      <div className="inequalities-list wizard-panel">
+                        <h2>Spells Collection</h2>
+                        <div className="scroll-container" ref={inequalityListRef}>
+                          {inequalities.length > 0 ? (
+                            inequalities.map((ineq, index) => (
+                              <div
+                                key={index}
+                                className={`inequality-item ${relatedToIntersection.some(eq => eq.label === ineq.label) 
+                                  ? 'related-intersection' 
+                                  : (hoveredEq?.label === ineq.label ? 'highlighted' : '')}`}
+                                style={{ 
+                                  borderLeftColor: ineq.color,
+                                  background: relatedToIntersection.some(eq => eq.label === ineq.label)
+                                    ? 'rgba(46, 125, 50, 0.3)' // Green background for related to intersection
+                                    : (hoveredEq?.label === ineq.label 
+                                      ? 'rgba(211, 166, 37, 0.4)'
+                                      : 'rgba(14, 26, 64, 0.7)'),
+                                  boxShadow: relatedToIntersection.some(eq => eq.label === ineq.label)
+                                    ? '0 0 10px rgba(46, 125, 50, 0.5)' // Green glow for related to intersection
+                                    : (hoveredEq?.label === ineq.label 
+                                      ? '0 0 10px rgba(211, 166, 37, 0.5)'
+                                      : 'none'),
+                                  transform: (relatedToIntersection.some(eq => eq.label === ineq.label) || hoveredEq?.label === ineq.label)
+                                    ? 'translateX(8px)'
+                                    : 'none',
+                                  transition: 'all 0.3s ease',
+                                  '--index': index
+                                }}
+                                onMouseEnter={() => handleListItemHover(ineq)}
+                                onMouseLeave={() => handleListItemHover(null)}
+                                onClick={() => handleListItemClick(ineq)}
+                              >
+                                <span 
+                                  className="latex-content"
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: `\\(${getSequentialLabel(index)}:\\; ${ineq.latex}\\)` 
+                                  }}
+                                />
+                                <span 
+                                  className="delete-icon material-icons"
+                                  onClick={(e) => handleDelete(e, ineq)}
+                                >
+                                  delete
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="empty-spells">Cast your first inequality spell!</div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </>
-        )}
-      </div>
+            </PrivateRoute>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       
       {/* Add the debug component */}
       <MagicPointsDebug />
