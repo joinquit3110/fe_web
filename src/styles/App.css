@@ -1483,123 +1483,173 @@ button, input, select, textarea {
   display: none !important;
 }
 
-/* System of Inequalities Challenge - Updated styles to prevent sinking down */
+/* System of Inequalities Challenge styles */
 .system-challenge-container {
-  margin: 20px 0;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   position: relative;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+  background: rgba(14, 26, 64, 0.95); /* Increased opacity for better visibility */
+  border: 2px solid var(--hogwarts-secondary);
+  border-radius: 10px;
+  padding: 25px;
+  margin: 20px 0;
+  color: var(--text-primary);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 15px rgba(211, 166, 37, 0.3);
+  z-index: 100; /* Increased z-index to ensure it stays on top */
+  transform: translateZ(0); /* Force hardware acceleration */
+  isolation: isolate; /* Create stacking context */
+  pointer-events: auto !important; /* Ensure this container receives click events */
 }
 
 .system-challenge-container h2 {
+  color: var(--hogwarts-secondary);
   text-align: center;
+  font-family: 'Cinzel', serif;
   margin-bottom: 20px;
-  color: #7b1fa2;
-  font-family: 'Harry Potter', fantasy, serif;
-}
-
-.system-challenge-container .inequality-input-group {
-  margin-bottom: 15px;
-}
-
-.system-challenge-container label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: #33291a;
-}
-
-.inequality-input-field {
+  text-shadow: 0 0 10px rgba(211, 166, 37, 0.5);
+  font-size: 1.8rem;
+  position: relative;
+  display: inline-block;
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border 0.3s;
 }
 
-.inequality-input-field.error {
-  border-color: #d32f2f;
-  background-color: #ffebee;
+.system-challenge-container h2::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--hogwarts-secondary), transparent);
 }
 
-.inequality-input-field:focus {
-  border-color: #7b1fa2;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(123, 31, 162, 0.2);
+.inequality-input-group {
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 101; /* Higher z-index for input groups */
 }
 
-.solution-point-input {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin: 15px 0;
+.inequality-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--hogwarts-secondary);
+  font-weight: 600;
+  font-family: 'Cinzel', serif;
 }
 
-.solution-point-input label {
-  grid-column: span 1;
-}
-
+/* New styles for inputs */
+.inequality-input-group input,
 .solution-point-input input {
-  grid-column: span 1;
+  width: 100%;
+  padding: 12px;
+  border: 2px solid rgba(211, 166, 37, 0.7); /* More visible border */
+  border-radius: 6px;
+  background-color: rgba(14, 26, 64, 0.8); /* Lighter background */
+  color: white;
+  font-size: 16px;
+  box-shadow: 0 0 8px rgba(211, 166, 37, 0.3); /* Subtle glow */
+  z-index: 200;
+  position: relative;
+  pointer-events: auto !important; /* Ensure inputs receive click events */
+  transition: all 0.3s ease;
+}
+
+.inequality-input-group input:focus,
+.solution-point-input input:focus {
+  outline: none;
+  border-color: rgba(211, 166, 37, 0.9);
+  background-color: rgba(25, 40, 80, 0.9); /* Darker when focused */
+  box-shadow: 0 0 12px rgba(211, 166, 37, 0.5); /* Stronger glow */
+}
+
+.inequality-input-group input.input-error {
+  border-color: rgba(255, 70, 70, 0.8);
+  background-color: rgba(80, 30, 30, 0.4);
 }
 
 .error-message {
-  color: #d32f2f;
+  color: #ff4646;
   font-size: 14px;
-  margin-top: 3px;
+  margin-top: 5px;
   display: block;
 }
 
-.message-box {
-  margin-top: 20px;
-  padding: 10px 15px;
-  border-radius: 4px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.message-box.success {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  border-left: 4px solid #2e7d32;
-}
-
-.message-box.error {
-  background-color: #ffebee;
-  color: #c62828;
-  border-left: 4px solid #c62828;
-}
-
-@media (max-width: 768px) {
-  .solution-point-input {
-    grid-template-columns: 1fr;
-  }
-}
-
-.challenge-button-group {
+/* Solution point inputs styling */
+.solution-point-input {
   display: flex;
   gap: 15px;
-  margin-top: 20px;
-  justify-content: space-between;
+  margin: 20px 0;
+  z-index: 200;
+  position: relative;
 }
 
-.challenge-button-group button {
+.solution-point-input > div {
   flex: 1;
-  min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .challenge-button-group {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .challenge-button-group button {
-    width: 100%;
-  }
+.solution-point-input label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--hogwarts-secondary);
+  font-weight: 600;
+}
+
+/* Button styling */
+.system-challenge-container button {
+  position: relative;
+  z-index: 200;
+  background: linear-gradient(
+    to bottom,
+    rgba(211, 166, 37, 0.8),
+    rgba(180, 140, 30, 0.8)
+  );
+  color: #fff;
+  border: 1px solid rgba(211, 166, 37, 0.9);
+  border-radius: 6px;
+  padding: 10px 15px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  pointer-events: auto !important;
+}
+
+.system-challenge-container button:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(211, 166, 37, 0.9),
+    rgba(180, 140, 30, 0.9)
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.system-challenge-container button:disabled {
+  background: rgba(100, 100, 100, 0.5);
+  border-color: rgba(150, 150, 150, 0.5);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Result message styling */
+.result-message {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  position: relative;
+  z-index: 200;
+}
+
+.result-message.success {
+  background-color: rgba(40, 167, 69, 0.2);
+  border: 1px solid rgba(40, 167, 69, 0.5);
+  color: #28a745;
+}
+
+.result-message.error {
+  background-color: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.5);
+  color: #dc3545;
 }

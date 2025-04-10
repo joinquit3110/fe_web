@@ -1944,10 +1944,24 @@ export default function LinearInequalitiesActivity({
           A <Blank solution="system" /> of linear inequalities in two variables is defined as a collection that <Blank solution="comprises" /> at least two distinct inequalities. A <Blank solution="coordinate" /> <span dangerouslySetInnerHTML={renderLatexHTML("(x_0,y_0)")} /> qualifies as a <Blank solution="solution" /> to this system if and only if the ordered pair <Blank solution="satisfies" /> every inequality in the collection without exception.
         </Dnd>
         <Separator />
-        <SystemOfInequalitiesChallenge 
-          onSolutionCheck={handleInequalitySolution}
-          onFormatCheck={handleFormatCheck}
-        />
+        <Box 
+          p="6" 
+          bg="rgba(14, 26, 64, 0.95)" 
+          borderRadius="md" 
+          border="2px solid var(--hogwarts-secondary)" 
+          boxShadow="0 5px 15px rgba(0, 0, 0, 0.5), 0 0 15px rgba(211, 166, 37, 0.3)"
+          position="relative"
+          zIndex="100"
+          style={{
+            isolation: "isolate",
+            pointerEvents: "auto"
+          }}
+        >
+          <SystemOfInequalitiesChallenge 
+            onSolutionCheck={handleInequalitySolution}
+            onFormatCheck={handleFormatCheck}
+          />
+        </Box>
       </Flex>
     </MagicPointsProvider>
   );
