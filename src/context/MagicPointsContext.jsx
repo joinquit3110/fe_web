@@ -578,15 +578,17 @@ export const MagicPointsProvider = ({ children }) => {
     return syncToServer();
   }, [isOnline, syncToServer]);
 
-  // Add debugging utility functions
-  const debugPointsState = useCallback(() => {
-    console.log('[POINTS DEBUG] Current state:');
-    console.log(`- Magic Points: ${magicPoints}`);
-    console.log(`- Online Status: ${isOnline ? 'Online' : 'Offline'}`);
-    console.log(`- Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
-    console.log(`- Syncing Status: ${isSyncing ? 'Syncing' : 'Idle'}`);
-    console.log(`- Pending Operations: ${pendingOperations.length}`);
-    console.log(`- Last Synced: ${lastSynced || 'Never'}`);
+  // Add debugging utility functions with silent option
+  const debugPointsState = useCallback((silent = false) => {
+    if (!silent) {
+      console.log('[POINTS DEBUG] Current state:');
+      console.log(`- Magic Points: ${magicPoints}`);
+      console.log(`- Online Status: ${isOnline ? 'Online' : 'Offline'}`);
+      console.log(`- Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
+      console.log(`- Syncing Status: ${isSyncing ? 'Syncing' : 'Idle'}`);
+      console.log(`- Pending Operations: ${pendingOperations.length}`);
+      console.log(`- Last Synced: ${lastSynced || 'Never'}`);
+    }
     
     // Return debug data for UI display
     return {

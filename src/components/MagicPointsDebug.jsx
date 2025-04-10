@@ -34,15 +34,15 @@ const MagicPointsDebug = () => {
   
   // Run debug on initial load
   useEffect(() => {
-    const data = debugPointsState();
+    const data = debugPointsState(true); // Silent mode for initial load
     setDebugData(data);
   }, [debugPointsState]);
   
-  // Refresh debug data every 2 seconds
+  // Refresh debug data every 2 seconds (silently)
   useEffect(() => {
     if (showDebug) {
       const interval = setInterval(() => {
-        const data = debugPointsState();
+        const data = debugPointsState(true); // Silent mode for automatic updates
         setDebugData(data);
       }, 2000);
       
@@ -53,7 +53,7 @@ const MagicPointsDebug = () => {
   const handleForceSync = async () => {
     try {
       await forceSync();
-      const data = debugPointsState();
+      const data = debugPointsState(); // Regular mode for manual action
       setDebugData(data);
     } catch (error) {
       console.error('Force sync error:', error);
@@ -203,6 +203,12 @@ const MagicPointsDebug = () => {
     checkServerAuth();
   };
   
+  const handleRefreshDebug = () => {
+    // Use regular (non-silent) mode for manual refresh
+    const data = debugPointsState();
+    setDebugData(data);
+  };
+  
   if (!showDebug) {
     return (
       <Box position="fixed" bottom="10px" right="10px" zIndex={1000}>
@@ -310,7 +316,7 @@ const MagicPointsDebug = () => {
         )}
         
         <HStack wrap="wrap" spacing={2}>
-          <Button size="sm" colorScheme="blue" onClick={debugPointsState}>
+          <Button size="sm" colorScheme="blue" onClick={handleRefreshDebug}>
             Refresh
           </Button>
           <Button size="sm" colorScheme="green" onClick={handleForceSync}>
