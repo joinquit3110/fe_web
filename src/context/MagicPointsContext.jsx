@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { fetchMagicPoints, updateMagicPoints, syncMagicPointsOperations, USE_OFFLINE_MODE } from "../api/magicPointsApi";
+import { 
+  fetchMagicPoints, 
+  updateMagicPoints, 
+  syncMagicPointsOperations, 
+  USE_OFFLINE_MODE,
+  checkAuthStatus 
+} from "../api/magicPointsApi";
 
 // Create context
 const MagicPointsContext = createContext();
@@ -27,6 +33,28 @@ export const MagicPointsProvider = ({ children }) => {
   useEffect(() => {
     const authState = localStorage.getItem('isAuthenticated');
     setIsAuthenticated(authState === 'true');
+
+    // Verify authentication status with server
+    const verifyAuth = async () => {
+      try {
+        const authStatus = await checkAuthStatus();
+        console.log('[POINTS] Auth verification result:', authStatus);
+        
+        if (authStatus.authenticated) {
+          setIsAuthenticated(true);
+          localStorage.setItem('isAuthenticated', 'true');
+        } else {
+          console.warn(`[POINTS] Auth verification failed: ${authStatus.reason}`);
+          // Don't immediately set to false - we'll rely on API call failures for that
+        }
+      } catch (error) {
+        console.error('[POINTS] Error verifying auth:', error);
+      }
+    };
+    
+    if (authState === 'true') {
+      verifyAuth();
+    }
 
     // Also load pending operations
     const savedOperations = localStorage.getItem('pendingOperations');
@@ -116,26 +144,47 @@ export const MagicPointsProvider = ({ children }) => {
           const operationsToSync = JSON.parse(JSON.stringify(sortedOperations));
           
           // Verify token exists before syncing
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('token') || localStorage.getItem('authToken');
           if (!token) {
             console.log('[POINTS] No auth token found, skipping server sync');
             throw new Error('Authentication required');
           }
           
-          const response = await syncMagicPointsOperations(operationsToSync);
-          const { magicPoints: serverPoints } = response;
-
-          // Clear pending operations only after successful sync
-          setPendingOperations([]);
-          localStorage.removeItem('pendingOperations');
-
-          setMagicPoints(serverPoints);
-          localStorage.setItem('magicPoints', serverPoints);
-          console.log(`[POINTS] Synced all operations, new point value: ${serverPoints}`);
+          // Log the actual token format (just the beginning for security)
+          console.log('[POINTS] Auth token format check:', `${token.substring(0, 5)}...${token.substring(token.length - 5)}`);
           
-          // Reset retry counter on success
-          localStorage.setItem('syncRetryCount', '0');
-          setSyncRetries(0);
+          try {
+            const response = await syncMagicPointsOperations(operationsToSync);
+            const { magicPoints: serverPoints } = response;
+
+            // Clear pending operations only after successful sync
+            setPendingOperations([]);
+            localStorage.removeItem('pendingOperations');
+
+            setMagicPoints(serverPoints);
+            localStorage.setItem('magicPoints', serverPoints);
+            console.log(`[POINTS] Synced all operations, new point value: ${serverPoints}`);
+            
+            // Reset retry counter on success
+            localStorage.setItem('syncRetryCount', '0');
+            setSyncRetries(0);
+          } catch (syncError) {
+            console.error(`[POINTS] Specific sync error: ${syncError.message}`);
+            
+            // Handle authentication errors specially
+            if (syncError.message && (
+              syncError.message.includes('Authentication') || 
+              syncError.message.includes('401') || 
+              syncError.message.includes('403')
+            )) {
+              console.error('[POINTS] Authentication error during sync, clearing auth state');
+              setIsAuthenticated(false);
+              localStorage.setItem('isAuthenticated', 'false');
+              throw new Error(`Authentication failed: ${syncError.message}`);
+            }
+            
+            throw syncError;
+          }
         } catch (error) {
           console.error(`[POINTS] Error during sync operations: ${error.message}`);
           throw error;
@@ -558,7 +607,19 @@ export const MagicPointsProvider = ({ children }) => {
     
     // Log auth state
     const token = localStorage.getItem('token');
+    const authToken = localStorage.getItem('authToken');
     console.log(`[POINTS DEBUG] Auth token: ${token ? 'Present' : 'Missing'}`);
+    console.log(`[POINTS DEBUG] Alt auth token: ${authToken ? 'Present' : 'Missing'}`);
+    console.log(`[POINTS DEBUG] Token length: ${token?.length || 0}`);
+    console.log(`[POINTS DEBUG] isAuthenticated state: ${isAuthenticated}`);
+    
+    // Verify with server
+    try {
+      const authStatus = await checkAuthStatus();
+      console.log(`[POINTS DEBUG] Server auth check: ${JSON.stringify(authStatus)}`);
+    } catch (error) {
+      console.error('[POINTS DEBUG] Error checking auth:', error);
+    }
     
     // Verify local storage
     console.log(`[POINTS DEBUG] Local magic points: ${localStorage.getItem('magicPoints')}`);
@@ -578,7 +639,7 @@ export const MagicPointsProvider = ({ children }) => {
     }
     
     if (pendingOperations.length > 0) {
-      console.log(pendingOperations);
+      console.log('[POINTS DEBUG] Pending operations:', pendingOperations);
     }
     
     try {
@@ -588,7 +649,7 @@ export const MagicPointsProvider = ({ children }) => {
       console.error('[POINTS DEBUG] Sync error:', error);
       return false;
     }
-  }, [pendingOperations, syncToServer, magicPoints]);
+  }, [pendingOperations, syncToServer, magicPoints, isAuthenticated]);
   
   // Reset points to 100
   const resetPoints = useCallback(async () => {

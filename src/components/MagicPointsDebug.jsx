@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Text, Heading, VStack, HStack, Badge, Code, Divider } from '@chakra-ui/react';
+import { 
+  Box, Button, Text, Heading, VStack, HStack, Badge, Code, 
+  Divider, useToast, Alert, AlertIcon, Input
+} from '@chakra-ui/react';
 import { useMagicPoints } from '../context/MagicPointsContext';
+import { checkAuthStatus } from '../api/magicPointsApi';
 
 const MagicPointsDebug = () => {
   const { 
@@ -21,6 +25,9 @@ const MagicPointsDebug = () => {
   
   const [debugData, setDebugData] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [authStatus, setAuthStatus] = useState(null);
+  const [tokenInput, setTokenInput] = useState('');
+  const toast = useToast();
   
   // Check if we're in offline/dev mode
   const isDevMode = false; // Set to false since we're online now
@@ -104,10 +111,85 @@ const MagicPointsDebug = () => {
     }
   };
   
+  const checkServerAuth = async () => {
+    try {
+      const status = await checkAuthStatus();
+      setAuthStatus(status);
+      console.log('[DEBUG] Auth check result:', status);
+      
+      toast({
+        title: status.authenticated ? 'Authenticated' : 'Not Authenticated',
+        description: status.authenticated 
+          ? `User ID: ${status.userId}` 
+          : `Reason: ${status.reason}`,
+        status: status.authenticated ? 'success' : 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('[DEBUG] Auth check error:', error);
+      setAuthStatus({ authenticated: false, error: error.message });
+      
+      toast({
+        title: 'Auth Check Error',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+  
+  const handleManualTokenSet = () => {
+    if (!tokenInput.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Token cannot be empty',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+    
+    try {
+      localStorage.setItem('token', tokenInput.trim());
+      localStorage.setItem('authToken', tokenInput.trim());
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      toast({
+        title: 'Token Set',
+        description: 'Auth token manually updated',
+        status: 'success',
+        duration: 3000,
+      });
+      
+      // Refresh debug data
+      const data = debugPointsState();
+      setDebugData(data);
+    } catch (error) {
+      console.error('Error setting token:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to set token: ' + error.message,
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+  
   const handleForceSyncError = () => {
     // Store auth token for debugging
-    const currentToken = localStorage.getItem('authToken');
+    const currentToken = localStorage.getItem('token');
+    const altToken = localStorage.getItem('authToken');
     console.log('[DEBUG] Current auth token:', currentToken || 'none');
+    console.log('[DEBUG] Alternative auth token:', altToken || 'none');
+    
+    // Log token details
+    if (currentToken) {
+      console.log('[DEBUG] Token length:', currentToken.length);
+      console.log('[DEBUG] Token first/last chars:', 
+        `${currentToken.substring(0, 5)}...${currentToken.substring(currentToken.length - 5)}`);
+    }
     
     // Log auth headers that would be sent
     console.log('[DEBUG] Auth headers that would be sent:', {
@@ -116,6 +198,9 @@ const MagicPointsDebug = () => {
     
     // Log retry count
     console.log('[DEBUG] Current retry count:', localStorage.getItem('syncRetryCount') || '0');
+    
+    // Check server auth status
+    checkServerAuth();
   };
   
   if (!showDebug) {
@@ -175,9 +260,40 @@ const MagicPointsDebug = () => {
         <Box>
           <Text fontWeight="bold" color="white">Current Points: {magicPoints}</Text>
           <Text fontSize="sm" color="gray.200">Last Synced: {lastSynced || 'Never'}</Text>
-          <Text fontSize="sm" color="gray.200">Auth Token: {localStorage.getItem('authToken') ? 'Present' : 'Missing'}</Text>
+          <Text fontSize="sm" color="gray.200">Auth Token: {localStorage.getItem('token') ? 'Present' : 'Missing'}</Text>
           <Text fontSize="sm" color="gray.200">Retry Count: {localStorage.getItem('syncRetryCount') || '0'}</Text>
         </Box>
+        
+        {authStatus && (
+          <Alert 
+            status={authStatus.authenticated ? 'success' : 'error'} 
+            borderRadius="md"
+            size="sm"
+          >
+            <AlertIcon />
+            <Text fontSize="xs">
+              {authStatus.authenticated 
+                ? 'Server authentication verified' 
+                : `Auth failed: ${authStatus.reason || authStatus.error || 'Unknown error'}`}
+            </Text>
+          </Alert>
+        )}
+        
+        {/* Manual token input */}
+        <VStack spacing={1}>
+          <Input 
+            placeholder="Enter JWT token" 
+            size="xs"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            bg="gray.700"
+            color="white"
+            fontSize="xs"
+          />
+          <Button size="xs" colorScheme="purple" onClick={handleManualTokenSet} width="100%">
+            Set Token Manually
+          </Button>
+        </VStack>
         
         {debugData && (
           <>

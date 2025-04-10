@@ -14,8 +14,15 @@ export { USE_OFFLINE_MODE };
 
 // Helper for getting authentication token
 const getAuthToken = () => {
-  // Use the main auth token directly like the profile update does
-  return localStorage.getItem('token') || '';
+  // Try multiple token storage locations
+  const token = localStorage.getItem('token') || 
+                localStorage.getItem('authToken') || 
+                sessionStorage.getItem('token');
+  
+  if (!token) {
+    console.warn('[API] No auth token found in any storage location');
+  }
+  return token || '';
 };
 
 // Helper function to handle API errors
@@ -175,9 +182,20 @@ export const syncMagicPointsOperations = async (operations) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for potentially larger operation
     
+    // Get token with additional verification
+    const token = getAuthToken();
+    if (!token) {
+      console.error('[API] Cannot sync - no authentication token available');
+      throw new Error('Authentication token missing');
+    }
+    
+    // Debug: Log full operations for troubleshooting
+    console.log('[API] Full operations payload:', JSON.stringify(operations));
+    
     // Log the request data for debugging
     console.log('[API] Request payload:', JSON.stringify({ operations }).slice(0, 200) + '...');
-    console.log('[API] Using auth token:', getAuthToken() ? 'Present' : 'Missing');
+    console.log('[API] Using auth token:', `${token.substring(0, 10)}...`);
+    console.log('[API] Sending to:', `${BACKEND_URL}/api/user/magic-points/sync`);
     
     const response = await fetch(`${BACKEND_URL}/api/user/magic-points/sync`, {
       method: 'POST',
@@ -185,7 +203,7 @@ export const syncMagicPointsOperations = async (operations) => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         operations
@@ -195,24 +213,46 @@ export const syncMagicPointsOperations = async (operations) => {
     
     clearTimeout(timeoutId);
     
-    // Log response status and headers for debugging
+    // Enhanced response logging
     console.log(`[API] Sync response status: ${response.status} ${response.statusText}`);
+    console.log('[API] Response headers:', [...response.headers.entries()]);
     
+    // Handle error responses with better debugging
     if (!response.ok) {
-      // Try to get the error message from response if possible
-      let errorMessage;
+      let errorData = null;
+      let errorMessage = `HTTP error ${response.status}`;
+      
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || `HTTP error ${response.status}`;
-      } catch (e) {
-        errorMessage = `HTTP error ${response.status}`;
+        // Try to get response body for more details
+        errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+        console.error('[API] Error response body:', errorData);
+      } catch (parseError) {
+        console.error('[API] Could not parse error response:', parseError);
       }
       
       // Log detailed error for auth issues
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         console.error('[API] Authentication failed. Not logged in or session expired.');
         const token = getAuthToken();
         console.log('[API] Auth token available:', !!token);
+        console.log('[API] Auth token length:', token?.length || 0);
+        
+        // Log actual token for debugging (only first few characters)
+        if (token) {
+          console.log('[API] Token first chars:', token.substring(0, 10) + '...');
+        }
+        
+        throw new Error(`Authentication error: ${errorMessage}`);
+      } else if (response.status === 400) {
+        console.error('[API] Bad request error:', errorMessage);
+        throw new Error(`Bad request: ${errorMessage}`);
+      } else if (response.status === 404) {
+        console.error('[API] Not found error:', errorMessage);
+        throw new Error(`Not found: ${errorMessage}`);
+      } else if (response.status >= 500) {
+        console.error('[API] Server error:', errorMessage);
+        throw new Error(`Server error: ${errorMessage}`);
       }
       
       console.error(`[API] Failed to sync magic points operations: ${errorMessage}`);
@@ -257,5 +297,40 @@ export const getLocalPoints = () => {
   } catch (error) {
     console.error('[API] Error getting local points:', error);
     return 100;
+  }
+};
+
+// New function to check authentication status
+export const checkAuthStatus = async () => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return { authenticated: false, reason: 'No token found' };
+    }
+    
+    const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      return { 
+        authenticated: false, 
+        status: response.status,
+        reason: `Server returned ${response.status}: ${response.statusText}`
+      };
+    }
+    
+    const data = await response.json();
+    return { authenticated: true, userId: data.userId };
+  } catch (error) {
+    return { 
+      authenticated: false, 
+      reason: `Error checking auth: ${error.message}` 
+    };
   }
 };
