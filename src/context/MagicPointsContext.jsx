@@ -373,6 +373,66 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [revelioAttempts, correctBlanks]);
   
+  // Add a new function to process blank submissions with rewards for correct answers
+  // IMPORTANT: Keep this function for backward compatibility with existing code
+  const processBlankSubmission = useCallback((blankId, isCorrect) => {
+    console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}, State: ${revelioAttempts[blankId]}`);
+    
+    // Check if this is the first attempt for this blank
+    const isFirstAttempt = revelioAttempts[blankId] === undefined || revelioAttempts[blankId] === true;
+    console.log(`[POINTS] Is first attempt for ${blankId}: ${isFirstAttempt}`);
+    
+    // Updated rewards system:
+    // - Correct on first attempt: no points (changed from +5)
+    // - Correct after first attempt: +10 points (changed from +2)
+    // - Incorrect: -10 points
+    
+    if (isCorrect) {
+      if (isFirstAttempt) {
+        console.log(`[POINTS] Blank ${blankId} correctly answered on first attempt, no points awarded`);
+        // No points awarded for correct first attempt
+      } else {
+        console.log(`[POINTS] Blank ${blankId} correctly answered after attempts, adding 10 points`);
+        addPointsWithLog(10, `correct_retry_${blankId}`);
+      }
+      
+      // Add to correct blanks
+      const newCorrectBlanks = { ...correctBlanks, [blankId]: true };
+      setCorrectBlanks(newCorrectBlanks);
+      localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
+    } else {
+      console.log(`[POINTS] Blank ${blankId} incorrect answer, removing 10 points`);
+      removePointsWithLog(10, `incorrect_${blankId}`);
+      
+      // Mark as no longer first attempt
+      console.log(`[POINTS] Marking ${blankId} as no longer first attempt`);
+      const newRevelioAttempts = { ...revelioAttempts, [blankId]: false };
+      setRevelioAttempts(newRevelioAttempts);
+      localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
+    }
+    
+    return isCorrect;
+  }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog]);
+  
+  // Add batch processing for multiple blanks - keep for backward compatibility
+  const processMultipleBlanks = useCallback((results) => {
+    console.log('[POINTS] Processing multiple blanks submission:', results);
+    
+    let correctCount = 0;
+    let processingPromises = [];
+    
+    // Process each blank
+    Object.entries(results).forEach(([blankId, isCorrect]) => {
+      if (isCorrect) correctCount++;
+      processingPromises.push(processBlankSubmission(blankId, isCorrect));
+    });
+    
+    // No more bonus points for high accuracy
+    console.log(`[POINTS] Results: ${correctCount}/${Object.keys(results).length} correct`);
+    
+    return Promise.all(processingPromises);
+  }, [processBlankSubmission]);
+
   // Handle Revelio attempts for fill-in-the-blank activities with updated scoring rules
   const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
     console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
