@@ -1482,3 +1482,124 @@ button, input, select, textarea {
 .mjx-chtml {
   display: none !important;
 }
+
+/* System of Inequalities Challenge - Updated styles to prevent sinking down */
+.system-challenge-container {
+  margin: 20px 0;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.system-challenge-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #7b1fa2;
+  font-family: 'Harry Potter', fantasy, serif;
+}
+
+.system-challenge-container .inequality-input-group {
+  margin-bottom: 15px;
+}
+
+.system-challenge-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #33291a;
+}
+
+.inequality-input-field {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border 0.3s;
+}
+
+.inequality-input-field.error {
+  border-color: #d32f2f;
+  background-color: #ffebee;
+}
+
+.inequality-input-field:focus {
+  border-color: #7b1fa2;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(123, 31, 162, 0.2);
+}
+
+.solution-point-input {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+.solution-point-input label {
+  grid-column: span 1;
+}
+
+.solution-point-input input {
+  grid-column: span 1;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 14px;
+  margin-top: 3px;
+  display: block;
+}
+
+.message-box {
+  margin-top: 20px;
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.message-box.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.message-box.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #c62828;
+}
+
+@media (max-width: 768px) {
+  .solution-point-input {
+    grid-template-columns: 1fr;
+  }
+}
+
+.challenge-button-group {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  justify-content: space-between;
+}
+
+.challenge-button-group button {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .challenge-button-group {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .challenge-button-group button {
+    width: 100%;
+  }
+}

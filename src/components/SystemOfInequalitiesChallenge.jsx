@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { checkPointInInequality } from '../utils/geometry';
 import { useMagicPoints } from '../context/MagicPointsContext';
+import { Button, FormHelperText } from '@mui/material';
+import '../styles/wizard-panel.css';
 
 const SystemOfInequalitiesChallenge = () => {
   const [inequalities, setInequalities] = useState(['', '', '']);
@@ -163,69 +165,78 @@ const SystemOfInequalitiesChallenge = () => {
   };
 
   return (
-    <div className="system-challenge-container">
-      <h2>System of Inequalities Challenge</h2>
-      <form onSubmit={handleSubmit}>
-        {inequalities.map((ineq, index) => (
-          <div key={index} className="inequality-input-group">
-            <label htmlFor={`inequality-${index}`}>Inequality {index + 1}:</label>
+    <div className="wizard-panel system-challenge-container">
+      <div className="panel-decoration left"></div>
+      <div className="panel-decoration right"></div>
+      
+      <h2 className="highlight">System of Inequalities Challenge</h2>
+      <div className="control-panel-content">
+        <form onSubmit={handleSubmit}>
+          {inequalities.map((ineq, index) => (
+            <div key={index} className="inequality-input-group">
+              <label htmlFor={`inequality-${index}`}>Inequality {index + 1}:</label>
+              <input
+                type="text"
+                id={`inequality-${index}`}
+                value={ineq}
+                onChange={(e) => {
+                  const newInequalities = [...inequalities];
+                  newInequalities[index] = e.target.value;
+                  setInequalities(newInequalities);
+                  
+                  // Clear error message when typing
+                  const newErrorMessages = [...errorMessages];
+                  newErrorMessages[index] = '';
+                  setErrorMessages(newErrorMessages);
+                  
+                  // Reset results when changing input
+                  setShowResult(false);
+                  setIsSystemVerified(false);
+                }}
+                className={`inequality-input-field ${errorMessages[index] ? 'error' : ''}`}
+                placeholder={`Example: 2x-3y+1≥0`}
+              />
+              {errorMessages[index] && <span className="error-message">{errorMessages[index]}</span>}
+            </div>
+          ))}
+          <button type="button" onClick={handleVerifySystem} className="spellcast-button">
+            Verify System
+          </button>
+          <div className="solution-point-input">
+            <label htmlFor="solution-x">Solution Point X:</label>
             <input
               type="text"
-              id={`inequality-${index}`}
-              value={ineq}
-              onChange={(e) => {
-                const newInequalities = [...inequalities];
-                newInequalities[index] = e.target.value;
-                setInequalities(newInequalities);
-                
-                // Clear error message when typing
-                const newErrorMessages = [...errorMessages];
-                newErrorMessages[index] = '';
-                setErrorMessages(newErrorMessages);
-                
-                // Reset results when changing input
-                setShowResult(false);
-                setIsSystemVerified(false);
-              }}
-              className={errorMessages[index] ? 'input-error' : ''}
-              placeholder={`Example: 2x-3y+1≥0`}
+              id="solution-x"
+              value={solutionPoint.x}
+              onChange={(e) => setSolutionPoint({ ...solutionPoint, x: e.target.value })}
+              disabled={!isSystemVerified}
+              className="inequality-input-field"
             />
-            {errorMessages[index] && <span className="error-message">{errorMessages[index]}</span>}
+            <label htmlFor="solution-y">Solution Point Y:</label>
+            <input
+              type="text"
+              id="solution-y"
+              value={solutionPoint.y}
+              onChange={(e) => setSolutionPoint({ ...solutionPoint, y: e.target.value })}
+              disabled={!isSystemVerified}
+              className="inequality-input-field"
+            />
           </div>
-        ))}
-        <button type="button" onClick={handleVerifySystem}>
-          Verify System
-        </button>
-        <div className="solution-point-input">
-          <label htmlFor="solution-x">Solution Point X:</label>
-          <input
-            type="text"
-            id="solution-x"
-            value={solutionPoint.x}
-            onChange={(e) => setSolutionPoint({ ...solutionPoint, x: e.target.value })}
-            disabled={!isSystemVerified}
-          />
-          <label htmlFor="solution-y">Solution Point Y:</label>
-          <input
-            type="text"
-            id="solution-y"
-            value={solutionPoint.y}
-            onChange={(e) => setSolutionPoint({ ...solutionPoint, y: e.target.value })}
-            disabled={!isSystemVerified}
-          />
-        </div>
-        <button type="submit" disabled={!isSystemVerified}>
-          Check Solution
-        </button>
-        <button type="button" onClick={handleNoSolution} disabled={!isSystemVerified}>
-          Declare No Solution
-        </button>
-      </form>
-      {showResult && (
-        <div className={`result-message ${validationResult.isCorrect ? 'correct' : 'incorrect'}`}>
-          {validationResult.message}
-        </div>
-      )}
+          <div className="challenge-button-group">
+            <button type="submit" disabled={!isSystemVerified} className="spellcast-button">
+              Check Solution
+            </button>
+            <button type="button" onClick={handleNoSolution} disabled={!isSystemVerified} className="finite-button">
+              Declare No Solution
+            </button>
+          </div>
+        </form>
+        {showResult && (
+          <div className={`message-box ${validationResult.isCorrect ? 'success' : 'error'}`}>
+            <div className="message-content">{validationResult.message}</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
