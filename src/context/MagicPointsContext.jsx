@@ -13,11 +13,12 @@ const MagicPointsContext = createContext();
 // Custom hook for using the Magic Points context
 export const useMagicPoints = () => useContext(MagicPointsContext);
 
-// Define MAX_RETRIES as a constant outside the component to avoid reference errors
+// Define constants outside component to avoid initialization issues
 const MAX_RETRIES = 5;
+const DEFAULT_POINTS = 100;
 
 export const MagicPointsProvider = ({ children }) => {
-  const [magicPoints, setMagicPoints] = useState(100); // Default to 100
+  const [magicPoints, setMagicPoints] = useState(DEFAULT_POINTS);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -31,112 +32,7 @@ export const MagicPointsProvider = ({ children }) => {
   // Track correctly answered blanks to avoid double counting
   const [correctBlanks, setCorrectBlanks] = useState({});
 
-  // Load authentication state from localStorage
-  useEffect(() => {
-    const authState = localStorage.getItem('isAuthenticated');
-    setIsAuthenticated(authState === 'true');
-
-    // Verify authentication status with server
-    const verifyAuth = async () => {
-      try {
-        const authStatus = await checkAuthStatus();
-        console.log('[POINTS] Auth verification result:', authStatus);
-        
-        if (authStatus.authenticated) {
-          setIsAuthenticated(true);
-          localStorage.setItem('isAuthenticated', 'true');
-          
-          // If authenticated, check for pending operations to auto-sync
-          const pendingOps = localStorage.getItem('pendingOperations');
-          if (pendingOps && JSON.parse(pendingOps).length > 0) {
-            console.log('[POINTS] Found pending operations on load, triggering auto-sync');
-            // Use a slight delay to ensure all states are properly initialized
-            setTimeout(() => syncToServer(), 1500);
-          } else {
-            console.log('[POINTS] No pending operations found on load');
-          }
-        } else {
-          console.warn(`[POINTS] Auth verification failed: ${authStatus.reason}`);
-          // Don't immediately set to false - we'll rely on API call failures for that
-        }
-      } catch (error) {
-        console.error('[POINTS] Error verifying auth:', error);
-      }
-    };
-    
-    if (authState === 'true' && navigator.onLine) {
-      verifyAuth();
-    }
-
-    // Also load pending operations
-    const savedOperations = localStorage.getItem('pendingOperations');
-    if (savedOperations) {
-      setPendingOperations(JSON.parse(savedOperations));
-    }
-    
-    // Load stored magic points from localStorage as backup
-    const storedPoints = localStorage.getItem('magicPoints');
-    if (storedPoints) {
-      const parsedPoints = parseInt(storedPoints, 10);
-      // Ensure points are never less than 0
-      setMagicPoints(parsedPoints >= 0 ? parsedPoints : 100);
-    } else {
-      // If no stored points, initialize to 100
-      localStorage.setItem('magicPoints', '100');
-    }
-    
-    // Load stored revelio attempts from localStorage
-    const storedRevelioAttempts = localStorage.getItem('revelioAttempts');
-    if (storedRevelioAttempts) {
-      setRevelioAttempts(JSON.parse(storedRevelioAttempts));
-    }
-    
-    // Load stored correct blanks from localStorage
-    const storedCorrectBlanks = localStorage.getItem('correctBlanks');
-    if (storedCorrectBlanks) {
-      setCorrectBlanks(JSON.parse(storedCorrectBlanks));
-    }
-    
-    // Set up online/offline event listeners with improved handlers
-    const handleOnline = () => {
-      console.log('[POINTS] Back online, attempting to sync');
-      setIsOnline(true);
-      // Attempt to sync when coming back online
-      if (pendingOperations.length > 0 || pendingChanges) {
-        setTimeout(() => syncToServer(), 1000);
-      }
-    };
-    
-    const handleOffline = () => {
-      console.log('[POINTS] Device went offline, pausing sync operations');
-      setIsOnline(false);
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Clean up event listeners properly
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Also add an initial sync attempt at the end of the useEffect
-  useEffect(() => {
-    // Auto-sync on app load if online and authenticated
-    if (isOnline && isAuthenticated && pendingOperations.length > 0) {
-      console.log('[POINTS] Auto-syncing points on app initialization');
-      // Use timeout to ensure the component is fully mounted
-      const autoSyncTimeout = setTimeout(() => {
-        syncToServer();
-      }, 2000);
-      
-      return () => clearTimeout(autoSyncTimeout);
-    }
-  }, [isOnline, isAuthenticated, pendingOperations.length, syncToServer]);
-
-  // Sync to server with enhanced reliability
+  // Define syncToServer function declaration before using it
   const syncToServer = useCallback(async () => {
     // Create a local reference to the current retry count that remains stable for this function call
     const currentRetryAttempt = parseInt(localStorage.getItem('syncRetryCount') || '0', 10);
@@ -289,6 +185,111 @@ export const MagicPointsProvider = ({ children }) => {
       setIsSyncing(false);
     }
   }, [isSyncing, isOnline, pendingOperations, pendingChanges, magicPoints]);
+
+  // Load authentication state from localStorage
+  useEffect(() => {
+    const authState = localStorage.getItem('isAuthenticated');
+    setIsAuthenticated(authState === 'true');
+
+    // Verify authentication status with server
+    const verifyAuth = async () => {
+      try {
+        const authStatus = await checkAuthStatus();
+        console.log('[POINTS] Auth verification result:', authStatus);
+        
+        if (authStatus.authenticated) {
+          setIsAuthenticated(true);
+          localStorage.setItem('isAuthenticated', 'true');
+          
+          // If authenticated, check for pending operations to auto-sync
+          const pendingOps = localStorage.getItem('pendingOperations');
+          if (pendingOps && JSON.parse(pendingOps).length > 0) {
+            console.log('[POINTS] Found pending operations on load, triggering auto-sync');
+            // Use a slight delay to ensure all states are properly initialized
+            setTimeout(() => syncToServer(), 1500);
+          } else {
+            console.log('[POINTS] No pending operations found on load');
+          }
+        } else {
+          console.warn(`[POINTS] Auth verification failed: ${authStatus.reason}`);
+          // Don't immediately set to false - we'll rely on API call failures for that
+        }
+      } catch (error) {
+        console.error('[POINTS] Error verifying auth:', error);
+      }
+    };
+    
+    if (authState === 'true' && navigator.onLine) {
+      verifyAuth();
+    }
+
+    // Also load pending operations
+    const savedOperations = localStorage.getItem('pendingOperations');
+    if (savedOperations) {
+      setPendingOperations(JSON.parse(savedOperations));
+    }
+    
+    // Load stored magic points from localStorage as backup
+    const storedPoints = localStorage.getItem('magicPoints');
+    if (storedPoints) {
+      const parsedPoints = parseInt(storedPoints, 10);
+      // Ensure points are never less than 0
+      setMagicPoints(parsedPoints >= 0 ? parsedPoints : DEFAULT_POINTS);
+    } else {
+      // If no stored points, initialize to DEFAULT_POINTS
+      localStorage.setItem('magicPoints', DEFAULT_POINTS.toString());
+    }
+    
+    // Load stored revelio attempts from localStorage
+    const storedRevelioAttempts = localStorage.getItem('revelioAttempts');
+    if (storedRevelioAttempts) {
+      setRevelioAttempts(JSON.parse(storedRevelioAttempts));
+    }
+    
+    // Load stored correct blanks from localStorage
+    const storedCorrectBlanks = localStorage.getItem('correctBlanks');
+    if (storedCorrectBlanks) {
+      setCorrectBlanks(JSON.parse(storedCorrectBlanks));
+    }
+    
+    // Set up online/offline event listeners with improved handlers
+    const handleOnline = () => {
+      console.log('[POINTS] Back online, attempting to sync');
+      setIsOnline(true);
+      // Attempt to sync when coming back online
+      if (pendingOperations.length > 0 || pendingChanges) {
+        setTimeout(() => syncToServer(), 1000);
+      }
+    };
+    
+    const handleOffline = () => {
+      console.log('[POINTS] Device went offline, pausing sync operations');
+      setIsOnline(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Clean up event listeners properly
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Also add an initial sync attempt at the end of the useEffect
+  useEffect(() => {
+    // Auto-sync on app load if online and authenticated
+    if (isOnline && isAuthenticated && pendingOperations.length > 0) {
+      console.log('[POINTS] Auto-syncing points on app initialization');
+      // Use timeout to ensure the component is fully mounted
+      const autoSyncTimeout = setTimeout(() => {
+        syncToServer();
+      }, 2000);
+      
+      return () => clearTimeout(autoSyncTimeout);
+    }
+  }, [isOnline, isAuthenticated, pendingOperations.length, syncToServer]);
 
   const addPoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
@@ -675,18 +676,18 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [pendingOperations, syncToServer, magicPoints, isAuthenticated]);
   
-  // Reset points to 100
+  // Reset points to DEFAULT_POINTS
   const resetPoints = useCallback(async () => {
-    console.log('[POINTS DEBUG] Resetting points to 100');
+    console.log(`[POINTS DEBUG] Resetting points to ${DEFAULT_POINTS}`);
     
     // Reset local state immediately
-    setMagicPoints(100);
-    localStorage.setItem('magicPoints', '100');
+    setMagicPoints(DEFAULT_POINTS);
+    localStorage.setItem('magicPoints', DEFAULT_POINTS.toString());
     
     // Add a reset operation
     const resetOperation = {
       type: 'set',
-      amount: 100,
+      amount: DEFAULT_POINTS,
       source: 'debug_reset',
       timestamp: new Date().toISOString()
     };
