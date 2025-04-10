@@ -9,6 +9,37 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
+import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+
+// Fix the theme to properly define colors
+const theme = extendTheme({
+  colors: {
+    blue: {
+      '500': '#3182ce',
+      '600': '#2B6CB0',
+      '700': '#2a4365',
+    },
+    gray: {
+      '50': '#f7fafc',
+      '700': '#2d3748',
+      '800': '#1a202c',
+    },
+    primary: {
+      '500': '#740001',
+    },
+    secondary: {
+      '500': '#D3A625',
+    }
+  },
+  styles: {
+    global: {
+      body: {
+        bg: 'gray.800',
+        color: 'white',
+      }
+    }
+  }
+});
 
 const AppContent = () => {
   const { user } = useAuth();
@@ -340,9 +371,11 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ChakraProvider theme={theme}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ChakraProvider>
   );
 };
 
