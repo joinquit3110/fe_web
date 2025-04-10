@@ -5,14 +5,14 @@ import TabNavigation from "./components/TabNavigation";
 import Activity1 from "./components/Activity1";
 import './styles/App.css';
 import './styles/HarryPotter.css';
-// Fix AuthContext import to use consistent path
+// Fix AuthContext import
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 
-// Fix the theme to properly define colors
+// Fix theme definition - must use proper color format
 const theme = extendTheme({
   colors: {
     blue: {
@@ -370,11 +370,14 @@ const AppContent = () => {
   );
 };
 
+// Wrap App with ChakraProvider first
 const App = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ChakraProvider theme={theme}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ChakraProvider>
   );
 };
 

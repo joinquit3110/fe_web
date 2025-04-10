@@ -36,15 +36,15 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const response = await login({ email, password });
+      // Use the credentials object format expected by the API
+      await login({
+        username: email, // Server expects username
+        password: password
+      });
       
-      if (response) {
-        navigate('/dashboard');
-      } else {
-        throw new Error('Login failed. Please try again.');
-      }
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login form error:', error);
       setError(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
