@@ -373,77 +373,7 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [revelioAttempts, correctBlanks]);
   
-  // Add a new function to process blank submissions with rewards for correct answers
-  const processBlankSubmission = useCallback((blankId, isCorrect) => {
-    console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}, State: ${revelioAttempts[blankId]}`);
-    
-    // Check if this is the first attempt for this blank
-    const isFirstAttempt = revelioAttempts[blankId] === undefined || revelioAttempts[blankId] === true;
-    console.log(`[POINTS] Is first attempt for ${blankId}: ${isFirstAttempt}`);
-    
-    // Updated rewards system:
-    // - Correct on first attempt: +5 points
-    // - Correct after first attempt: +2 points
-    // - Incorrect: -5 points (reduced from -10)
-    
-    if (isCorrect) {
-      if (isFirstAttempt) {
-        console.log(`[POINTS] Blank ${blankId} correctly answered on first attempt, adding 5 points`);
-        addPointsWithLog(5, `correct_first_${blankId}`);
-      } else {
-        console.log(`[POINTS] Blank ${blankId} correctly answered after attempts, adding 2 points`);
-        addPointsWithLog(2, `correct_retry_${blankId}`);
-      }
-      
-      // Add to correct blanks
-      const newCorrectBlanks = { ...correctBlanks, [blankId]: true };
-      setCorrectBlanks(newCorrectBlanks);
-      localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
-    } else {
-      console.log(`[POINTS] Blank ${blankId} incorrect answer, removing 5 points`);
-      removePointsWithLog(5, `incorrect_${blankId}`);
-      
-      // Mark as no longer first attempt
-      console.log(`[POINTS] Marking ${blankId} as no longer first attempt`);
-      const newRevelioAttempts = { ...revelioAttempts, [blankId]: false };
-      setRevelioAttempts(newRevelioAttempts);
-      localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
-    }
-    
-    console.log('[POINTS] Updated revelioAttempts:', revelioAttempts);
-    console.log('[POINTS] Updated correctBlanks:', correctBlanks);
-    
-    return isCorrect;
-  }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog]);
-  
-  // Add batch processing for multiple blanks
-  const processMultipleBlanks = useCallback((results) => {
-    console.log('[POINTS] Processing multiple blanks submission:', results);
-    
-    let correctCount = 0;
-    let processingPromises = [];
-    
-    // Process each blank
-    Object.entries(results).forEach(([blankId, isCorrect]) => {
-      if (isCorrect) correctCount++;
-      processingPromises.push(processBlankSubmission(blankId, isCorrect));
-    });
-    
-    // Add bonus points for high percentage correct
-    const totalBlanks = Object.keys(results).length;
-    const percentCorrect = (correctCount / totalBlanks) * 100;
-    
-    // Bonus points for getting 80%+ correct
-    if (percentCorrect >= 80 && totalBlanks >= 3) {
-      const bonus = Math.ceil(totalBlanks * 0.5); // 0.5 point per blank rounded up
-      console.log(`[POINTS] High accuracy bonus! ${percentCorrect.toFixed(1)}% correct, adding ${bonus} points`);
-      addPointsWithLog(bonus, 'high_accuracy_bonus');
-    }
-    
-    return Promise.all(processingPromises);
-  }, [processBlankSubmission, addPointsWithLog]);
-
-  // Handle Revelio attempts for fill-in-the-blank activities with improved logging
+  // Handle Revelio attempts for fill-in-the-blank activities with updated scoring rules
   const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
     console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
     
@@ -461,16 +391,17 @@ export const MagicPointsProvider = ({ children }) => {
     const pointsBefore = magicPoints;
     console.log(`[POINTS] Current points before processing: ${pointsBefore}`);
     
-    // Scoring rules:
-    // - First attempt: -10 points for wrong, no points for correct
-    // - Second+ attempt: +10 points for correcting previously wrong, -10 points for any wrong
+    // 2.1. Updated Charm the Blanks scoring rules:
+    // 2.1.1: First Revelio attempt - wrong: -10 points, correct: no points
+    // 2.1.2: Second+ Revelio attempts - corrected answer: +10 points, wrong again: -10 points
     
     if (isCorrect) {
       if (!isFirstAttempt) {
-        // This is a correction of a previously wrong answer, award points
+        // 2.1.2: Second+ attempt that's now correct (corrected a previous wrong answer)
         console.log(`[POINTS] Blank ${blankId} corrected after initial wrong attempt, adding 10 points`);
         addPointsWithLog(10, `revelio_correction_${blankId}`);
       } else {
+        // 2.1.1: First attempt correct - no points awarded
         console.log(`[POINTS] Blank ${blankId} correctly answered on first attempt, no points awarded`);
       }
       
@@ -479,22 +410,21 @@ export const MagicPointsProvider = ({ children }) => {
       setCorrectBlanks(newCorrectBlanks);
       localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
     } else {
-      // Always deduct points for wrong answers
+      // Wrong answer (both first attempt and subsequent attempts)
       console.log(`[POINTS] Blank ${blankId} answered incorrectly, removing 10 points from ${magicPoints}`);
       removePointsWithLog(10, `revelio_incorrect_${blankId}`);
       
-      // Mark as no longer first attempt
-      console.log(`[POINTS] Marking ${blankId} as no longer first attempt`);
-      const newRevelioAttempts = { ...revelioAttempts, [blankId]: false };
-      setRevelioAttempts(newRevelioAttempts);
-      localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
+      // Mark as no longer first attempt if it was the first attempt
+      if (isFirstAttempt) {
+        console.log(`[POINTS] Marking ${blankId} as no longer first attempt`);
+        const newRevelioAttempts = { ...revelioAttempts, [blankId]: false };
+        setRevelioAttempts(newRevelioAttempts);
+        localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
+      }
     }
     
     // Log the point change
     console.log(`[POINTS] Points after processing ${blankId}: ${magicPoints} (change: ${magicPoints - pointsBefore})`);
-    
-    console.log('[POINTS] Updated revelioAttempts:', revelioAttempts);
-    console.log('[POINTS] Updated correctBlanks:', correctBlanks);
     
     return isCorrect;
   }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog, magicPoints]);
@@ -503,12 +433,15 @@ export const MagicPointsProvider = ({ children }) => {
   const handleMultipleRevelioAttempts = useCallback((results) => {
     console.log('[POINTS] Processing multiple blanks submission:', results);
     
-    let processingPromises = [];
+    // Process each blank individually with updated scoring rules
+    const processingPromises = Object.entries(results).map(([blankId, isCorrect]) => 
+      handleBlankRevelioAttempt(blankId, isCorrect)
+    );
     
-    // Process each blank
-    Object.entries(results).forEach(([blankId, isCorrect]) => {
-      processingPromises.push(handleBlankRevelioAttempt(blankId, isCorrect));
-    });
+    // Log overall results
+    const correctCount = Object.values(results).filter(Boolean).length;
+    const totalBlanks = Object.keys(results).length;
+    console.log(`[POINTS] Revelio results: ${correctCount}/${totalBlanks} correct`);
     
     return Promise.all(processingPromises);
   }, [handleBlankRevelioAttempt]);
