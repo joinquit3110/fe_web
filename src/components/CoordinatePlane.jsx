@@ -1,6 +1,8 @@
 ﻿import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { computeIntersection } from "../utils/geometry";
 import { parseInequality, resetLabelCounter } from "../utils/parser";
+import { useMagicPoints } from '../context/MagicPointsContext';
+import '../styles/CoordinatePlane.css';
 
 // Constants
 const CANVAS_CONFIG = {
@@ -361,7 +363,12 @@ const hexToRgba = (hex, alpha = 0.3) => {
 };
 
 // Main component
-const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq, onInequalityClick, setRelatedToIntersection }, ref) => {
+const CoordinatePlane = forwardRef((props, ref) => {
+  const { inequalities, setInequalities, setQuizMessage, hoveredEq, setHoveredEq, onInequalityClick, setRelatedToIntersection } = props;
+  
+  // Get magic points functions
+  const { handleWrongRegionSelection, handleWrongCoordinateInput } = useMagicPoints();
+
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   
@@ -1279,6 +1286,8 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
       if (buttonType.isSolution) {
         setQuizMessage(`Correct! You've selected the right solution region for ${clickedButton.eq.label}.`);
       } else {
+        // Incorrect region selected, deduct points
+        handleWrongRegionSelection(clickedButton.eq.label);
         setQuizMessage(`Incorrect! The region you selected for ${clickedButton.eq.label} is not the solution. Try again.`);
       }
       
@@ -1682,6 +1691,9 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
 
     // Get related inequality labels for better feedback
     const relatedLabels = relatedInequalities.map(ineq => ineq.label).join(' and ');
+    
+    // Create a unique identifier for this point
+    const pointId = `${correctX.toFixed(1)}_${correctY.toFixed(1)}`;
   
     setIntersectionPoints(points => points.map(pt => {
       if (Math.abs(pt.x - activePoint.x) < EPSILON && 
@@ -1710,6 +1722,14 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         }
       }, 2000);
     } else {
+      // Deduct points for wrong coordinates
+      if (!xCorrect) {
+        handleWrongCoordinateInput('x', pointId);
+      }
+      if (!yCorrect) {
+        handleWrongCoordinateInput('y', pointId);
+      }
+      
       // Thông báo chi tiết về lỗi
       if (!xCorrect && !yCorrect) {
         setQuizMessage(`Both coordinates are incorrect for the intersection of ${relatedLabels}. Try again!`);
@@ -1719,7 +1739,7 @@ const CoordinatePlane = forwardRef(({ inequalities, setInequalities, setQuizMess
         setQuizMessage(`The y-coordinate is incorrect for the intersection of ${relatedLabels}. Try again!`);
       }
     }
-  }, [activePoint, inputCoords, setQuizMessage, setRelatedToIntersection, relatedInequalities]);
+  }, [activePoint, inputCoords, setQuizMessage, setRelatedToIntersection, relatedInequalities, handleWrongCoordinateInput]);
 
   useEffect(() => {
     findValidIntersections();

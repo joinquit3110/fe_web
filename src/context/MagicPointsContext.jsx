@@ -575,6 +575,20 @@ export const MagicPointsProvider = ({ children }) => {
     return true;
   }, [removePointsWithLog]);
 
+  // Handle wrong region selection in Activity 2
+  const handleWrongRegionSelection = useCallback((inequalityLabel) => {
+    console.log(`[POINTS] Wrong region selected for inequality ${inequalityLabel}`);
+    removePointsWithLog(10, `activity2_wrong_region_${inequalityLabel}`);
+    return false;
+  }, [removePointsWithLog]);
+  
+  // Handle wrong coordinate input in Activity 2
+  const handleWrongCoordinateInput = useCallback((coordinateType, pointLabel) => {
+    console.log(`[POINTS] Wrong ${coordinateType} coordinate entered for point ${pointLabel}`);
+    removePointsWithLog(10, `activity2_wrong_coordinate_${coordinateType}_${pointLabel}`);
+    return false;
+  }, [removePointsWithLog]);
+
   // Utility function to log current points state (for debugging)
   const logCurrentPoints = useCallback(() => {
     console.log(`[POINTS] Current magic points: ${magicPoints}`);
@@ -752,6 +766,8 @@ export const MagicPointsProvider = ({ children }) => {
       handleMultipleRevelioAttempts,
       handleInequalityFormatCheck,
       handleInequalitySolutionCheck,
+      handleWrongRegionSelection,
+      handleWrongCoordinateInput,
       processBlankSubmission, // Keep for backward compatibility
       processMultipleBlanks,  // Keep for backward compatibility
       logCurrentPoints,
