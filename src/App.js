@@ -4,6 +4,8 @@ import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
 import Activity1 from "./components/Activity1";
+import 'katex/dist/katex.min.css';
+import katex from 'katex';
 import './styles/App.css';
 import './styles/HarryPotter.css';
 // Fix AuthContext import
@@ -59,6 +61,19 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 
+// Helper function for KaTeX rendering
+const renderLatex = (latex) => {
+  if (!latex) return '';
+  try {
+    return katex.renderToString(latex, {
+      throwOnError: false,
+      displayMode: false,
+    });
+  } catch (error) {
+    return '';
+  }
+};
+
 const AppContent = () => {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('activity1'); // Default to Activity 1 instead of Activity 2
@@ -83,11 +98,7 @@ const AppContent = () => {
         type: "success"
       });
       
-      if (window.MathJax?.typeset) {
-        setTimeout(() => {
-          window.MathJax.typeset();
-        }, 100);
-      }
+      // KaTeX renders immediately when used, no need for typeset calls
     }
     
     return result;
@@ -114,38 +125,6 @@ const AppContent = () => {
       });
     }
   }, [quizMessage]);
-
-  // Add a useEffect to initialize MathJax when component mounts
-  useEffect(() => {
-    if (window.MathJax) {
-      // Configure MathJax if needed
-      if (window.MathJax.Hub && window.MathJax.Hub.Config) {
-        window.MathJax.Hub.Config({
-          tex2jax: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            processEscapes: true
-          }
-        });
-      }
-      
-      // Process initial LaTeX
-      setTimeout(() => {
-        if (window.MathJax.typeset) {
-          window.MathJax.typeset();
-        } else if (window.MathJax.Hub && window.MathJax.Hub.Queue) {
-          window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub]);
-        }
-      }, 200);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (window.MathJax?.typeset) {
-      setTimeout(() => {
-        window.MathJax.typeset();
-      }, 100);
-    }
-  }, [inequalities, activeTab]);
 
   const handleListItemHover = (equation) => {
     setHoveredEq(equation);
@@ -245,16 +224,9 @@ const AppContent = () => {
     grade: 'Advanced',
   };
   
-  // Handle tab change and ensure MathJax is reprocessed
+  // Handle tab change and ensure rendering is reprocessed
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
-    
-    // Reprocess MathJax when changing to Activity 2 tab
-    if (tabName === 'activity2' && window.MathJax?.typeset) {
-      setTimeout(() => {
-        window.MathJax.typeset();
-      }, 100);
-    }
   };
 
   return (
@@ -353,7 +325,7 @@ const AppContent = () => {
                                 <span 
                                   className="latex-content"
                                   dangerouslySetInnerHTML={{ 
-                                    __html: `\\(${getSequentialLabel(index)}:\\; ${ineq.latex}\\)` 
+                                    __html: renderLatex(`${getSequentialLabel(index)}:\\; ${ineq.latex}`) 
                                   }}
                                 />
                                 <span 

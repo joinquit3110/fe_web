@@ -5,12 +5,8 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
     // Call the setActiveTab function passed from parent
     setActiveTab(tabName);
     
-    // Allow time for the DOM to update before invoking MathJax if available
-    if (window.MathJax && window.MathJax.typeset) {
-      setTimeout(() => {
-        window.MathJax.typeset();
-      }, 100);
-    }
+    // No need to invoke MathJax anymore as we're using KaTeX
+    // KaTeX renders immediately when used in dangerouslySetInnerHTML
   };
 
   return (

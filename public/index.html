@@ -22,64 +22,6 @@
     <!-- KaTeX Stylesheet -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     
-    <!-- MathJax for LaTeX equations - Enhanced configuration -->
-    <script type="text/javascript">
-      window.MathJax = {
-        tex: {
-          inlineMath: [['\\(', '\\)'], ['$', '$']],
-          processEscapes: true,
-          packages: ['base', 'ams', 'noerrors', 'noundefined']
-        },
-        options: {
-          enableMenu: false,
-          renderActions: {
-            addMenu: [], 
-            checkLoading: []
-          },
-          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'annotation', 'annotation-xml', 'span.katex'],
-          ignoreHtmlClass: 'preview-content',
-          processHtmlClass: 'tex2jax_process|mathjax',
-          menuOptions: {
-            settings: {
-              zoom: "Click",
-              zscale: "200%"
-            }
-          },
-          enableFastPreview: true,
-          processSectionDelay: 0,
-          messageStyle: 'none'
-        },
-        svg: {
-          fontCache: 'global'
-        },
-        startup: {
-          typeset: true,
-          ready: () => {
-            MathJax.startup.defaultReady();
-            console.log('MathJax initialized and ready');
-          },
-          pageReady: () => {
-            return MathJax.startup.defaultPageReady().then(() => {
-              // Preload common expressions
-              try {
-                MathJax.typesetPromise([
-                  '\\(x + y < 0\\)', 
-                  '\\(x >= 0\\)', 
-                  '\\(y <= 0\\)',
-                  '\\(2x - 3y + 4 \\leq 0\\)'
-                ]).catch(err => {
-                  console.error('MathJax preload error:', err);
-                });
-              } catch (e) {
-                console.error('MathJax pageReady error:', e);
-              }
-            });
-          }
-        }
-      };
-    </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-    
     <title>Hogwarts School of Witchcraft and Wizardry</title>
   </head>
   <body>
