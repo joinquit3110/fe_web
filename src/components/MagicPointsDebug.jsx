@@ -31,10 +31,6 @@ const MagicPointsDebug = () => {
   const [tokenInput, setTokenInput] = useState('');
   const toast = useToast();
   
-  if (isAdmin) {
-    return null;
-  }
-  
   // Check if we're in offline/dev mode
   const isDevMode = false; // Set to false since we're online now
   
@@ -55,6 +51,11 @@ const MagicPointsDebug = () => {
       return () => clearInterval(interval);
     }
   }, [showDebug, debugPointsState]);
+  
+  // Early return for admin users, but only AFTER all hooks are defined
+  if (isAdmin) {
+    return null;
+  }
   
   const handleForceSync = async () => {
     try {
