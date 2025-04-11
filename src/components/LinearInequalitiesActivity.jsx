@@ -175,22 +175,23 @@ const Blank = ({ solution, id, onDrop, value, isCorrect }) => {
       className={`droppable-blank ${getAnimationClass()}`}
       style={{
         display: 'inline-block',
-        minWidth: '80px',
-        height: '28px',
-        padding: '3px 8px',
+        minWidth: '100px',
+        height: '36px',
+        padding: '5px 10px',
         margin: '0 4px',
-        background: value ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+        background: value ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
         border: `2px solid ${getValidationBorderColor()}`,
-        borderRadius: '6px',
+        borderRadius: '8px',
         color: getValidationColor(),
         fontWeight: 'bold',
         position: 'relative',
         cursor: value ? 'grab' : 'default',
         textAlign: 'center',
         verticalAlign: 'middle',
-        lineHeight: '22px',
-        boxShadow: value ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+        lineHeight: '26px',
+        boxShadow: value ? '0 2px 4px rgba(0,0,0,0.25)' : 'none',
         transition: 'all 0.15s ease',
+        fontSize: '16px',
       }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
@@ -204,10 +205,10 @@ const Blank = ({ solution, id, onDrop, value, isCorrect }) => {
         <span
           style={{
             position: 'absolute',
-            top: '-8px',
-            right: '-8px',
-            width: '16px',
-            height: '16px',
+            top: '-10px',
+            right: '-10px',
+            width: '20px',
+            height: '20px',
             backgroundImage: `url("${getValidationIcon()}")`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
@@ -1066,11 +1067,12 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
         p="5" 
         bg="linear-gradient(to bottom, rgba(24, 36, 76, 0.9), rgba(14, 26, 56, 0.95))"
         borderRadius="lg"
-        border="1px solid var(--panel-border)"
+        border="2px solid var(--panel-border)"
         boxShadow="0 8px 16px rgba(0,0,0,0.4), inset 0 0 30px rgba(211, 166, 37, 0.15)"
         style={{
           position: "relative",
           overflow: "hidden",
+          marginTop: "20px",
         }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleWordBankDrop}
@@ -1083,8 +1085,8 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundImage: "radial-gradient(circle at 20% 30%, rgba(211, 166, 37, 0.1) 0%, transparent 60%), radial-gradient(circle at 80% 70%, rgba(211, 166, 37, 0.1) 0%, transparent 60%)",
-          opacity: 0.6,
+          backgroundImage: "radial-gradient(circle at 20% 30%, rgba(211, 166, 37, 0.15) 0%, transparent 60%), radial-gradient(circle at 80% 70%, rgba(211, 166, 37, 0.15) 0%, transparent 60%)",
+          opacity: 0.7,
           pointerEvents: "none",
         }}></div>
         
@@ -1092,12 +1094,13 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
         <Flex
           direction="column"
           align="center"
-          mb="4"
+          mb="5"
         >
           <div style={{ 
             position: "relative", 
-            marginBottom: "8px",
-            padding: "0 40px"
+            marginBottom: "10px",
+            padding: "0 40px",
+            width: "100%"
           }}>
             <div style={{
               height: "2px",
@@ -1115,14 +1118,14 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
               fontFamily: "'Cinzel', serif",
               textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
               position: "relative",
-              letterSpacing: "1px",
-              marginBottom: "6px",
+              letterSpacing: "1.5px",
+              marginBottom: "10px",
             }}
           >
             <span style={{ 
               display: "inline-block",
               color: "var(--secondary-color)",
-              fontSize: "18px",
+              fontSize: "22px",
               textTransform: "uppercase"
             }}>
               Magical Incantations Vault
@@ -1131,8 +1134,9 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
           
           <div style={{ 
             position: "relative", 
-            marginTop: "8px",
-            padding: "0 40px"
+            marginTop: "10px",
+            padding: "0 40px",
+            width: "100%"
           }}>
             <div style={{
               height: "2px",
@@ -1146,11 +1150,11 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
         {/* Word bank items container with improved styling */}
         <Box 
           style={{
-            background: "linear-gradient(to bottom, rgba(16, 25, 56, 0.7), rgba(12, 21, 46, 0.8))",
-            border: "1px solid rgba(211, 166, 37, 0.3)",
-            borderRadius: "12px",
-            boxShadow: "inset 0 0 10px rgba(0,0,0,0.4)",
-            padding: "12px",
+            background: "linear-gradient(to bottom, rgba(16, 25, 56, 0.8), rgba(12, 21, 46, 0.9))",
+            border: "1px solid rgba(211, 166, 37, 0.4)",
+            borderRadius: "14px",
+            boxShadow: "inset 0 0 15px rgba(0,0,0,0.5)",
+            padding: "16px",
             position: "relative",
             overflow: "hidden",
           }}
@@ -1161,8 +1165,8 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"none\" stroke=\"%23D3A625\" stroke-width=\"0.5\" stroke-opacity=\"0.1\"/></svg>')",
-            opacity: 0.1,
+            backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"none\" stroke=\"%23D3A625\" stroke-width=\"0.5\" stroke-opacity=\"0.15\"/></svg>')",
+            opacity: 0.15,
             pointerEvents: "none",
           }}></div>
           
@@ -1172,14 +1176,14 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
             gap="3"
             justifyContent="center"
             style={{
-              maxHeight: "160px",
+              maxHeight: "200px",
               overflowY: "auto",
-              padding: "5px",
+              padding: "8px",
               position: "relative",
               zIndex: 2,
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-              gridGap: "8px"
+              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+              gridGap: "12px"
             }}
             className="word-bank-scrollable"
             onDragOver={(e) => e.preventDefault()}
@@ -1189,11 +1193,11 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
             {wordBankItems.map((item, index) => (
               <Box 
                 key={index}
-                p="2"
-                bg="rgba(30, 33, 40, 0.95)"
-                border="1px solid rgba(211, 166, 37, 0.5)"
-                borderRadius="8px"
-                fontSize="sm"
+                p="3"
+                bg="rgba(30, 33, 50, 0.95)"
+                border="1px solid rgba(211, 166, 37, 0.6)"
+                borderRadius="10px"
+                fontSize="md"
                 color="var(--secondary-color)"
                 draggable
                 onDragStart={(e) => handleDragStart(e, item)}
@@ -1204,24 +1208,25 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
                 style={{ 
                   fontFamily: "'Cinzel', serif",
                   transition: "all 0.15s ease",
-                  minWidth: "80px",
-                  maxWidth: "120px",
-                  height: "34px",
+                  minWidth: "100px",
+                  maxWidth: "150px",
+                  height: "42px",
                   textAlign: "center",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
                   position: "relative",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "6px",
+                  marginBottom: "8px",
                   fontWeight: "500",
-                  letterSpacing: "0.5px"
+                  letterSpacing: "0.5px",
+                  fontSize: "16px"
                 }}
                 className="word-bank-item"
                 _hover={{ 
                   borderColor: "var(--secondary-color)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-                  transform: "translateY(-1px)"
+                  boxShadow: "0 2px 6px rgba(211, 166, 37, 0.4)",
+                  transform: "translateY(-2px)"
                 }}
               >
                 {item}
@@ -1711,7 +1716,6 @@ const SystemOfInequalitiesChallenge = ({ onSolutionCheck, onFormatCheck }) => {
                     value={solutionPoint.x}
                     onChange={(e) => handlePointChange('x', e.target.value)}
                     placeholder="x"
-                    inputMode="decimal"
                     style={{
                       width: "80px",
                       padding: "8px",
@@ -1728,7 +1732,6 @@ const SystemOfInequalitiesChallenge = ({ onSolutionCheck, onFormatCheck }) => {
                     value={solutionPoint.y}
                     onChange={(e) => handlePointChange('y', e.target.value)}
                     placeholder="y"
-                    inputMode="decimal"
                     style={{
                       width: "80px",
                       padding: "8px",
