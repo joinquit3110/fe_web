@@ -29,6 +29,7 @@ export const AdminProvider = ({ children }) => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [notifications, setNotifications] = useState([]); // Store notifications to be sent to users
 
   // Fetch all users from MongoDB
   const fetchUsers = useCallback(async () => {
@@ -270,6 +271,133 @@ export const AdminProvider = ({ children }) => {
     }
   };
 
+  // Update points for all users in a specific house
+  const updateHousePoints = async (house, pointsChange, reason) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Filter users by house
+      const houseUsers = users.filter(user => user.house === house);
+      
+      if (houseUsers.length === 0) {
+        throw new Error(`No users found in house: ${house}`);
+      }
+      
+      const userIds = houseUsers.map(user => user._id || user.id);
+      
+      // Create a notification for users
+      const notification = {
+        type: pointsChange > 0 ? 'success' : 'warning',
+        title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
+        message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
+        timestamp: new Date().toISOString(),
+        targetUsers: userIds,
+        housesAffected: [house]
+      };
+      
+      // Send notification to the backend for real-time delivery
+      await axios.post(`${API_URL}/notifications`, notification, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Update points in the database
+      for (const userId of userIds) {
+        try {
+          // Get current user's points
+          const userResponse = await axios.get(`${API_URL}/users/${userId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const user = userResponse.data;
+          const currentPoints = user.magicPoints || 0;
+          const newPoints = Math.max(0, currentPoints + pointsChange); // Ensure points don't go below 0
+          
+          // Update user's points
+          await axios.patch(`${API_URL}/users/${userId}`, 
+            { magicPoints: newPoints },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+        } catch (userError) {
+          console.error(`Error updating points for user ${userId}:`, userError);
+          // Continue with other users even if one fails
+        }
+      }
+      
+      // Update local state to reflect changes
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          userIds.includes(user._id || user.id) 
+            ? { ...user, magicPoints: Math.max(0, (user.magicPoints || 0) + pointsChange) } 
+            : user
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating house points:', err);
+      setError('Failed to update house points: ' + (err.message || 'Unknown error'));
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Group criteria points system
+  const criteriaPoints = {
+    excellent: 15,
+    good: 10,
+    satisfactory: 5,
+    poor: -5,
+    veryPoor: -10,
+  };
+
+  // Update points based on group work criteria
+  const updateGroupCriteriaPoints = async (house, criteriaType, performanceLevel, details) => {
+    if (!criteriaPoints[performanceLevel]) {
+      setError(`Invalid performance level: ${performanceLevel}`);
+      return false;
+    }
+    
+    const pointsChange = criteriaPoints[performanceLevel];
+    let criteriaName;
+    
+    switch (criteriaType) {
+      case 'participation':
+        criteriaName = 'Level of participation of group members';
+        break;
+      case 'english':
+        criteriaName = 'Level of English usage in the group';
+        break;
+      case 'completion':
+        criteriaName = 'Time taken by the group to complete tasks';
+        break;
+      default:
+        criteriaName = 'Group work';
+    }
+    
+    const reason = `${criteriaName}: ${performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)}${details ? ` - ${details}` : ''}`;
+    
+    return await updateHousePoints(house, pointsChange, reason);
+  };
+
   return (
     <AdminContext.Provider value={{
       isAdmin,
@@ -283,7 +411,11 @@ export const AdminProvider = ({ children }) => {
       selectAllUsers,
       resetPointsForUsers,
       resetAttemptsForUsers,
-      forceSyncForUsers
+      forceSyncForUsers,
+      updateHousePoints,
+      updateGroupCriteriaPoints,
+      criteriaPoints,
+      notifications
     }}>
       {children}
     </AdminContext.Provider>

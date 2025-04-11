@@ -10,7 +10,9 @@ const Profile = ({ user }) => {
     'Gryffindor',
     'Slytherin',
     'Ravenclaw',
-    'Hufflepuff'
+    'Hufflepuff',
+    'Muggle',
+    'Admin'
   ];
 
   // Handle click outside to close menu

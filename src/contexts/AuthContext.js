@@ -61,7 +61,8 @@ export const AuthProvider = ({ children }) => {
           email: `${username}@hogwarts.admin.edu`,
           fullName: `Admin ${username.charAt(0).toUpperCase() + username.slice(1)}`,
           isAdmin: true,
-          role: 'admin'
+          role: 'admin',
+          house: 'admin'
         };
         
         // Set authentication data

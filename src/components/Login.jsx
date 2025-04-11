@@ -131,7 +131,8 @@ const Login = () => {
           email: `${email}@hogwarts.admin.edu`,
           fullName: `Admin ${email.charAt(0).toUpperCase() + email.slice(1)}`,
           isAdmin: true,
-          role: 'admin'
+          role: 'admin',
+          house: 'admin'
         };
         
         // Store admin user in localStorage

@@ -17,6 +17,8 @@ import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
 import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+import AdminHousePoints from './components/AdminHousePoints';
+import NotificationDisplay from './components/NotificationDisplay';
 
 // Fix theme definition - must use proper color format
 const theme = extendTheme({
@@ -234,6 +236,11 @@ const AppContent = () => {
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/admin/house-points" element={
+          <PrivateRoute>
+            <AdminHousePoints />
+          </PrivateRoute>
+        } />
         <Route 
           path="/" 
           element={
@@ -241,6 +248,9 @@ const AppContent = () => {
               <div className="hogwarts-app">
                 {/* UserProfile component */}
                 <UserProfile user={user || (window.location.hostname === 'localhost' ? localUser : null)} />
+                
+                {/* Notification display */}
+                <NotificationDisplay />
                 
                 <header className="hogwarts-header">
                   <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>

@@ -38,6 +38,16 @@
   color: #000000;
 }
 
+.house-badge.muggle {
+  background-color: #6B6B6B;
+  color: #FFFFFF;
+}
+
+.house-badge.admin {
+  background-color: #4B0082;
+  color: #FFFFFF;
+}
+
 /* Admin Table */
 .admin-table {
   width: 100%;
@@ -139,6 +149,16 @@
   color: #000000;
 }
 
+.admin-house-select option[value="muggle"] {
+  background-color: #6B6B6B;
+  color: #FFFFFF;
+}
+
+.admin-house-select option[value="admin"] {
+  background-color: #4B0082;
+  color: #FFFFFF;
+}
+
 /* Admin Badge */
 .admin-badge {
   display: flex;
@@ -184,7 +204,8 @@
 @media (max-width: 768px) {
   .admin-table th,
   .admin-table td {
-    padding: 8px;
+    padding: 6px 4px !important;
+    font-size: 12px !important;
   }
   
   .admin-actions {
@@ -195,6 +216,61 @@
   .admin-control-bar {
     flex-direction: column;
     gap: 8px;
+    padding: 8px;
+  }
+
+  .admin-user-management {
+    padding: 10px;
+  }
+
+  .admin-table {
+    min-width: 100%;
+    overflow-x: auto;
+  }
+
+  .chakra-button.chakra-menu__menu-button {
+    font-size: 12px !important;
+    min-width: 100px !important;
+    padding: 6px !important;
+  }
+  
+  .chakra-menu__menuitem {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  
+  .admin-badge {
+    padding: 4px 8px;
+    font-size: 12px !important;
+  }
+  
+  .chakra-button {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-table th,
+  .admin-table td {
+    padding: 4px 2px !important;
+    font-size: 11px !important;
+  }
+  
+  .admin-actions button {
+    font-size: 10px !important;
+    padding: 4px 6px !important;
+  }
+  
+  .chakra-button.chakra-menu__menu-button {
+    font-size: 10px !important;
+    min-width: 80px !important;
+    padding: 4px !important;
+  }
+  
+  .admin-badge {
+    font-size: 10px !important;
+    padding: 2px 4px;
   }
 }
 

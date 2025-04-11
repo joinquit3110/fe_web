@@ -231,7 +231,7 @@ const UserProfile = () => {
 
   return (
     <div className="profile-container">
-      <div className={`profile-icon ${userHouse}`} onClick={toggleMenu} title={`${user.username}'s profile`}>
+      <div className={`profile-icon ${userHouse}`} onClick={isAdmin ? null : toggleMenu} title={`${user.username}'s profile`}>
         {avatar ? (
           <img src={avatar} alt={user.username} className="avatar-img" />
         ) : (
@@ -239,7 +239,7 @@ const UserProfile = () => {
         )}
       </div>
       
-      {showMenu && (
+      {showMenu && !isAdmin && (
         <div className="profile-menu">
           <div className="menu-header">
             <div className="avatar-section">
@@ -320,6 +320,7 @@ const UserProfile = () => {
                     <option value="slytherin">SLYTHERIN</option>
                     <option value="ravenclaw">RAVENCLAW</option>
                     <option value="hufflepuff">HUFFLEPUFF</option>
+                    <option value="muggle">MUGGLE</option>
                   </select>
                 ) : (
                   <span className={`house-badge ${userHouse}`}>
