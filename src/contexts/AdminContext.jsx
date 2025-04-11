@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useMagicPoints } from '../context/MagicPointsContext';
 
@@ -29,23 +29,8 @@ export const AdminProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check if current user is an admin
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const isAdminUser = ADMIN_USERS.includes(user.username);
-      setIsAdmin(isAdminUser);
-      
-      // If admin, fetch users
-      if (isAdminUser) {
-        fetchUsers();
-      }
-    } else {
-      setIsAdmin(false);
-    }
-  }, [isAuthenticated, user, fetchUsers]);
-
   // Fetch all users (except admins)
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -68,7 +53,22 @@ export const AdminProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Check if current user is an admin
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const isAdminUser = ADMIN_USERS.includes(user.username);
+      setIsAdmin(isAdminUser);
+      
+      // If admin, fetch users
+      if (isAdminUser) {
+        fetchUsers();
+      }
+    } else {
+      setIsAdmin(false);
+    }
+  }, [isAuthenticated, user, fetchUsers]);
 
   // Assign house to user
   const assignHouse = async (userId, house) => {
