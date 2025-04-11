@@ -4,7 +4,7 @@ import { useMagicPoints } from '../context/MagicPointsContext';
 
 // Constants
 const ADMIN_USERS = ['hungpro', 'vipro'];
-const ADMIN_PASSWORD = '3110';
+const ADMIN_PASSWORD = '31102004';
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 // Create context
