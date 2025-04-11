@@ -187,12 +187,14 @@ const AppContent = () => {
                   onMouseEnter={() => handleListItemHover(ineq)}
                   onMouseLeave={() => handleListItemHover(null)}
                 >
-                  <span 
-                    className="latex-content"
-                    dangerouslySetInnerHTML={{ 
-                      __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
-                    }}
-                  />
+                  <div className="latex-preview-container">
+                    <span 
+                      className="latex-preview"
+                      dangerouslySetInnerHTML={{ 
+                        __html: `\\(${ineq.label}:\\; ${ineq.latex}\\)` 
+                      }}
+                    />
+                  </div>
                   <span 
                     className="delete-icon material-icons"
                     onClick={(e) => handleDelete(e, ineq)}

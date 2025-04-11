@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';  // Make sure path is consistent
 import { useAdmin } from '../contexts/AdminContext';  // Import the admin context
+import ReactCrop from 'react-image-crop'; // Add image cropping library
+import 'react-image-crop/dist/ReactCrop.css'; // Import cropping styles
 
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
@@ -22,14 +24,25 @@ const UserProfile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
+  const [showCrop, setShowCrop] = useState(false);
+  const [crop, setCrop] = useState({ 
+    unit: '%', 
+    width: 100,
+    aspect: 1 
+  });
+  const [croppedImageUrl, setCroppedImageUrl] = useState(null);
+  const imageRef = useRef(null);
   
   useEffect(() => {
     return () => {
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl);
+      }
     };
-  }, [imagePreview]);
+  }, [imagePreview, croppedImageUrl]);
 
   useEffect(() => {
     if (user) {
@@ -50,6 +63,11 @@ const UserProfile = () => {
     // Reset error and success messages when toggling menu
     setError('');
     setSuccess('');
+    if (!showMenu) {
+      // Close crop mode when opening the menu
+      setShowCrop(false);
+      setCroppedImageUrl(null);
+    }
   };
   
   const handleLogout = () => {
@@ -73,38 +91,104 @@ const UserProfile = () => {
   const userHouse = getHouseClass(user.username);
 
   const handleAvatarClick = () => {
+    if (showCrop) return; // Don't open file dialog if in crop mode
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = async (e) => {
+  // Handle initial file selection
+  const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
+      setShowCrop(true);
+    }
+  };
 
-      try {
-        const formData = new FormData();
-        formData.append('avatar', file);
-        
-        const response = await fetch(`${API_URL}/auth/avatar`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: formData
-        });
+  // When crop is complete
+  const onCropComplete = (crop) => {
+    if (imageRef.current && crop.width && crop.height) {
+      getCroppedImg(imageRef.current, crop);
+    }
+  };
 
-        if (response.ok) {
-          const { avatarUrl } = await response.json();
-          setAvatar(avatarUrl);
-          setSuccess('Avatar updated successfully!');
-          updateProfile({ ...user, avatar: avatarUrl });
-        }
-      } catch (err) {
-        setError('Failed to update avatar');
-      } finally {
-        URL.revokeObjectURL(previewUrl);
+  // Create cropped image
+  const getCroppedImg = (image, crop) => {
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width,
+      crop.height
+    );
+
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl);
       }
+      const croppedUrl = URL.createObjectURL(blob);
+      setCroppedImageUrl(croppedUrl);
+    }, 'image/jpeg', 0.95);
+  };
+
+  // Upload cropped avatar
+  const uploadCroppedAvatar = async () => {
+    if (!croppedImageUrl) return;
+    
+    try {
+      // Convert the cropped image URL to a file
+      const response = await fetch(croppedImageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], "cropped-avatar.jpg", { type: "image/jpeg" });
+      
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const apiResponse = await fetch(`${API_URL}/auth/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      if (apiResponse.ok) {
+        const { avatarUrl } = await apiResponse.json();
+        setAvatar(avatarUrl);
+        setSuccess('Avatar updated successfully!');
+        updateProfile({ ...user, avatar: avatarUrl });
+      } else {
+        throw new Error('Failed to upload avatar');
+      }
+    } catch (err) {
+      setError('Failed to update avatar');
+    } finally {
+      // Clean up
+      setShowCrop(false);
+      setImagePreview(null);
+      setCroppedImageUrl(null);
+    }
+  };
+
+  // Cancel avatar cropping
+  const cancelCrop = () => {
+    setShowCrop(false);
+    setImagePreview(null);
+    if (croppedImageUrl) {
+      URL.revokeObjectURL(croppedImageUrl);
+      setCroppedImageUrl(null);
     }
   };
 
@@ -159,20 +243,52 @@ const UserProfile = () => {
         <div className="profile-menu">
           <div className="menu-header">
             <div className="avatar-section">
-              <div 
-                className={`avatar-container ${userHouse}`} 
-                onClick={handleAvatarClick}
-                title="Change avatar"
-              >
-                {avatar ? (
-                  <img src={avatar} alt={user.username} className="profile-avatar" />
-                ) : (
-                  <div className="default-avatar">{getInitials(user.fullName || user.username)}</div>
-                )}
-                <div className="avatar-overlay">
-                  <i className="material-icons">photo_camera</i>
+              {!showCrop ? (
+                <div 
+                  className={`avatar-container ${userHouse}`} 
+                  onClick={handleAvatarClick}
+                  title="Change avatar"
+                >
+                  {avatar ? (
+                    <img src={avatar} alt={user.username} className="profile-avatar" />
+                  ) : (
+                    <div className="default-avatar">{getInitials(user.fullName || user.username)}</div>
+                  )}
+                  <div className="avatar-overlay">
+                    <i className="material-icons">photo_camera</i>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="crop-container">
+                  {imagePreview && (
+                    <ReactCrop
+                      src={imagePreview}
+                      crop={crop}
+                      onChange={newCrop => setCrop(newCrop)}
+                      onComplete={onCropComplete}
+                      circularCrop
+                      className="crop-tool"
+                    >
+                      <img ref={imageRef} src={imagePreview} alt="Upload preview" />
+                    </ReactCrop>
+                  )}
+                  <div className="crop-actions">
+                    <button 
+                      className="crop-button save"
+                      onClick={uploadCroppedAvatar} 
+                      disabled={!croppedImageUrl}
+                    >
+                      Save
+                    </button>
+                    <button 
+                      className="crop-button cancel"
+                      onClick={cancelCrop}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -184,9 +300,8 @@ const UserProfile = () => {
             
             <div className="menu-user-info">
               <span className="menu-username">{user.username}</span>
-              <div className="profile-email">{user.email}</div>
               <div className="profile-house">
-                HOUSE OF 
+                <span className="house-label">HOUSE OF</span> 
                 {isAdmin ? (
                   <select 
                     className="house-dropdown" 
@@ -201,14 +316,14 @@ const UserProfile = () => {
                       document.dispatchEvent(changeEvent);
                     }}
                   >
-                    <option value="gryffindor">Gryffindor</option>
-                    <option value="slytherin">Slytherin</option>
-                    <option value="ravenclaw">Ravenclaw</option>
-                    <option value="hufflepuff">Hufflepuff</option>
+                    <option value="gryffindor">GRYFFINDOR</option>
+                    <option value="slytherin">SLYTHERIN</option>
+                    <option value="ravenclaw">RAVENCLAW</option>
+                    <option value="hufflepuff">HUFFLEPUFF</option>
                   </select>
                 ) : (
                   <span className={`house-badge ${userHouse}`}>
-                    {userHouse.charAt(0).toUpperCase() + userHouse.slice(1)}
+                    {userHouse.toUpperCase()}
                   </span>
                 )}
               </div>
@@ -220,13 +335,13 @@ const UserProfile = () => {
               className={activeTab === 'profile' ? 'active' : ''} 
               onClick={() => setActiveTab('profile')}
             >
-              Profile
+              PROFILE
             </button>
             <button 
               className={activeTab === 'password' ? 'active' : ''} 
               onClick={() => setActiveTab('password')}
             >
-              Password
+              PASSWORD
             </button>
           </div>
           
@@ -267,11 +382,13 @@ const UserProfile = () => {
                   name="grade"
                   value={form.grade}
                   onChange={handleInputChange}
-                  placeholder="Your class or grade"
+                  placeholder="Your class"
                 />
               </div>
               
-              <button type="submit" className="update-btn">Update Profile</button>
+              <button type="submit" className="update-profile-btn">
+                UPDATE PROFILE
+              </button>
             </form>
           )}
           
@@ -313,13 +430,14 @@ const UserProfile = () => {
                 />
               </div>
               
-              <button type="submit" className="update-btn">Change Password</button>
+              <button type="submit" className="change-password-btn">
+                CHANGE PASSWORD
+              </button>
             </form>
           )}
           
-          <button className="logout-btn" onClick={handleLogout} title="Leave Hogwarts">
-            <i className="material-icons">exit_to_app</i>
-            Leave Hogwarts
+          <button className="logout-btn" onClick={handleLogout}>
+            <i className="material-icons">exit_to_app</i> LEAVE HOGWARTS
           </button>
         </div>
       )}

@@ -1677,3 +1677,200 @@ canvas {
     transform: translateY(0);
   }
 }
+
+/* Profile Menu Improvements */
+.profile-house {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 5px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  color: #e0dfdf;
+  text-shadow: 0 0 3px #000;
+  flex-wrap: wrap;
+}
+
+.house-label {
+  margin-right: 5px;
+  font-size: 14px;
+}
+
+.house-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.house-badge.gryffindor {
+  background-color: #740001;
+  color: #FFC500;
+}
+
+.house-badge.slytherin {
+  background-color: #1A472A;
+  color: #AAAAAA;
+}
+
+.house-badge.ravenclaw {
+  background-color: #0E1A40;
+  color: #946B2D;
+}
+
+.house-badge.hufflepuff {
+  background-color: #ecb939;
+  color: #000000;
+}
+
+/* Image Cropping */
+.crop-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.crop-tool {
+  max-width: 300px;
+  max-height: 300px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.crop-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.crop-button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.crop-button.save {
+  background-color: #1A472A;
+  color: white;
+}
+
+.crop-button.save:hover {
+  background-color: #2c6e40;
+}
+
+.crop-button.save:disabled {
+  background-color: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+}
+
+.crop-button.cancel {
+  background-color: #740001;
+  color: white;
+}
+
+.crop-button.cancel:hover {
+  background-color: #9c0000;
+}
+
+/* Better buttons in profile */
+.update-profile-btn,
+.change-password-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  border: none;
+  border-radius: 5px;
+  background-color: #1A472A;
+  color: white;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.update-profile-btn:hover,
+.change-password-btn:hover {
+  background-color: #2c6e40;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Enhanced LaTeX preview */
+.latex-preview-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 5px 10px;
+  width: calc(100% - 40px); /* Account for the delete icon */
+  overflow: hidden; 
+}
+
+.latex-preview {
+  font-size: 18px;
+  color: #fff;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.latex-preview .MathJax {
+  display: inline-block !important;
+  max-width: 100%;
+}
+
+.inequality-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.5s ease-out forwards;
+  animation-delay: calc(var(--index) * 0.1s);
+  opacity: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-left: 4px solid;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Make sure we have some space for the delete icon */
+.delete-icon {
+  margin-left: 8px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+  flex-shrink: 0;
+}
+
+.delete-icon:hover {
+  opacity: 1;
+  color: #ff5252;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .profile-house {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .crop-tool {
+    max-width: 250px;
+    max-height: 250px;
+  }
+  
+  .latex-preview {
+    font-size: 16px;
+  }
+}

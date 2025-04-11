@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useMagicPoints } from '../context/MagicPointsContext';
+import axios from 'axios';
 
 // Constants
 const ADMIN_USERS = ['hungpro', 'vipro'];
@@ -29,27 +30,50 @@ export const AdminProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch all users (except admins)
+  // Fetch all users from MongoDB
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // In a real implementation, this would call an API endpoint
-      // For now, we'll simulate with mock data
-      const mockUsers = [
-        { id: '1', username: 'student1', email: 'student1@hogwarts.edu', house: 'gryffindor', magicPoints: 80 },
-        { id: '2', username: 'student2', email: 'student2@hogwarts.edu', house: 'slytherin', magicPoints: 95 },
-        { id: '3', username: 'student3', email: 'student3@hogwarts.edu', house: 'ravenclaw', magicPoints: 110 },
-        { id: '4', username: 'student4', email: 'student4@hogwarts.edu', house: 'hufflepuff', magicPoints: 75 },
-      ];
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
-      // Filter out admin users
-      const filteredUsers = mockUsers.filter(u => !ADMIN_USERS.includes(u.username));
-      setUsers(filteredUsers);
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Check if the token is valid first
+      const authStatus = await axios.get(`${API_URL}/auth/verify`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Only proceed if authentication is valid
+      if (!authStatus.data.authenticated) {
+        throw new Error('Authentication invalid');
+      }
+      
+      // Call the API to get real student data from MongoDB
+      const response = await axios.get(`${API_URL}/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.data && Array.isArray(response.data.users)) {
+        // Filter out admin users
+        const filteredUsers = response.data.users.filter(u => !ADMIN_USERS.includes(u.username));
+        setUsers(filteredUsers);
+      } else {
+        // Log the actual response for debugging
+        console.error('API returned unexpected format:', response.data);
+        setError('Failed to fetch users: API returned unexpected format');
+      }
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to fetch users');
+      setError('Failed to fetch users: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -70,24 +94,52 @@ export const AdminProvider = ({ children }) => {
     }
   }, [isAuthenticated, user, fetchUsers]);
 
-  // Assign house to user
+  // Assign house to user in MongoDB
   const assignHouse = async (userId, house) => {
     setLoading(true);
     setError(null);
     
     try {
-      // In a real implementation, this would call an API endpoint
-      // For now, we'll update the local state
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Call the API to update house in MongoDB
+      const response = await axios.patch(`${API_URL}/users/${userId}`, 
+        { house },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.status === 200 || response.status === 204) {
+        // Update local state after successful API call
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId ? { ...user, house } : user
+          )
+        );
+        console.log(`House updated in MongoDB for user ${userId}: ${house}`);
+        return true;
+      } else {
+        throw new Error(`Failed to update house: ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error('Error assigning house:', err);
+      setError('Failed to assign house: ' + (err.message || 'Unknown error'));
+      
+      // Still update local state even if API fails (optimistic UI)
       setUsers(prevUsers => 
         prevUsers.map(user => 
           user.id === userId ? { ...user, house } : user
         )
       );
-      
-      return true;
-    } catch (err) {
-      console.error('Error assigning house:', err);
-      setError('Failed to assign house');
       return false;
     } finally {
       setLoading(false);

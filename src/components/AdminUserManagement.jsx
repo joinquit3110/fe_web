@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box, Table, Thead, Tbody, Tr, Th, Td, Checkbox, 
   Select, Button, Heading, VStack, HStack, Badge, 
-  Text, useToast, Divider, Flex, Spinner
+  Text, useToast, Divider, Flex, Spinner,
+  Menu, MenuButton, MenuList, MenuItem, IconButton
 } from '@chakra-ui/react';
 import '../styles/Admin.css'; // Import admin styles
 
@@ -22,15 +24,16 @@ const AdminUserManagement = () => {
     forceSyncForUsers
   } = useAdmin();
   
+  const { logout } = useAuth();
   const toast = useToast();
   const [refreshInterval, setRefreshInterval] = useState(null);
 
   // Houses options
   const houses = [
-    { value: 'gryffindor', label: 'Gryffindor', color: 'red.500' },
-    { value: 'slytherin', label: 'Slytherin', color: 'green.500' },
-    { value: 'ravenclaw', label: 'Ravenclaw', color: 'blue.500' },
-    { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500' }
+    { value: 'gryffindor', label: 'Gryffindor', color: 'red.500', bgColor: '#740001', textColor: '#FFC500' },
+    { value: 'slytherin', label: 'Slytherin', color: 'green.500', bgColor: '#1A472A', textColor: '#AAAAAA' },
+    { value: 'ravenclaw', label: 'Ravenclaw', color: 'blue.500', bgColor: '#0E1A40', textColor: '#946B2D' },
+    { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000' }
   ];
 
   // Start auto-refresh
@@ -144,7 +147,10 @@ const AdminUserManagement = () => {
       <VStack spacing={4} align="stretch">
         <HStack justify="space-between">
           <Heading size="lg" className="highlight admin-title">Hogwarts Student Registry</Heading>
-          <Badge colorScheme="purple" fontSize="md" p={2}>Admin Console</Badge>
+          <HStack>
+            <Badge colorScheme="purple" fontSize="md" p={2}>Admin Console</Badge>
+            <Button colorScheme="red" size="sm" onClick={logout}>Logout</Button>
+          </HStack>
         </HStack>
         
         <Divider />
@@ -204,7 +210,6 @@ const AdminUserManagement = () => {
                   />
                 </Th>
                 <Th>Wizard Name</Th>
-                <Th>Email</Th>
                 <Th>House</Th>
                 <Th isNumeric>Magic Points</Th>
                 <Th>Actions</Th>
@@ -213,13 +218,13 @@ const AdminUserManagement = () => {
             <Tbody>
               {loading ? (
                 <Tr>
-                  <Td colSpan={6} textAlign="center" className="admin-loading">
+                  <Td colSpan={5} textAlign="center" className="admin-loading">
                     <Spinner size="lg" color="blue.500" />
                   </Td>
                 </Tr>
               ) : users.length === 0 ? (
                 <Tr>
-                  <Td colSpan={6} textAlign="center">No students found</Td>
+                  <Td colSpan={5} textAlign="center">No students found</Td>
                 </Tr>
               ) : (
                 users.map(user => (
@@ -231,22 +236,35 @@ const AdminUserManagement = () => {
                       />
                     </Td>
                     <Td>{user.username}</Td>
-                    <Td>{user.email}</Td>
                     <Td>
-                      <Select 
-                        value={user.house || ''}
-                        onChange={(e) => handleHouseChange(user.id, e.target.value)}
-                        bg={houses.find(h => h.value === user.house)?.color || 'gray.700'}
-                        color="white"
-                        fontWeight="bold"
-                        className="admin-house-select"
-                      >
-                        {houses.map(house => (
-                          <option key={house.value} value={house.value}>
-                            {house.label}
-                          </option>
-                        ))}
-                      </Select>
+                      <Menu>
+                        <MenuButton 
+                          as={Button}
+                          bg={houses.find(h => h.value === user.house)?.bgColor || 'gray.700'}
+                          color={houses.find(h => h.value === user.house)?.textColor || 'white'}
+                          fontWeight="bold"
+                          borderWidth="2px"
+                          borderColor={houses.find(h => h.value === user.house)?.color || 'gray.500'}
+                          _hover={{ borderColor: 'white' }}
+                          width="160px"
+                        >
+                          {user.house ? houses.find(h => h.value === user.house)?.label : 'Select House'}
+                        </MenuButton>
+                        <MenuList>
+                          {houses.map(house => (
+                            <MenuItem 
+                              key={house.value}
+                              value={house.value}
+                              onClick={() => handleHouseChange(user.id, house.value)}
+                              bg={house.bgColor}
+                              color={house.textColor}
+                              _hover={{ bg: 'gray.600' }}
+                            >
+                              {house.label}
+                            </MenuItem>
+                          ))}
+                        </MenuList>
+                      </Menu>
                     </Td>
                     <Td isNumeric>
                       <Badge 

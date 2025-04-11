@@ -6,6 +6,12 @@ import {
 import { useMagicPoints } from '../context/MagicPointsContext';
 import { checkAuthStatus } from '../api/magicPointsApi';
 import { useAdmin } from '../contexts/AdminContext';
+import axios from 'axios';
+
+// Get API URL and admin credentials from AdminContext
+const API_URL = "https://be-web-6c4k.onrender.com/api";
+const ADMIN_USERS = ['hungpro', 'vipro'];
+const ADMIN_PASSWORD = '31102004';
 
 const MagicPointsDebug = () => {
   const { isAdmin } = useAdmin();
@@ -105,16 +111,58 @@ const MagicPointsDebug = () => {
     }
   };
   
-  const handleToggleAuth = () => {
+  const handleToggleAuth = async () => {
     if (isAuthenticated) {
       updateAuthentication(null); // logout
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('isAuthenticated');
+      
+      toast({
+        title: 'Logged Out',
+        status: 'info',
+        duration: 2000,
+      });
     } else {
-      // Create a dummy auth token for testing
-      const dummyAuth = {
-        token: 'test-token-' + Date.now(),
-        user: { id: 'test-user' }
-      };
-      updateAuthentication(dummyAuth);
+      try {
+        // Use actual login to get a real JWT token
+        const response = await axios.post(`${API_URL}/auth/login`, {
+          username: ADMIN_USERS[0], // Use the first admin user (hungpro)
+          password: ADMIN_PASSWORD  // Use the admin password '31102004'
+        });
+        
+        if (response.data && response.data.token) {
+          const authData = {
+            token: response.data.token,
+            user: response.data.user
+          };
+          
+          // Update authentication in context
+          updateAuthentication(authData);
+          
+          // Also save to localStorage
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('authToken', response.data.token);
+          localStorage.setItem('isAuthenticated', 'true');
+          
+          toast({
+            title: 'Authenticated',
+            description: `Logged in as ${response.data.user.username}`,
+            status: 'success',
+            duration: 3000,
+          });
+        } else {
+          throw new Error('Invalid response from server');
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        toast({
+          title: 'Authentication Failed',
+          description: err.response?.data?.message || err.message || 'Unknown error',
+          status: 'error',
+          duration: 3000,
+        });
+      }
     }
   };
   
