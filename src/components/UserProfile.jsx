@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';  // Make sure path is consistent
+import { useAdmin } from '../contexts/AdminContext';  // Import the admin context
 
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 const UserProfile = () => {
   const { user, logout, updateProfile, updatePassword } = useAuth();
+  const { isAdmin } = useAdmin(); // Get admin status
   const [showMenu, setShowMenu] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [avatar, setAvatar] = useState(user?.avatar || null);
@@ -185,24 +187,30 @@ const UserProfile = () => {
               <div className="profile-email">{user.email}</div>
               <div className="profile-house">
                 HOUSE OF 
-                <select 
-                  className="house-dropdown" 
-                  value={userHouse}
-                  onChange={(e) => {
-                    // Save house preference in localStorage for persistence
-                    localStorage.setItem('userHouse', e.target.value);
-                    // Use a different event name to avoid confusion
-                    const changeEvent = new CustomEvent('houseChange', {
-                      detail: { house: e.target.value }
-                    });
-                    document.dispatchEvent(changeEvent);
-                  }}
-                >
-                  <option value="gryffindor">Gryffindor</option>
-                  <option value="slytherin">Slytherin</option>
-                  <option value="ravenclaw">Ravenclaw</option>
-                  <option value="hufflepuff">Hufflepuff</option>
-                </select>
+                {isAdmin ? (
+                  <select 
+                    className="house-dropdown" 
+                    value={userHouse}
+                    onChange={(e) => {
+                      // Save house preference in localStorage for persistence
+                      localStorage.setItem('userHouse', e.target.value);
+                      // Use a different event name to avoid confusion
+                      const changeEvent = new CustomEvent('houseChange', {
+                        detail: { house: e.target.value }
+                      });
+                      document.dispatchEvent(changeEvent);
+                    }}
+                  >
+                    <option value="gryffindor">Gryffindor</option>
+                    <option value="slytherin">Slytherin</option>
+                    <option value="ravenclaw">Ravenclaw</option>
+                    <option value="hufflepuff">Hufflepuff</option>
+                  </select>
+                ) : (
+                  <span className={`house-badge ${userHouse}`}>
+                    {userHouse.charAt(0).toUpperCase() + userHouse.slice(1)}
+                  </span>
+                )}
               </div>
             </div>
           </div>

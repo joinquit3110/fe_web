@@ -5,8 +5,10 @@ import {
 } from '@chakra-ui/react';
 import { useMagicPoints } from '../context/MagicPointsContext';
 import { checkAuthStatus } from '../api/magicPointsApi';
+import { useAdmin } from '../contexts/AdminContext';
 
 const MagicPointsDebug = () => {
+  const { isAdmin } = useAdmin();
   const { 
     magicPoints,
     isOnline,
@@ -28,6 +30,10 @@ const MagicPointsDebug = () => {
   const [authStatus, setAuthStatus] = useState(null);
   const [tokenInput, setTokenInput] = useState('');
   const toast = useToast();
+  
+  if (isAdmin) {
+    return null;
+  }
   
   // Check if we're in offline/dev mode
   const isDevMode = false; // Set to false since we're online now

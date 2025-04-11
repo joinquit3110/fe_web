@@ -8,10 +8,12 @@ import './styles/App.css';
 import './styles/HarryPotter.css';
 // Fix AuthContext import
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdminProvider } from './contexts/AdminContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
+import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 
 // Fix theme definition - must use proper color format
@@ -394,7 +396,11 @@ const App = () => {
   return (
     <ChakraProvider theme={theme}>
       <AuthProvider>
-        <AppContent />
+        <AdminProvider>
+          <MagicPointsProvider>
+            <AppContent />
+          </MagicPointsProvider>
+        </AdminProvider>
       </AuthProvider>
     </ChakraProvider>
   );

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import LinearInequalitiesActivity from './LinearInequalitiesActivity';
 import { ActivityStateProvider, useActivityState } from '../context/ActivityStateContext';
 import { useMagicPoints } from '../context/MagicPointsContext';
+import { useAdmin } from '../contexts/AdminContext';
+import AdminUserManagement from './AdminUserManagement';
 
 // Create a wrapper component to access context
 const ActivityContent = () => {
@@ -14,6 +16,9 @@ const ActivityContent = () => {
     handleMultipleRevelioAttempts,
     resetRevelioAttempts
   } = useMagicPoints();
+  
+  // Get admin status
+  const { isAdmin } = useAdmin();
 
   // When component mounts, reset Revelio attempts only once
   useEffect(() => {
@@ -49,6 +54,12 @@ const ActivityContent = () => {
     handleInequalityFormatCheck(isValid, index);
   };
 
+  // If user is admin, show admin UI
+  if (isAdmin) {
+    return <AdminUserManagement />;
+  }
+
+  // For regular users, show the normal activity
   return (
     <LinearInequalitiesActivity 
       blankState={blankActivityState}
@@ -56,6 +67,7 @@ const ActivityContent = () => {
       onSubmission={handleCharmBlanksSubmission}
       onInequalitySolution={handleInequalitySolution}
       onFormatCheck={handleFormatCheck}
+      disableHouseSelection={true} // Disable house selection for regular users
     />
   );
 };

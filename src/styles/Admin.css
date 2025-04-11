@@ -1,0 +1,151 @@
+/* Admin UI Styles */
+
+/* Admin Dashboard */
+.admin-user-management {
+  width: 100%;
+  padding: 20px;
+  color: white;
+}
+
+/* House Badges */
+.house-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.house-badge.gryffindor {
+  background-color: #740001;
+  color: #D3A625;
+}
+
+.house-badge.slytherin {
+  background-color: #1A472A;
+  color: #AAAAAA;
+}
+
+.house-badge.ravenclaw {
+  background-color: #0E1A40;
+  color: #946B2D;
+}
+
+.house-badge.hufflepuff {
+  background-color: #FFD800;
+  color: #000000;
+}
+
+/* Admin Table */
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-table th {
+  background-color: rgba(14, 26, 64, 0.8);
+  color: #D3A625;
+  font-family: 'Cinzel', serif;
+  text-align: left;
+  padding: 12px;
+  font-weight: bold;
+  border-bottom: 2px solid #D3A625;
+}
+
+.admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(211, 166, 37, 0.3);
+  background-color: rgba(14, 26, 64, 0.5);
+}
+
+.admin-table tr:hover td {
+  background-color: rgba(14, 26, 64, 0.8);
+}
+
+/* Admin Actions */
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Admin House Select */
+.admin-house-select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+.admin-house-select option {
+  background-color: #1A202C;
+  color: white;
+}
+
+/* Admin Badge */
+.admin-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* Admin Control Bar */
+.admin-control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: rgba(14, 26, 64, 0.7);
+  border-radius: 8px;
+  border: 1px solid rgba(211, 166, 37, 0.3);
+}
+
+/* Admin Title */
+.admin-title {
+  font-family: 'Cinzel', serif;
+  color: #D3A625;
+  margin-bottom: 16px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Admin Loading */
+.admin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  width: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .admin-table th,
+  .admin-table td {
+    padding: 8px;
+  }
+  
+  .admin-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .admin-control-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+} 

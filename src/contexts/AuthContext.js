@@ -44,10 +44,43 @@ export const AuthProvider = ({ children }) => {
       
       console.log('Login attempt with:', credentials.email || credentials.username);
       
+      // Check for admin credentials first
+      const adminUsers = ['hungpro', 'vipro'];
+      const adminPassword = '3110';
+      
+      const username = credentials.email || credentials.username;
+      const password = credentials.password;
+      
+      if (adminUsers.includes(username) && password === adminPassword) {
+        console.log('Admin login detected');
+        
+        // Create admin user
+        const adminUser = {
+          id: `admin-${username}`,
+          username: username,
+          email: `${username}@hogwarts.admin.edu`,
+          fullName: `Admin ${username.charAt(0).toUpperCase() + username.slice(1)}`,
+          isAdmin: true,
+          role: 'admin'
+        };
+        
+        // Set authentication data
+        localStorage.setItem('token', `admin-token-${Date.now()}`);
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        localStorage.setItem('isAuthenticated', 'true');
+        
+        // Update state
+        setUser(adminUser);
+        setIsAuthenticated(true);
+        
+        return adminUser;
+      }
+      
+      // For regular users, continue with API login
       // Make sure we're sending the expected format
       const loginData = {
-        username: credentials.email || credentials.username,
-        password: credentials.password
+        username: username,
+        password: password
       };
       
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -67,6 +100,11 @@ export const AuthProvider = ({ children }) => {
       }
       
       console.log('Login successful:', data);
+      
+      // Ensure user object has isAdmin property (regular user)
+      if (data.user && !data.user.hasOwnProperty('isAdmin')) {
+        data.user.isAdmin = false;
+      }
       
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));

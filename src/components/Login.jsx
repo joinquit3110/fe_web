@@ -117,6 +117,34 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      // Check for admin credentials
+      const adminUsers = ['hungpro', 'vipro'];
+      const adminPassword = '3110';
+      
+      if (adminUsers.includes(email) && password === adminPassword) {
+        console.log('Admin login detected');
+        
+        // Create a fake admin user object
+        const adminUser = {
+          id: `admin-${email}`,
+          username: email,
+          email: `${email}@hogwarts.admin.edu`,
+          fullName: `Admin ${email.charAt(0).toUpperCase() + email.slice(1)}`,
+          isAdmin: true,
+          role: 'admin'
+        };
+        
+        // Store admin user in localStorage
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        localStorage.setItem('token', `admin-token-${Date.now()}`);
+        localStorage.setItem('isAuthenticated', 'true');
+        
+        // Navigate to dashboard
+        navigate('/dashboard');
+        return;
+      }
+      
+      // Regular user flow
       // Use the credentials object format expected by the API
       await login({
         username: email, // Server expects username
