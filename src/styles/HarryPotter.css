@@ -534,21 +534,39 @@ button, input, select, textarea {
 
 /* Enhanced LaTeX preview */
 .latex-preview-container {
-  margin-top: 15px;
-  width: 100%;
-  padding: 10px;
-  background: rgba(14, 26, 64, 0.6);
-  border-radius: 8px;
+  background: rgba(14, 26, 64, 0.7);
   border: 1px solid rgba(211, 166, 37, 0.3);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-x: auto;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
 .latex-preview {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  min-height: 40px;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px;
+  max-width: 100%;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+
+.latex-preview .MathJax {
+  display: inline-block !important;
+  max-width: 100%;
+  overflow-x: visible !important;
 }
 
 .preview-label {
@@ -566,19 +584,19 @@ button, input, select, textarea {
 
 /* Enhanced inequality list */
 .inequality-item {
-  background: rgba(14, 26, 64, 0.7);
-  border-left: 4px solid;
-  margin-bottom: 12px;
-  padding: 14px;
-  border-radius: 6px;
-  transition: all 0.3s;
-  position: relative;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  animation: item-appear 0.5s ease forwards;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.5s ease-out forwards;
   animation-delay: calc(var(--index) * 0.1s);
   opacity: 0;
-  transform: translateY(10px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-left: 4px solid;
+  position: relative;
+  overflow: hidden;
 }
 
 .inequality-item:after {
@@ -600,29 +618,16 @@ button, input, select, textarea {
 }
 
 .delete-icon {
-  position: absolute;
-  right: 10px;
-  top: 0;
-  bottom: 0;
-  display: none; /* Hide by default */
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
-  transition: all 0.2s;
+  margin-left: 8px;
   cursor: pointer;
-  font-size: 18px;
-  width: 24px;
-  height: 100%;
-  margin: auto;
-}
-
-.inequality-item:hover .delete-icon {
-  display: flex; /* Show on parent hover */
+  opacity: 0.6;
+  transition: opacity 0.3s;
+  flex-shrink: 0;
 }
 
 .delete-icon:hover {
-  color: var(--error-color);
-  transform: scale(1.1);
+  opacity: 1;
+  color: #ff5252;
 }
 
 /* Animations */
@@ -1802,60 +1807,6 @@ canvas {
   background-color: #2c6e40;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
-}
-
-/* Enhanced LaTeX preview */
-.latex-preview-container {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 5px 10px;
-  width: calc(100% - 40px); /* Account for the delete icon */
-  overflow: hidden; 
-}
-
-.latex-preview {
-  font-size: 18px;
-  color: #fff;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.latex-preview .MathJax {
-  display: inline-block !important;
-  max-width: 100%;
-}
-
-.inequality-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 15px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-  animation: fadeIn 0.5s ease-out forwards;
-  animation-delay: calc(var(--index) * 0.1s);
-  opacity: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border-left: 4px solid;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Make sure we have some space for the delete icon */
-.delete-icon {
-  margin-left: 8px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.3s;
-  flex-shrink: 0;
-}
-
-.delete-icon:hover {
-  opacity: 1;
-  color: #ff5252;
 }
 
 /* Mobile optimizations */

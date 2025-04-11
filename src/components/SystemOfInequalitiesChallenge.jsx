@@ -335,8 +335,8 @@ const SystemOfInequalitiesChallenge = () => {
                     <label htmlFor="x-coordinate">X-coordinate:</label>
                     <input
                       id="x-coordinate"
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       value={solutionPoint.x}
                       onChange={(e) => setSolutionPoint({...solutionPoint, x: e.target.value})}
                       style={styles.coordinateInput}
@@ -346,8 +346,8 @@ const SystemOfInequalitiesChallenge = () => {
                     <label htmlFor="y-coordinate">Y-coordinate:</label>
                     <input
                       id="y-coordinate"
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       value={solutionPoint.y}
                       onChange={(e) => setSolutionPoint({...solutionPoint, y: e.target.value})}
                       style={styles.coordinateInput}

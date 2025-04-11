@@ -258,7 +258,30 @@ const AppContent = () => {
                       {/* 1. Control Panel - Cast Spell at top */}
                       <div className="control-panel wizard-panel">
                         <div className="control-panel-content">
-                          <h2>Grand Arcanum of<br />Inequality</h2>
+                          <h2 className="activity-title" style={{ 
+                            fontFamily: "'Cinzel', serif",
+                            position: "relative",
+                            textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
+                            letterSpacing: "1px",
+                            textAlign: "center"
+                          }}>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "0 30px",
+                              position: "relative"
+                            }}>
+                              Grand Arcanum of<br />Inequality
+                              <span style={{
+                                position: "absolute",
+                                bottom: "-5px",
+                                left: "0",
+                                right: "0",
+                                height: "2px",
+                                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                                animation: "shimmer 2s infinite"
+                              }}></span>
+                            </span>
+                          </h2>
                           <InequalityInput 
                             addInequality={handleAddInequality}
                             setQuizMessage={setQuizMessage}
@@ -274,7 +297,30 @@ const AppContent = () => {
 
                       {/* 3. Coordinate Plane */}
                       <div className="coordinate-container wizard-panel">
-                        <h2>Magical Coordinate Plane</h2>
+                        <h2 className="activity-title" style={{ 
+                            fontFamily: "'Cinzel', serif",
+                            position: "relative",
+                            textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
+                            letterSpacing: "1px",
+                            textAlign: "center"
+                          }}>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "0 30px",
+                              position: "relative"
+                            }}>
+                              Magical Coordinate Plane
+                              <span style={{
+                                position: "absolute",
+                                bottom: "-5px",
+                                left: "0",
+                                right: "0",
+                                height: "2px",
+                                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                                animation: "shimmer 2s infinite"
+                              }}></span>
+                            </span>
+                          </h2>
                         <div className="coordinate-plane">
                           <CoordinatePlane
                             ref={coordinatePlaneRef}
@@ -291,7 +337,30 @@ const AppContent = () => {
 
                       {/* 4. Inequalities List at bottom */}
                       <div className="inequalities-list wizard-panel">
-                        <h2>Spells Collection</h2>
+                        <h2 className="activity-title" style={{ 
+                            fontFamily: "'Cinzel', serif",
+                            position: "relative",
+                            textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
+                            letterSpacing: "1px",
+                            textAlign: "center"
+                          }}>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "0 30px",
+                              position: "relative"
+                            }}>
+                              Spells Collection
+                              <span style={{
+                                position: "absolute",
+                                bottom: "-5px",
+                                left: "0",
+                                right: "0",
+                                height: "2px",
+                                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                                animation: "shimmer 2s infinite"
+                              }}></span>
+                            </span>
+                          </h2>
                         <div className="scroll-container" ref={inequalityListRef}>
                           {inequalities.length > 0 ? (
                             inequalities.map((ineq, index) => (

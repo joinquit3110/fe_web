@@ -1913,8 +1913,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
             <div className="coordinate-input-form">
           <span>(</span>
             <input 
-              type="number"
-              step="0.1"
+              type="text"
               inputMode="decimal"
               value={inputCoords.x}
               onChange={e => setInputCoords(prev => ({ ...prev, x: e.target.value }))}
@@ -1927,8 +1926,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
             />
               <span>,</span>
             <input 
-              type="number"
-              step="0.1"
+              type="text"
               inputMode="decimal"
               value={inputCoords.y}
               onChange={e => setInputCoords(prev => ({ ...prev, y: e.target.value }))}

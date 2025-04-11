@@ -99,6 +99,14 @@ export const AdminProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     
+    // Handle missing userId
+    if (!userId) {
+      console.error('Error: userId is undefined or null');
+      setError('Missing user ID. Cannot update house.');
+      setLoading(false);
+      return false;
+    }
+    
     try {
       // Get authentication token from localStorage
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -106,6 +114,8 @@ export const AdminProvider = ({ children }) => {
       if (!token) {
         throw new Error('Authentication token not found');
       }
+      
+      console.log(`Making API call to update house for user ${userId} to ${house}`);
       
       // Call the API to update house in MongoDB
       const response = await axios.patch(`${API_URL}/users/${userId}`, 
@@ -122,7 +132,7 @@ export const AdminProvider = ({ children }) => {
         // Update local state after successful API call
         setUsers(prevUsers => 
           prevUsers.map(user => 
-            user.id === userId ? { ...user, house } : user
+            (user.id === userId || user._id === userId) ? { ...user, house } : user
           )
         );
         console.log(`House updated in MongoDB for user ${userId}: ${house}`);
@@ -133,13 +143,6 @@ export const AdminProvider = ({ children }) => {
     } catch (err) {
       console.error('Error assigning house:', err);
       setError('Failed to assign house: ' + (err.message || 'Unknown error'));
-      
-      // Still update local state even if API fails (optimistic UI)
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId ? { ...user, house } : user
-        )
-      );
       return false;
     } finally {
       setLoading(false);

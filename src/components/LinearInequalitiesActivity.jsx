@@ -113,117 +113,106 @@ const Blank = ({ solution, id, onDrop, value, isCorrect }) => {
   const handleDragOver = (e) => {
     e.preventDefault();
   };
-
+  
   const handleDrop = (e) => {
     e.preventDefault();
-    const data = e.dataTransfer.getData("text/plain");
-    onDrop(id, data, e);  // Pass the event object as the third parameter
+    if (onDrop) {
+      const data = e.dataTransfer.getData('text/plain');
+      onDrop(id, data, e);
+    }
   };
-
-  // Handle drag start from a filled blank
+  
   const handleDragStart = (e) => {
     if (value) {
-      e.dataTransfer.setData("text/plain", value);
-      e.dataTransfer.setData("source-blank", id);
+      e.dataTransfer.setData('text/plain', value);
+      // Add blank ID as metadata
+      e.dataTransfer.setData('origin-blank-id', id);
     }
   };
-
-  // Touch event handlers for mobile
+  
   const handleTouchEnter = (e) => {
     e.preventDefault();
-    if (!value) {
-      // Instead of changing backgroundColor, use a more subtle effect
-      e.currentTarget.style.borderColor = "var(--secondary-color)";
-      e.currentTarget.style.boxShadow = "0 0 15px rgba(211, 166, 37, 0.3)";
+    // Add very subtle highlight instead of strong effect
+    const target = e.target;
+    if (target) {
+      target.style.backgroundColor = 'rgba(211, 166, 37, 0.15)';
     }
   };
-
+  
   const handleTouchLeave = (e) => {
     e.preventDefault();
-    e.currentTarget.style.boxShadow = value ? "0 2px 4px rgba(0,0,0,0.3)" : "none";
-    e.currentTarget.style.borderColor = getValidationBorderColor();
+    const target = e.target;
+    if (target) {
+      target.style.backgroundColor = value ? 'rgba(255, 255, 255, 0.05)' : 'transparent';
+    }
   };
-
-  // Determine the validation status color
+  
   const getValidationColor = () => {
-    if (isCorrect === true) return "rgba(46, 204, 113, 0.2)"; // Green for correct
-    if (isCorrect === false) return "rgba(231, 76, 60, 0.2)"; // Red for incorrect
-    return value ? "rgba(211, 166, 37, 0.2)" : "transparent"; // Yellow for filled but not validated, transparent for empty
+    if (isCorrect === null) return 'var(--secondary-color)';
+    return isCorrect ? '#2ecc71' : '#e74c3c';
   };
-
-  // Determine border color
+  
   const getValidationBorderColor = () => {
-    if (isCorrect === true) return "#2ecc71"; // Green border for correct
-    if (isCorrect === false) return "#e74c3c"; // Red border for incorrect
-    return value ? "var(--secondary-color)" : "rgba(211, 166, 37, 0.5)"; // Yellow for filled, subtle yellow for empty
+    if (isCorrect === null) return 'rgba(211, 166, 37, 0.7)';
+    return isCorrect ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)';
   };
-
-  // Get validation icon (keeping the icons for visual feedback)
+  
   const getValidationIcon = () => {
-    if (isCorrect === true) return "✓";
-    if (isCorrect === false) return "✗";
-    return "";
+    if (isCorrect === null) return null;
+    return isCorrect ? 
+      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41-1.41L9,16.17z' fill='%232ecc71'/></svg>" : 
+      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41z' fill='%23e74c3c'/></svg>";
   };
-
-  // Animation class based on status
+  
   const getAnimationClass = () => {
-    if (isCorrect === true) return "correct-pulse";
-    if (isCorrect === false) return "incorrect-shake";
-    return "";
+    // Remove animations for smoother performance
+    return '';
   };
-
+  
   return (
-    <span 
-      style={{ 
-        display: "inline-block", 
-        margin: "0 5px", 
-        padding: "8px 12px", 
-        background: getValidationColor(),
+    <span
+      data-blank-id={id}
+      className={`droppable-blank ${getAnimationClass()}`}
+      style={{
+        display: 'inline-block',
+        minWidth: '80px',
+        height: '28px',
+        padding: '3px 8px',
+        margin: '0 4px',
+        background: value ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
         border: `2px solid ${getValidationBorderColor()}`,
-        borderRadius: "8px",
-        minWidth: "120px",
-        minHeight: "36px",
-        textAlign: "center",
-        position: "relative",
-        fontFamily: "'Cinzel', serif",
-        color: "var(--text-primary)",
-        boxShadow: value ? "0 2px 4px rgba(0,0,0,0.3)" : "none",
-        transition: "all 0.3s ease",
-        cursor: "pointer",
-        backdropFilter: "blur(2px)",
-        animation: `${getAnimationClass()} 0.6s ease`
+        borderRadius: '6px',
+        color: getValidationColor(),
+        fontWeight: 'bold',
+        position: 'relative',
+        cursor: value ? 'grab' : 'default',
+        textAlign: 'center',
+        verticalAlign: 'middle',
+        lineHeight: '22px',
+        boxShadow: value ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+        transition: 'all 0.15s ease',
       }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      data-blank-id={id}
-      className={`droppable-blank ${getAnimationClass()}`}
-      onTouchEnter={handleTouchEnter}
-      onTouchLeave={handleTouchLeave}
       draggable={!!value}
       onDragStart={handleDragStart}
+      onTouchStart={handleTouchEnter}
+      onTouchEnd={handleTouchLeave}
     >
-      {value || "____"}
+      {value || '____'}
       {isCorrect !== null && (
-        <span style={{ 
-          position: "absolute", 
-          top: "-12px", 
-          right: "-12px", 
-          width: "24px", 
-          height: "24px", 
-          borderRadius: "50%", 
-          backgroundColor: isCorrect ? "#2ecc71" : "#e74c3c",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "14px",
-          fontWeight: "bold",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-          border: "2px solid #fff",
-          animation: "pop-in 0.3s forwards"
-        }}>
-          {getValidationIcon()}
-        </span>
+        <span
+          style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '-8px',
+            width: '16px',
+            height: '16px',
+            backgroundImage: `url("${getValidationIcon()}")`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+          }}
+        ></span>
       )}
     </span>
   );
@@ -992,7 +981,7 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
                          "0 0 5px rgba(46, 204, 113, 0.5)",
               position: "relative",
               zIndex: 1,
-              animation: "float-text 3s ease-in-out infinite",
+              // Remove float animation
               color: fillBlanksMessage ? "#f39c12" :
                     resetMessage ? "#3498db" :
                     "#2ecc71",
@@ -1188,6 +1177,9 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
               padding: "5px",
               position: "relative",
               zIndex: 2,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+              gridGap: "8px"
             }}
             className="word-bank-scrollable"
             onDragOver={(e) => e.preventDefault()}
@@ -1211,23 +1203,25 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
                 onTouchEnd={handleTouchEnd}
                 style={{ 
                   fontFamily: "'Cinzel', serif",
-                  transition: "all 0.2s ease",
+                  transition: "all 0.15s ease",
                   minWidth: "80px",
-                  height: "36px",
+                  maxWidth: "120px",
+                  height: "34px",
                   textAlign: "center",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
                   position: "relative",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "8px",
+                  marginBottom: "6px",
                   fontWeight: "500",
                   letterSpacing: "0.5px"
                 }}
                 className="word-bank-item"
                 _hover={{ 
                   borderColor: "var(--secondary-color)",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  transform: "translateY(-1px)"
                 }}
               >
                 {item}

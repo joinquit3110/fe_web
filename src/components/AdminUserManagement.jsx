@@ -36,14 +36,12 @@ const AdminUserManagement = () => {
     { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000' }
   ];
 
-  // Start auto-refresh
+  // Fetch users once on component mount instead of auto-refresh
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchUsers();
-    }, 5000); // Refresh every 5 seconds
+    // Load users once when component mounts
+    fetchUsers();
     
-    setRefreshInterval(interval);
-    
+    // Remove auto-refresh - it was causing problems
     return () => {
       if (refreshInterval) {
         clearInterval(refreshInterval);
@@ -51,17 +49,35 @@ const AdminUserManagement = () => {
     };
   }, [fetchUsers]);
 
-  // Handle house change
+  // Handle house change with better error handling and validation
   const handleHouseChange = async (userId, house) => {
+    if (!userId) {
+      toast({
+        title: 'Error',
+        description: 'Cannot update: User ID is missing',
+        status: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+    
+    console.log(`Attempting to assign ${house} to user ${userId}`);
+    
     try {
       const success = await assignHouse(userId, house);
       
       if (success) {
         toast({
           title: 'House updated',
+          description: `Successfully assigned to ${house}`,
           status: 'success',
           duration: 2000,
         });
+        
+        // Manually update UI to reflect the change immediately
+        const updatedUsers = users.map(user => 
+          user.id === userId ? { ...user, house: house } : user
+        );
       }
     } catch (err) {
       toast({
@@ -210,6 +226,7 @@ const AdminUserManagement = () => {
                   />
                 </Th>
                 <Th>Wizard Name</Th>
+                <Th>ID</Th>
                 <Th>House</Th>
                 <Th isNumeric>Magic Points</Th>
                 <Th>Actions</Th>
@@ -218,24 +235,25 @@ const AdminUserManagement = () => {
             <Tbody>
               {loading ? (
                 <Tr>
-                  <Td colSpan={5} textAlign="center" className="admin-loading">
+                  <Td colSpan={6} textAlign="center" className="admin-loading">
                     <Spinner size="lg" color="blue.500" />
                   </Td>
                 </Tr>
               ) : users.length === 0 ? (
                 <Tr>
-                  <Td colSpan={5} textAlign="center">No students found</Td>
+                  <Td colSpan={6} textAlign="center">No students found</Td>
                 </Tr>
               ) : (
                 users.map(user => (
-                  <Tr key={user.id}>
+                  <Tr key={user.id || user._id}>
                     <Td>
                       <Checkbox 
-                        isChecked={selectedUsers.includes(user.id)}
-                        onChange={() => toggleUserSelection(user.id)}
+                        isChecked={selectedUsers.includes(user.id || user._id)}
+                        onChange={() => toggleUserSelection(user.id || user._id)}
                       />
                     </Td>
                     <Td>{user.username}</Td>
+                    <Td><Text fontSize="xs" color="gray.400">{user.id || user._id}</Text></Td>
                     <Td>
                       <Menu>
                         <MenuButton 
@@ -255,7 +273,7 @@ const AdminUserManagement = () => {
                             <MenuItem 
                               key={house.value}
                               value={house.value}
-                              onClick={() => handleHouseChange(user.id, house.value)}
+                              onClick={() => handleHouseChange(user.id || user._id, house.value)}
                               bg={house.bgColor}
                               color={house.textColor}
                               _hover={{ bg: 'gray.600' }}
@@ -281,14 +299,14 @@ const AdminUserManagement = () => {
                         <Button 
                           size="sm" 
                           colorScheme="green"
-                          onClick={() => resetPointsForUsers([user.id])}
+                          onClick={() => resetPointsForUsers([user.id || user._id])}
                         >
                           Reset Points
                         </Button>
                         <Button 
                           size="sm" 
                           colorScheme="blue"
-                          onClick={() => resetAttemptsForUsers([user.id])}
+                          onClick={() => resetAttemptsForUsers([user.id || user._id])}
                         >
                           Reset Attempts
                         </Button>

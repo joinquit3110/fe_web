@@ -45,7 +45,7 @@ export const parseInequality = (input) => {
     return { ...inequalityCache.get(input) };
   }
   
-  // Normalize input: remove spaces, fix double operators
+  // Normalize input: remove spaces, fix double operators, convert uppercase X and Y to lowercase
   const normalizedInput = input
     .replace(/\s+/g, '')
     .replace(/\-\-/g, '+')
@@ -55,7 +55,9 @@ export const parseInequality = (input) => {
     .replace(/≥/g, '>=')
     .replace(/≠/g, '!=')
     .replace(/=>/g, '>=')
-    .replace(/=</g, '<=');
+    .replace(/=</g, '<=')
+    .replace(/X/g, 'x')
+    .replace(/Y/g, 'y');
 
   // Main regex for standard form ax + by + c operator 0
   const match = normalizedInput.match(standardFormRegex);
