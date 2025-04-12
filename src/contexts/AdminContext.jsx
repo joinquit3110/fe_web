@@ -239,7 +239,7 @@ export const AdminProvider = ({ children }) => {
     }
   };
 
-  // Force sync for selected users
+  // Force sync for selected users - enhanced with API integration
   const forceSyncForUsers = async (userIds = []) => {
     setLoading(true);
     setError(null);
@@ -252,8 +252,25 @@ export const AdminProvider = ({ children }) => {
         throw new Error('No users selected');
       }
       
-      // In a real implementation, this would call an API endpoint
-      // For now, we'll just call the local forceSync
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Call the backend API to trigger server-side sync for these users
+      const response = await axios.post(`${API_URL}/users/force-sync`, 
+        { userIds: targetUserIds },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Also run local force sync for the admin's own data
       if (forceSync) {
         await forceSync();
       }
@@ -420,4 +437,4 @@ export const AdminProvider = ({ children }) => {
       {children}
     </AdminContext.Provider>
   );
-}; 
+};

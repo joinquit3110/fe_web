@@ -111,11 +111,14 @@ self.addEventListener('sync', event => {
   }
 });
 
-// Function to sync magic points in the background
+// Enhanced background sync with better offline/online handling
 async function syncMagicPoints() {
   try {
-    // Get pending operations from localStorage
+    console.log('[SW] Starting optimized background sync');
+    
+    // First, check if we need to sync pending operations
     const pendingOpsJson = localStorage.getItem('pendingOperations');
+    const lastSyncTimestamp = localStorage.getItem('magicPointsTimestamp');
     
     if (pendingOpsJson) {
       const pendingOps = JSON.parse(pendingOpsJson);
@@ -130,7 +133,7 @@ async function syncMagicPoints() {
           return Promise.resolve(); // Don't treat as failure
         }
         
-        // Use the sync endpoint directly instead of calculating locally
+        // Use the sync endpoint directly
         const response = await fetch('/api/user/magic-points/sync', {
           method: 'POST',
           headers: {
@@ -156,14 +159,30 @@ async function syncMagicPoints() {
         // Clear pending operations
         localStorage.removeItem('pendingOperations');
         console.log('[SW] Cleared pending operations after successful sync');
+        
+        // Notify the application that sync has completed
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'SYNC_COMPLETED',
+              magicPoints: result.magicPoints,
+              timestamp: result.timestamp
+            });
+          });
+        });
       } else {
-        console.log('[SW] No operations to sync');
+        console.log('[SW] No operations to sync, checking for updates');
+        await checkForServerUpdates();
       }
+    } else {
+      console.log('[SW] No pending operations, checking for updates');
+      await checkForServerUpdates();
     }
     
     return Promise.resolve();
   } catch (error) {
     console.error('[SW] Background sync failed:', error);
+    
     // Don't automatically retry for certain errors
     if (error.message && (
       error.message.includes('401') || 
@@ -176,5 +195,57 @@ async function syncMagicPoints() {
     
     // For other errors, reject to allow browser to retry
     return Promise.reject(error);
+  }
+}
+
+// New function to check for server-side updates when coming back online
+async function checkForServerUpdates() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('[SW] No auth token available, skipping server check');
+      return Promise.resolve();
+    }
+    
+    // Get current magic points from server
+    const response = await fetch('/api/user/magic-points', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    console.log(`[SW] Received server points: ${result.magicPoints}`);
+    
+    // Compare with local value
+    const localPoints = parseInt(localStorage.getItem('magicPoints') || '100', 10);
+    
+    if (result.magicPoints !== localPoints) {
+      console.log(`[SW] Server points (${result.magicPoints}) differ from local (${localPoints}), updating local`);
+      localStorage.setItem('magicPoints', result.magicPoints.toString());
+      localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+      
+      // Notify the application about the updated points
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'POINTS_UPDATED',
+            magicPoints: result.magicPoints
+          });
+        });
+      });
+    } else {
+      console.log('[SW] Local and server points match, no update needed');
+    }
+    
+    return Promise.resolve();
+  } catch (error) {
+    console.error('[SW] Error checking for server updates:', error);
+    return Promise.resolve(); // Don't fail sync on this error
   }
 }
