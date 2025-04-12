@@ -20,12 +20,8 @@ export const AuthProvider = ({ children }) => {
         const storedIsAuthenticated = localStorage.getItem('isAuthenticated');
         
         if (token && storedUser && storedIsAuthenticated === 'true') {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
+          setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
-          
-          // Fetch fresh user data if we're authenticated
-          fetchUserData();
         }
       } catch (error) {
         console.error('Authentication check error:', error);
@@ -40,63 +36,6 @@ export const AuthProvider = ({ children }) => {
     
     checkAuth();
   }, []);
-  
-  // Fetch fresh user data from the server
-  const fetchUserData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        console.warn('No token available for fetching user data');
-        return;
-      }
-      
-      // If token is an admin token (starts with admin-token-), skip fetch
-      if (token.startsWith('admin-token-')) {
-        console.log('Admin user - skipping user data fetch');
-        return;
-      }
-      
-      const response = await fetch(`${API_URL}/auth/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      
-      const userData = await response.json();
-      
-      // Update local storage and state with fresh data
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      
-      // Dispatch event for other components to react to user data changes
-      window.dispatchEvent(new CustomEvent('userDataChanged', {
-        detail: { user: userData }
-      }));
-      
-      return userData;
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      return null;
-    }
-  };
-  
-  // Setup polling for user data updates (every 30 seconds)
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    
-    const interval = setInterval(() => {
-      fetchUserData();
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
   
   // Login function
   const login = async (credentials) => {
@@ -272,8 +211,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     register,
     updateProfile,
-    updatePassword,
-    fetchUserData
+    updatePassword
   };
   
   return (
