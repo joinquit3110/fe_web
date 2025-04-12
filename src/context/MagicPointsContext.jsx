@@ -679,19 +679,17 @@ export const MagicPointsProvider = ({ children }) => {
           // Admin triggered forced sync - prioritize this operation
           console.log('[POINTS] Admin triggered force sync');
           
-          // Clear any pending sync operations
+          // Clear any pending sync operations and fetch immediately without delay
           if (isSyncing) {
             console.log('[POINTS] Cancelling current sync to prioritize admin-triggered sync');
           }
           
-          // Use immediate sync with high priority
-          setTimeout(() => {
-            if (forceSyncWithDebugRef.current) {
-              forceSyncWithDebugRef.current().catch(err => 
-                console.error('[POINTS] Error during admin-triggered sync:', err)
-              );
-            }
-          }, 100);
+          // Use immediate sync with high priority - remove timeout delay
+          if (forceSyncWithDebugRef.current) {
+            forceSyncWithDebugRef.current().catch(err => 
+              console.error('[POINTS] Error during admin-triggered sync:', err)
+            );
+          }
         } else if (data.type === 'reset_attempts') {
           // Admin reset attempts for this user
           console.log('[POINTS] Admin reset attempts notification received');
@@ -709,12 +707,10 @@ export const MagicPointsProvider = ({ children }) => {
             window.dispatchEvent(resetEvent);
           }
           
-          // Fetch updated points
-          setTimeout(() => {
-            if (checkServerPointsRef.current) {
-              checkServerPointsRef.current();
-            }
-          }, 200);
+          // Fetch updated points immediately
+          if (checkServerPointsRef.current) {
+            checkServerPointsRef.current();
+          }
         } else if (data.type === 'user_update') {
           // Direct user update (e.g., house change, points change)
           console.log('[POINTS] Received user update:', data.data);
@@ -732,6 +728,15 @@ export const MagicPointsProvider = ({ children }) => {
               setPendingOperations([]);
               localStorage.removeItem('pendingOperations');
               setPendingChanges(false);
+              
+              // Dispatch event for UI components to refresh
+              const syncEvent = new CustomEvent('serverSyncCompleted', {
+                detail: { 
+                  source: 'pointsUpdate',
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(syncEvent);
             }
           }
           
@@ -743,27 +748,12 @@ export const MagicPointsProvider = ({ children }) => {
             const syncEvent = new CustomEvent('serverSyncCompleted', {
               detail: { 
                 source: 'houseChange',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                immediate: true
               }
             });
             window.dispatchEvent(syncEvent);
           }
-          
-          // If resetAttempts flag was set, reset locally
-          if (data.data?.updatedFields?.resetAttempts === true) {
-            console.log('[POINTS] Resetting attempts due to admin request');
-            // Use the ref to avoid circular dependency
-            if (resetRevelioAttemptsRef.current) {
-              resetRevelioAttemptsRef.current();
-            }
-          }
-          
-          // After receiving any update, check for any other changes after a short delay
-          setTimeout(() => {
-            if (checkServerPointsRef.current) {
-              checkServerPointsRef.current();
-            }
-          }, 500);
         }
       } else if (event.detail?.type === 'global_update') {
         // Handle global updates that affect all users

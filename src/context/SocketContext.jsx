@@ -168,13 +168,13 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
       
-      // Dispatch a custom event to allow MagicPointsContext to react
+      // Dispatch a custom event to allow MagicPointsContext to react IMMEDIATELY
       const event = new CustomEvent('magicPointsSocketUpdate', {
         detail: { type: 'sync_update', data }
       });
       window.dispatchEvent(event);
       
-      // Enhanced user update handling
+      // Enhanced user update handling with immediate effect
       if (data.type === 'user_update' && data.data?.updatedFields) {
         const updatedFields = data.data.updatedFields;
         
@@ -182,7 +182,7 @@ export const SocketProvider = ({ children }) => {
         if (updatedFields.house && user) {
           console.log(`[SOCKET] House updated from server: ${updatedFields.house}`);
           
-          // Update user object in AuthContext
+          // Update user object in AuthContext with high priority
           setUser(prevUser => {
             if (!prevUser) return prevUser;
             
@@ -197,7 +197,7 @@ export const SocketProvider = ({ children }) => {
             
             // Dispatch a custom event for other components that might need to react
             const houseEvent = new CustomEvent('userHouseChanged', {
-              detail: { house: updatedFields.house }
+              detail: { house: updatedFields.house, immediate: true }
             });
             window.dispatchEvent(houseEvent);
             
@@ -234,11 +234,12 @@ export const SocketProvider = ({ children }) => {
               ...prev.slice(0, 9)
             ]);
             
-            // Dispatch a custom event for MagicPointsContext
+            // Dispatch a custom event for MagicPointsContext with high priority flag
             const pointsEvent = new CustomEvent('magicPointsUpdated', {
               detail: { 
                 points: newPoints,
-                source: 'serverSync'
+                source: 'serverSync',
+                immediate: true
               }
             });
             window.dispatchEvent(pointsEvent);
@@ -278,9 +279,9 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received house update:', data);
       setLastMessage({ type: 'house_update', data, timestamp: new Date() });
       
-      // Dispatch custom event for MagicPointsContext
+      // Dispatch custom event for MagicPointsContext with immediate flag
       const event = new CustomEvent('magicPointsSocketUpdate', {
-        detail: { type: 'house_update', data }
+        detail: { type: 'house_update', data, immediate: true }
       });
       window.dispatchEvent(event);
       
@@ -298,6 +299,15 @@ export const SocketProvider = ({ children }) => {
           },
           ...prev.slice(0, 9)
         ]);
+        
+        // Force an immediate check for updated points if this affects the user's house
+        if (user?.house === data.house) {
+          // Immediate update without delay
+          const pointsEvent = new CustomEvent('checkHousePointsUpdate', {
+            detail: { house: data.house, immediate: true }
+          });
+          window.dispatchEvent(pointsEvent);
+        }
       }
     });
 
