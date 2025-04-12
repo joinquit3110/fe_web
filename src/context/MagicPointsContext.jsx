@@ -7,6 +7,9 @@ import {
   checkAuthStatus 
 } from "../api/magicPointsApi";
 
+// API URL for direct calls
+const API_URL = "https://be-web-6c4k.onrender.com/api";
+
 // Create context
 const MagicPointsContext = createContext();
 
