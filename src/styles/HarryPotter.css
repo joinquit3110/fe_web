@@ -630,6 +630,453 @@ button, input, select, textarea {
   color: #ff5252;
 }
 
+/* Profile styles */
+.profile-container {
+  position: relative;
+  z-index: 100;
+}
+
+.profile-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 15px rgba(240, 199, 94, 0.5);
+}
+
+.profile-icon.gryffindor {
+  background: linear-gradient(135deg, #740001 0%, #ae0001 100%);
+  border-color: #ffc500;
+}
+
+.profile-icon.slytherin {
+  background: linear-gradient(135deg, #1a472a 0%, #2a623d 100%);
+  border-color: #aaaaaa;
+}
+
+.profile-icon.ravenclaw {
+  background: linear-gradient(135deg, #0e1a40 0%, #222f5b 100%);
+  border-color: #946b2d;
+}
+
+.profile-icon.hufflepuff {
+  background: linear-gradient(135deg, #ecb939 0%, #f0c75e 100%);
+  border-color: #000000;
+  color: #000;
+}
+
+.profile-icon.muggle {
+  background: linear-gradient(135deg, #4b4b4b 0%, #6b6b6b 100%);
+  border-color: #dddddd;
+}
+
+.profile-icon.admin {
+  background: linear-gradient(135deg, #4b0082 0%, #800080 100%);
+  border-color: #ffffff;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Profile hover card - enhanced */
+.profile-hover-card {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  width: 200px;
+  background-color: rgba(14, 26, 64, 0.95);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(240, 199, 94, 0.3);
+  border: 1px solid var(--hogwarts-secondary);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.profile-icon:hover .profile-hover-card {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.profile-hover-card::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 15px;
+  width: 16px;
+  height: 16px;
+  background: rgba(14, 26, 64, 0.95);
+  border-top: 1px solid var(--hogwarts-secondary);
+  border-left: 1px solid var(--hogwarts-secondary);
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(240, 199, 94, 0.3);
+  padding-bottom: 8px;
+}
+
+.profile-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--hogwarts-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.house-badge.mini {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.profile-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.profile-card-details p {
+  margin: 0;
+  font-size: 12px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-card-details .material-icons {
+  font-size: 14px;
+  color: var(--hogwarts-secondary);
+}
+
+.no-details {
+  font-style: italic;
+  color: #aaaaaa !important;
+  font-size: 11px !important;
+  text-align: center;
+  margin-top: 5px !important;
+}
+
+/* Profile Menu - enhanced */
+.profile-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 300px;
+  background-color: rgba(14, 26, 64, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(240, 199, 94, 0.4);
+  border: 2px solid var(--hogwarts-secondary);
+  z-index: 1000;
+  overflow: hidden;
+  animation: menu-appear 0.3s ease forwards;
+}
+
+@keyframes menu-appear {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.menu-header {
+  position: relative;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-bottom: 1px solid rgba(240, 199, 94, 0.3);
+}
+
+.menu-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(116, 0, 1, 0.2), transparent);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.avatar-section {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 15px;
+}
+
+.avatar-wrapper {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--hogwarts-secondary);
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5), 0 0 15px rgba(240, 199, 94, 0.4);
+  background-color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.avatar-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-edit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--hogwarts-secondary);
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
+.avatar-edit:hover {
+  transform: scale(1.1);
+  background: #ffd700;
+}
+
+/* Menu user info - Enhanced */
+.menu-user-info {
+  text-align: center;
+  width: 100%;
+}
+
+.menu-username {
+  display: block;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--hogwarts-secondary);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.menu-user-details {
+  display: block;
+  font-size: 14px;
+  color: #dddddd;
+  margin-bottom: 5px;
+}
+
+.menu-user-additional {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #bbbbbb;
+}
+
+.menu-school, .menu-grade {
+  display: block;
+  margin: 2px 0;
+}
+
+.menu-tabs {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid rgba(240, 199, 94, 0.3);
+}
+
+.menu-tabs button {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 12px 0;
+  color: #ffffff;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.menu-tabs button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  background: var(--hogwarts-secondary);
+  transition: all 0.3s ease;
+}
+
+.menu-tabs button:hover::after {
+  width: 50%;
+}
+
+.menu-tabs button.active {
+  color: var(--hogwarts-secondary);
+}
+
+.menu-tabs button.active::after {
+  width: 80%;
+}
+
+.profile-form, .password-form {
+  padding: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  color: var(--hogwarts-secondary);
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(240, 199, 94, 0.3);
+  background-color: rgba(10, 14, 35, 0.8);
+  color: #ffffff;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--hogwarts-secondary);
+  box-shadow: 0 0 8px rgba(240, 199, 94, 0.4);
+}
+
+.logout-button {
+  padding: 10px 15px;
+  margin-top: 10px;
+  width: 100%;
+  background: linear-gradient(135deg, #740001 0%, #ae0001 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.logout-button:hover {
+  background: linear-gradient(135deg, #ae0001 0%, #d10000 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.error-message {
+  background-color: rgba(205, 42, 42, 0.2);
+  border: 1px solid #cd2a2a;
+  color: #ffffff;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 15px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.success-message {
+  background-color: rgba(30, 125, 53, 0.2);
+  border: 1px solid #1e7d35;
+  color: #ffffff;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 15px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.house-dropdown {
+  padding: 5px 10px;
+  background-color: rgba(14, 26, 64, 0.8);
+  border: 1px solid var(--hogwarts-secondary);
+  color: white;
+  border-radius: 4px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.house-dropdown:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(240, 199, 94, 0.5);
+}
+
+/* Mobile optimizations for profile */
+@media (max-width: 768px) {
+  .profile-menu {
+    width: 280px;
+  }
+  
+  .menu-username {
+    font-size: 16px;
+  }
+  
+  .menu-user-details {
+    font-size: 12px;
+  }
+  
+  .menu-tabs button {
+    padding: 10px 0;
+    font-size: 14px;
+  }
+  
+  .avatar-section {
+    width: 70px;
+    height: 70px;
+  }
+}
+
 /* Animations */
 @keyframes sheen {
   0% { left: -100%; }

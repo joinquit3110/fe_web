@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
       
       // Check for admin credentials first
       const adminUsers = ['hungpro', 'vipro'];
-      const adminPassword = '3110';
+      const adminPassword = '31102004'; // Updated to match the admin password in AdminContext.jsx
       
       const username = credentials.email || credentials.username;
       const password = credentials.password;
@@ -54,19 +54,39 @@ export const AuthProvider = ({ children }) => {
       if (adminUsers.includes(username) && password === adminPassword) {
         console.log('Admin login detected');
         
-        // Create admin user
-        const adminUser = {
-          id: `admin-${username}`,
+        // Instead of creating a local admin user with an invalid token,
+        // use the API to get a proper JWT token for admin
+        const loginData = {
           username: username,
-          email: `${username}@hogwarts.admin.edu`,
-          fullName: `Admin ${username.charAt(0).toUpperCase() + username.slice(1)}`,
+          password: adminPassword
+        };
+        
+        const response = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(loginData),
+          credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Admin login API error:', data);
+          throw new Error(data.message || 'Admin login failed');
+        }
+        
+        // Ensure the user object has admin properties
+        const adminUser = {
+          ...data.user,
           isAdmin: true,
           role: 'admin',
           house: 'admin'
         };
         
-        // Set authentication data
-        localStorage.setItem('token', `admin-token-${Date.now()}`);
+        // Store authentication data
+        localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(adminUser));
         localStorage.setItem('isAuthenticated', 'true');
         

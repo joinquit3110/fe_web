@@ -37,6 +37,19 @@ const UserProfile = ({ user: propUser }) => {
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const imageRef = useRef(null);
   
+  // Log user data for debugging
+  useEffect(() => {
+    if (user) {
+      console.log('User data loaded:', {
+        username: user.username,
+        fullName: user.fullName,
+        school: user.school,
+        grade: user.grade,
+        house: user.house
+      });
+    }
+  }, [user]);
+
   useEffect(() => {
     return () => {
       if (imagePreview) {
@@ -82,15 +95,15 @@ const UserProfile = ({ user: propUser }) => {
     return name ? name.charAt(0).toUpperCase() : 'W';
   };
 
-  // Lấy house từ dữ liệu người dùng thay vì tạo ngẫu nhiên
+  // Get house from user data instead of generating randomly
   const getHouseClass = (username) => {
-    // Nếu user có thuộc tính house, sử dụng nó
+    // If user has a house property, use it
     if (user && user.house) {
-      return user.house.toLowerCase(); // Đảm bảo viết thường để phù hợp với CSS classes
+      return user.house.toLowerCase(); // Ensure lowercase to match CSS classes
     }
     
-    // Fallback nếu không có thông tin house trong dữ liệu người dùng
-    // Giữ lại logic cũ làm phương án dự phòng
+    // Fallback if no house information in user data
+    // Keep old logic as a backup plan
     if (!username) return 'gryffindor';
     
     const sum = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -162,20 +175,20 @@ const UserProfile = ({ user: propUser }) => {
       const response = await fetch(croppedImageUrl);
       const blob = await response.blob();
       
-      // Hiển thị thông báo đang tải lên
-      setSuccess('Đang tải ảnh lên...');
+      // Show uploading notification
+      setSuccess('Uploading image...');
       
-      // Tạo FormData để tải lên
+      // Create FormData for upload
       const formData = new FormData();
       formData.append('image', blob, 'avatar.jpg');
       
-      // Sử dụng ImgBB làm dịch vụ lưu trữ ảnh thay thế
-      const imgbbApiKey = '2a641ab1b775ca9624cce32873427f43'; // Free API key cho demo
+      // Use ImgBB as alternative image hosting service
+      const imgbbApiKey = '2a641ab1b775ca9624cce32873427f43'; // Free API key for demo
       const imgbbUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
       
       console.log('[AVATAR] Uploading image to ImgBB...');
       
-      // Upload ảnh lên ImgBB
+      // Upload image to ImgBB
       const imgbbResponse = await fetch(imgbbUrl, {
         method: 'POST',
         body: formData
@@ -191,21 +204,21 @@ const UserProfile = ({ user: propUser }) => {
         throw new Error('ImgBB upload failed');
       }
       
-      // Lấy URL ảnh từ ImgBB
+      // Get image URL from ImgBB
       const avatarUrl = imgbbData.data.url;
       console.log('[AVATAR] Image uploaded successfully:', avatarUrl);
       
-      // Lấy token từ localStorage
+      // Get token from localStorage
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
       if (!token) {
         throw new Error('Authentication required');
       }
       
-      // Cập nhật URL avatar vào profile người dùng
+      // Update avatar URL in user profile
       await updateProfile({ avatar: avatarUrl });
       
-      // Cập nhật UI
+      // Update UI
       setAvatar(avatarUrl);
       setSuccess('Avatar updated successfully!');
     } catch (err) {
@@ -275,18 +288,18 @@ const UserProfile = ({ user: propUser }) => {
           getInitials(user.fullName || user.username)
         )}
         
-        {/* Thêm card hiển thị thông tin khi hover */}
+        {/* Add card to display info on hover */}
         <div className="profile-hover-card">
           <div className="profile-card-header">
             <span className={`house-badge mini ${userHouse}`}>{userHouse.toUpperCase()}</span>
-            <h3>{user.username}</h3>
+            <h3>{user.fullName || user.username}</h3>
           </div>
           <div className="profile-card-details">
-            {user.fullName && <p><i className="material-icons">person</i> {user.fullName}</p>}
+            <p><i className="material-icons">account_circle</i> {user.username}</p>
             {user.school && <p><i className="material-icons">school</i> {user.school}</p>}
             {user.grade && <p><i className="material-icons">class</i> {user.grade}</p>}
-            {!(user.fullName || user.school || user.grade) && 
-              <p className="no-details">Nhấn để cập nhật thông tin cá nhân</p>
+            {!(user.school || user.grade) && 
+              <p className="no-details">Click to update your personal information</p>
             }
           </div>
         </div>
@@ -296,52 +309,20 @@ const UserProfile = ({ user: propUser }) => {
         <div className="profile-menu">
           <div className="menu-header">
             <div className="avatar-section">
-              {!showCrop ? (
-                <div 
-                  className={`avatar-container ${userHouse}`} 
-                  onClick={handleAvatarClick}
-                  title="Change avatar"
-                >
-                  {avatar ? (
-                    <img src={avatar} alt={user.username} className="profile-avatar" />
-                  ) : (
-                    <div className="default-avatar">{getInitials(user.fullName || user.username)}</div>
-                  )}
-                  <div className="avatar-overlay">
-                    <i className="material-icons">photo_camera</i>
-                  </div>
+              <div 
+                className={`avatar-wrapper ${userHouse}`} 
+                onClick={handleAvatarClick}
+                title="Change avatar"
+              >
+                {avatar ? (
+                  <img src={avatar} alt={user.username} className="avatar-img" />
+                ) : (
+                  getInitials(user.fullName || user.username)
+                )}
+                <div className="avatar-edit">
+                  <i className="material-icons">photo_camera</i>
                 </div>
-              ) : (
-                <div className="crop-container">
-                  {imagePreview && (
-                    <ReactCrop
-                      src={imagePreview}
-                      crop={crop}
-                      onChange={newCrop => setCrop(newCrop)}
-                      onComplete={onCropComplete}
-                      circularCrop
-                      className="crop-tool"
-                    >
-                      <img ref={imageRef} src={imagePreview} alt="Upload preview" />
-                    </ReactCrop>
-                  )}
-                  <div className="crop-actions">
-                    <button 
-                      className="crop-button save"
-                      onClick={uploadCroppedAvatar} 
-                      disabled={!croppedImageUrl}
-                    >
-                      Save
-                    </button>
-                    <button 
-                      className="crop-button cancel"
-                      onClick={cancelCrop}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -352,36 +333,77 @@ const UserProfile = ({ user: propUser }) => {
             </div>
             
             <div className="menu-user-info">
-              <span className="menu-username">{user.username}</span>
-              <div className="profile-house">
-                <span className="house-label">HOUSE OF</span> 
-                {isAdmin ? (
-                  <select 
-                    className="house-dropdown" 
-                    value={userHouse}
-                    onChange={(e) => {
-                      // Save house preference in localStorage for persistence
-                      localStorage.setItem('userHouse', e.target.value);
-                      // Use a different event name to avoid confusion
-                      const changeEvent = new CustomEvent('houseChange', {
-                        detail: { house: e.target.value }
-                      });
-                      document.dispatchEvent(changeEvent);
-                    }}
-                  >
-                    <option value="gryffindor">GRYFFINDOR</option>
-                    <option value="slytherin">SLYTHERIN</option>
-                    <option value="ravenclaw">RAVENCLAW</option>
-                    <option value="hufflepuff">HUFFLEPUFF</option>
-                    <option value="muggle">MUGGLE</option>
-                  </select>
-                ) : (
-                  <span className={`house-badge ${userHouse}`}>
-                    {userHouse.toUpperCase()}
-                  </span>
-                )}
+              <span className="menu-username">{user.fullName || user.username}</span>
+              <span className="menu-user-details">@{user.username}</span>
+              <div className="menu-user-additional">
+                {user.school && <span className="menu-school"><i className="material-icons">school</i> {user.school}</span>}
+                {user.grade && <span className="menu-grade"><i className="material-icons">class</i> Grade: {user.grade}</span>}
+                {!(user.school || user.grade) && 
+                  <span className="no-details">Complete your profile information</span>
+                }
               </div>
             </div>
+          </div>
+          
+          {showCrop && (
+            <div className="crop-container">
+              {imagePreview && (
+                <ReactCrop
+                  src={imagePreview}
+                  crop={crop}
+                  onChange={newCrop => setCrop(newCrop)}
+                  onComplete={onCropComplete}
+                  circularCrop
+                  className="crop-tool"
+                >
+                  <img ref={imageRef} src={imagePreview} alt="Upload preview" />
+                </ReactCrop>
+              )}
+              <div className="crop-actions">
+                <button 
+                  className="crop-button save"
+                  onClick={uploadCroppedAvatar} 
+                  disabled={!croppedImageUrl}
+                >
+                  Save
+                </button>
+                <button 
+                  className="crop-button cancel"
+                  onClick={cancelCrop}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div className="profile-house">
+            <span className="house-label">HOUSE OF</span> 
+            {isAdmin ? (
+              <select 
+                className="house-dropdown" 
+                value={userHouse}
+                onChange={(e) => {
+                  // Save house preference in localStorage for persistence
+                  localStorage.setItem('userHouse', e.target.value);
+                  // Use a different event name to avoid confusion
+                  const changeEvent = new CustomEvent('houseChange', {
+                    detail: { house: e.target.value }
+                  });
+                  document.dispatchEvent(changeEvent);
+                }}
+              >
+                <option value="gryffindor">GRYFFINDOR</option>
+                <option value="slytherin">SLYTHERIN</option>
+                <option value="ravenclaw">RAVENCLAW</option>
+                <option value="hufflepuff">HUFFLEPUFF</option>
+                <option value="muggle">MUGGLE</option>
+              </select>
+            ) : (
+              <span className={`house-badge ${userHouse}`}>
+                {userHouse.toUpperCase()}
+              </span>
+            )}
           </div>
           
           <div className="menu-tabs">
@@ -490,7 +512,7 @@ const UserProfile = ({ user: propUser }) => {
             </form>
           )}
           
-          <button className="logout-btn" onClick={handleLogout}>
+          <button className="logout-button" onClick={handleLogout}>
             <i className="material-icons">exit_to_app</i> LEAVE HOGWARTS
           </button>
         </div>
