@@ -20,6 +20,43 @@ export const useMagicPoints = () => useContext(MagicPointsContext);
 const MAX_RETRIES = 5;
 const DEFAULT_POINTS = 100;
 
+// Function to clear needsSync flag - completely rewritten to avoid circular dependencies
+// Define this before any functions that might call it
+const clearNeedSync = async (token) => {
+  try {
+    if (!token) return;
+    
+    const authResponse = await fetch(`${API_URL}/auth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!authResponse.ok) return;
+    
+    const data = await authResponse.json();
+    if (!data.authenticated) return;
+    
+    // Update user to clear needsSync flag
+    await fetch(`${API_URL}/users/${data.userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        needsSync: false,
+        lastSyncedAt: new Date().toISOString()
+      })
+    });
+
+    return true;
+  } catch (error) {
+    console.error('[POINTS] Error clearing sync flag:', error);
+    return false;
+  }
+};
+
 export const MagicPointsProvider = ({ children }) => {
   const [magicPoints, setMagicPoints] = useState(DEFAULT_POINTS);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -98,7 +135,7 @@ export const MagicPointsProvider = ({ children }) => {
       const user = await checkNeedSyncInternal();
       if (user?.needsSync) {
         console.log('[POINTS] User was marked for sync while offline, clearing flag');
-        await clearNeedSync();
+        await clearNeedSync(token);
       }
     } catch (error) {
       console.error('[POINTS] Error fetching current points:', error);
@@ -159,7 +196,9 @@ export const MagicPointsProvider = ({ children }) => {
       if (userData?.needsSync) {
         console.log('[POINTS] User needs sync from server, initiating sync');
         await fetchCurrentPointsRef.current();
-        await clearNeedSync(); // Clear the flag after sync
+        // Get token and use the standalone clearNeedSync function
+        const token = localStorage.getItem('token');
+        await clearNeedSync(token);
       }
       
       return userData;
@@ -167,7 +206,7 @@ export const MagicPointsProvider = ({ children }) => {
       console.error('[POINTS] Error in checkNeedSync:', error);
       return null;
     }
-  }, [isAuthenticated, isOnline]);
+  }, []);
 
   // Define syncToServer function declaration FIRST (moved up)
   const syncToServer = useCallback(async () => {
@@ -685,43 +724,6 @@ export const MagicPointsProvider = ({ children }) => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
     };
   }, [checkServerPoints, isSyncing, resetRevelioAttempts]);
-
-  // Function to clear needsSync flag - fixed to avoid circular reference
-  const clearNeedSync = useCallback(async () => {
-    try {
-      // Use current state values directly instead of relying on closure variables
-      if (!isAuthenticated || !isOnline) return;
-      
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      
-      const authResponse = await fetch(`${API_URL}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!authResponse.ok) return;
-      
-      const data = await authResponse.json();
-      if (!data.authenticated) return;
-      
-      // Update user to clear needsSync flag
-      await fetch(`${API_URL}/users/${data.userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          needsSync: false,
-          lastSyncedAt: new Date().toISOString()
-        })
-      });
-    } catch (error) {
-      console.error('[POINTS] Error clearing sync flag:', error);
-    }
-  }, [isOnline, isAuthenticated]); // Add dependencies directly
 
   const addPoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
