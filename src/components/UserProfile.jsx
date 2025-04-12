@@ -78,11 +78,17 @@ const UserProfile = () => {
     return name ? name.charAt(0).toUpperCase() : 'W';
   };
 
-  // Assign a Hogwarts house based on username
+  // Lấy house từ dữ liệu người dùng thay vì tạo ngẫu nhiên
   const getHouseClass = (username) => {
+    // Nếu user có thuộc tính house, sử dụng nó
+    if (user && user.house) {
+      return user.house.toLowerCase(); // Đảm bảo viết thường để phù hợp với CSS classes
+    }
+    
+    // Fallback nếu không có thông tin house trong dữ liệu người dùng
+    // Giữ lại logic cũ làm phương án dự phòng
     if (!username) return 'gryffindor';
     
-    // Simple hashing of username to pick a house
     const sum = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const houses = ['gryffindor', 'slytherin', 'ravenclaw', 'hufflepuff'];
     return houses[sum % houses.length];
@@ -156,24 +162,46 @@ const UserProfile = () => {
       const formData = new FormData();
       formData.append('avatar', file);
       
+      // Lấy token từ localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      // Gửi request đến endpoint chính xác và log thông tin
+      console.log('[AVATAR] Sending avatar upload request to API');
+      console.log(`[AVATAR] Token format: ${token.substring(0, 10)}...`);
+      
       const apiResponse = await fetch(`${API_URL}/auth/avatar`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       });
 
+      console.log(`[AVATAR] Response status: ${apiResponse.status}`);
+      
       if (apiResponse.ok) {
-        const { avatarUrl } = await apiResponse.json();
+        const data = await apiResponse.json();
+        console.log('[AVATAR] Upload successful:', data);
+        
+        const avatarUrl = data.avatarUrl || data.avatar;
         setAvatar(avatarUrl);
         setSuccess('Avatar updated successfully!');
-        updateProfile({ ...user, avatar: avatarUrl });
+        
+        // Cập nhật thông tin người dùng với avatar mới
+        updateProfile({ avatar: avatarUrl });
       } else {
-        throw new Error('Failed to upload avatar');
+        // Log chi tiết lỗi
+        const errorData = await apiResponse.text();
+        console.error('[AVATAR] Upload failed:', apiResponse.status, errorData);
+        throw new Error(`Failed to upload avatar: ${apiResponse.status}`);
       }
     } catch (err) {
-      setError('Failed to update avatar');
+      console.error('[AVATAR] Error:', err);
+      setError(`Failed to update avatar: ${err.message}`);
     } finally {
       // Clean up
       setShowCrop(false);
