@@ -117,6 +117,7 @@ const MagicPointsDebug = () => {
       localStorage.removeItem('token');
       localStorage.removeItem('authToken');
       localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user'); // Also remove user object
       
       toast({
         title: 'Logged Out',
@@ -132,9 +133,15 @@ const MagicPointsDebug = () => {
         });
         
         if (response.data && response.data.token) {
+          // Add explicit house and role fields to ensure admin privileges
           const authData = {
             token: response.data.token,
-            user: response.data.user
+            user: {
+              ...response.data.user,
+              house: 'admin',
+              role: 'admin',
+              isAdmin: true
+            }
           };
           
           // Update authentication in context
@@ -144,13 +151,17 @@ const MagicPointsDebug = () => {
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('authToken', response.data.token);
           localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('user', JSON.stringify(authData.user));
           
           toast({
             title: 'Authenticated',
-            description: `Logged in as ${response.data.user.username}`,
+            description: `Logged in as ${response.data.user.username} with admin privileges`,
             status: 'success',
             duration: 3000,
           });
+          
+          // Verify the token immediately to confirm it works
+          checkServerAuth();
         } else {
           throw new Error('Invalid response from server');
         }

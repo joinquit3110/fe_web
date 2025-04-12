@@ -204,39 +204,77 @@ export const AdminProvider = ({ children }) => {
         throw new Error('Authentication token not found');
       }
       
-      // Call backend to reset points for these users
-      const response = await axios.post(`${API_URL}/users/bulk-update`, 
-        { 
-          userIds: targetUserIds,
-          magicPoints: 100,
-          reason: 'Points reset by admin'
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+      // Get user info if available - helps with debugging
+      const userStr = localStorage.getItem('user');
+      const userInfo = userStr ? JSON.parse(userStr) : {};
+      console.log('Current user info:', userInfo);
+      
+      // Log auth header to help with debugging
+      console.log('Using auth header:', `Bearer ${token.substring(0, 10)}...`);
+      
+      try {
+        // Call backend to reset points for these users
+        const response = await axios.post(`${API_URL}/users/bulk-update`, 
+          { 
+            userIds: targetUserIds,
+            magicPoints: 100,
+            reason: 'Points reset by admin'
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
+        );
+        
+        console.log('Reset points response:', response.data);
+        
+        // Update local state to reflect changes
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            targetUserIds.includes(user._id || user.id) 
+              ? { ...user, magicPoints: 100 } 
+              : user
+          )
+        );
+        
+        // Force sync all users who had points reset
+        await forceSyncForUsers(targetUserIds);
+        
+        // Refresh user data
+        await fetchUsers();
+        
+        return true;
+      } catch (apiError) {
+        // Enhanced error handling with more detail
+        console.error('API Error in resetPointsForUsers:', apiError);
+        
+        if (apiError.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error('API Error details:', {
+            status: apiError.response.status,
+            headers: apiError.response.headers,
+            data: apiError.response.data
+          });
+          
+          if (apiError.response.status === 403) {
+            // Try to reauthenticate - the token might be expired or invalid
+            throw new Error('Authentication failed: You do not have admin privileges or your session has expired. Please log out and log back in.');
+          } else if (apiError.response.status === 401) {
+            throw new Error('Authentication required: Your session has expired. Please log out and log back in.');
+          } else {
+            throw new Error(`Server error: ${apiError.response.data?.message || apiError.message || 'Unknown error'}`);
+          }
+        } else if (apiError.request) {
+          // The request was made but no response was received
+          throw new Error('Network error: No response received from server. Please check your internet connection.');
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          throw new Error(`Request error: ${apiError.message}`);
         }
-      );
-      
-      console.log('Reset points response:', response.data);
-      
-      // Update local state to reflect changes
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          targetUserIds.includes(user._id || user.id) 
-            ? { ...user, magicPoints: 100 } 
-            : user
-        )
-      );
-      
-      // Force sync all users who had points reset
-      await forceSyncForUsers(targetUserIds);
-      
-      // Refresh user data
-      await fetchUsers();
-      
-      return true;
+      }
     } catch (err) {
       console.error('Error resetting points:', err);
       setError(err.message || 'Failed to reset points');
