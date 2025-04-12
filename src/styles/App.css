@@ -593,7 +593,7 @@ button, input, select, textarea {
 
 /* Profile styles */
 .profile-container {
-  position: absolute;
+  position: relative;
   top: 20px;
   right: 20px;
   z-index: 10;
@@ -641,6 +641,118 @@ button, input, select, textarea {
   animation: menu-appear 0.3s ease-out;
   transform-origin: top right;
   backdrop-filter: blur(10px);
+}
+
+/* Profile hover card styles */
+.profile-container {
+  position: relative;
+}
+
+.profile-icon {
+  position: relative;
+}
+
+.profile-hover-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -10px;
+  width: 250px;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.profile-icon:hover .profile-hover-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(211, 166, 37, 0.3);
+  padding-bottom: 8px;
+}
+
+.profile-card-header h3 {
+  font-family: 'Cinzel', serif;
+  color: var(--secondary-color);
+  margin: 0;
+  font-size: 16px;
+}
+
+.house-badge.mini {
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 3px;
+}
+
+.profile-card-details {
+  font-size: 14px;
+}
+
+.profile-card-details p {
+  display: flex;
+  align-items: center;
+  margin: 6px 0;
+  color: var(--text-primary);
+}
+
+.profile-card-details .material-icons {
+  font-size: 16px;
+  margin-right: 8px;
+  color: var(--secondary-color);
+}
+
+.profile-card-details .no-details {
+  font-style: italic;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 10px 0;
+}
+
+/* Improve autocomplete styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Mobile optimization for profile menu */
+@media (max-width: 768px) {
+  .profile-menu {
+    max-width: 90vw;
+    width: 300px;
+    right: -15px;
+  }
+  
+  .profile-hover-card {
+    width: 220px;
+    right: -15px;
+  }
+  
+  .crop-container {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .crop-tool {
+    max-width: 100%;
+  }
 }
 
 /* Sửa style cho menu profile */

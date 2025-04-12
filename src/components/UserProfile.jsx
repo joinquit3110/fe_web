@@ -154,13 +154,42 @@ const UserProfile = () => {
     if (!croppedImageUrl) return;
     
     try {
-      // Convert the cropped image URL to a file
+      // Convert the cropped image URL to a blob
       const response = await fetch(croppedImageUrl);
       const blob = await response.blob();
-      const file = new File([blob], "cropped-avatar.jpg", { type: "image/jpeg" });
       
+      // Hiển thị thông báo đang tải lên
+      setSuccess('Đang tải ảnh lên...');
+      
+      // Tạo FormData để tải lên
       const formData = new FormData();
-      formData.append('avatar', file);
+      formData.append('image', blob, 'avatar.jpg');
+      
+      // Sử dụng ImgBB làm dịch vụ lưu trữ ảnh thay thế
+      const imgbbApiKey = '2a641ab1b775ca9624cce32873427f43'; // Free API key cho demo
+      const imgbbUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
+      
+      console.log('[AVATAR] Uploading image to ImgBB...');
+      
+      // Upload ảnh lên ImgBB
+      const imgbbResponse = await fetch(imgbbUrl, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!imgbbResponse.ok) {
+        throw new Error(`ImgBB upload failed: ${imgbbResponse.status}`);
+      }
+      
+      const imgbbData = await imgbbResponse.json();
+      
+      if (!imgbbData.success) {
+        throw new Error('ImgBB upload failed');
+      }
+      
+      // Lấy URL ảnh từ ImgBB
+      const avatarUrl = imgbbData.data.url;
+      console.log('[AVATAR] Image uploaded successfully:', avatarUrl);
       
       // Lấy token từ localStorage
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -169,36 +198,12 @@ const UserProfile = () => {
         throw new Error('Authentication required');
       }
       
-      // Gửi request đến endpoint chính xác và log thông tin
-      console.log('[AVATAR] Sending avatar upload request to API');
-      console.log(`[AVATAR] Token format: ${token.substring(0, 10)}...`);
+      // Cập nhật URL avatar vào profile người dùng
+      await updateProfile({ avatar: avatarUrl });
       
-      const apiResponse = await fetch(`${API_URL}/auth/avatar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      console.log(`[AVATAR] Response status: ${apiResponse.status}`);
-      
-      if (apiResponse.ok) {
-        const data = await apiResponse.json();
-        console.log('[AVATAR] Upload successful:', data);
-        
-        const avatarUrl = data.avatarUrl || data.avatar;
-        setAvatar(avatarUrl);
-        setSuccess('Avatar updated successfully!');
-        
-        // Cập nhật thông tin người dùng với avatar mới
-        updateProfile({ avatar: avatarUrl });
-      } else {
-        // Log chi tiết lỗi
-        const errorData = await apiResponse.text();
-        console.error('[AVATAR] Upload failed:', apiResponse.status, errorData);
-        throw new Error(`Failed to upload avatar: ${apiResponse.status}`);
-      }
+      // Cập nhật UI
+      setAvatar(avatarUrl);
+      setSuccess('Avatar updated successfully!');
     } catch (err) {
       console.error('[AVATAR] Error:', err);
       setError(`Failed to update avatar: ${err.message}`);
@@ -265,6 +270,22 @@ const UserProfile = () => {
         ) : (
           getInitials(user.fullName || user.username)
         )}
+        
+        {/* Thêm card hiển thị thông tin khi hover */}
+        <div className="profile-hover-card">
+          <div className="profile-card-header">
+            <span className={`house-badge mini ${userHouse}`}>{userHouse.toUpperCase()}</span>
+            <h3>{user.username}</h3>
+          </div>
+          <div className="profile-card-details">
+            {user.fullName && <p><i className="material-icons">person</i> {user.fullName}</p>}
+            {user.school && <p><i className="material-icons">school</i> {user.school}</p>}
+            {user.grade && <p><i className="material-icons">class</i> {user.grade}</p>}
+            {!(user.fullName || user.school || user.grade) && 
+              <p className="no-details">Nhấn để cập nhật thông tin cá nhân</p>
+            }
+          </div>
+        </div>
       </div>
       
       {showMenu && !isAdmin && (

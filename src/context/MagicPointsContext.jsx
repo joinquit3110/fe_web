@@ -599,6 +599,23 @@ export const MagicPointsProvider = ({ children }) => {
               console.error('[POINTS] Error during admin-triggered sync:', err)
             );
           }, 100);
+        } else if (data.type === 'reset_attempts') {
+          // Admin reset attempts for this user
+          console.log('[POINTS] Admin reset attempts notification received');
+          
+          // Clear all revelioAttempts and correctBlanks
+          resetRevelioAttempts();
+          
+          // Show notification with alert or toast
+          if (typeof window !== 'undefined') {
+            const resetEvent = new CustomEvent('admin-reset-attempts', {
+              detail: { message: data.message || 'Your attempts have been reset' }
+            });
+            window.dispatchEvent(resetEvent);
+          }
+          
+          // Fetch updated points
+          setTimeout(() => checkServerPoints(), 200);
         } else if (data.type === 'user_update') {
           // Direct user update (e.g., house change, points change)
           console.log('[POINTS] Received user update:', data.data);
@@ -632,6 +649,12 @@ export const MagicPointsProvider = ({ children }) => {
             window.dispatchEvent(syncEvent);
           }
           
+          // If resetAttempts flag was set, reset locally
+          if (data.data?.updatedFields?.resetAttempts === true) {
+            console.log('[POINTS] Resetting attempts due to admin request');
+            resetRevelioAttempts();
+          }
+          
           // After receiving any update, check for any other changes after a short delay
           setTimeout(() => checkServerPoints(), 500);
         }
@@ -661,7 +684,7 @@ export const MagicPointsProvider = ({ children }) => {
     return () => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
     };
-  }, [checkServerPoints, isSyncing]);
+  }, [checkServerPoints, isSyncing, resetRevelioAttempts]);
 
   // Function to clear needsSync flag
   const clearNeedSync = useCallback(async () => {

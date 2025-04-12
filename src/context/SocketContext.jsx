@@ -188,46 +188,77 @@ export const SocketProvider = ({ children }) => {
             house: updatedFields.house
           }));
           
-          // Also update localStorage to ensure persistence
-          try {
-            const storedUser = JSON.parse(localStorage.getItem('user'));
-            if (storedUser) {
-              storedUser.house = updatedFields.house;
-              localStorage.setItem('user', JSON.stringify(storedUser));
-            }
-          } catch (err) {
-            console.error('[SOCKET] Error updating house in localStorage:', err);
-          }
+          // Add notification about house change
+          setNotifications(prev => [
+            {
+              id: Date.now(),
+              type: 'info',
+              message: `Your house has been updated to ${updatedFields.house}`,
+              timestamp: new Date()
+            },
+            ...prev.slice(0, 9)
+          ]);
+        }
+        
+        // If magic points were updated, show notification
+        if (updatedFields.magicPoints !== undefined) {
+          console.log(`[SOCKET] Magic points updated from server: ${updatedFields.magicPoints}`);
           
-          // Dispatch house change event for any other components listening
-          const houseEvent = new CustomEvent('userHouseChanged', {
-            detail: { house: updatedFields.house }
-          });
-          window.dispatchEvent(houseEvent);
+          setNotifications(prev => [
+            {
+              id: Date.now(),
+              type: 'info',
+              message: `Your magic points have been updated to ${updatedFields.magicPoints}`,
+              timestamp: new Date()
+            },
+            ...prev.slice(0, 9)
+          ]);
         }
         
-        // Add to notifications with more specific messages
-        let message = 'Your profile has been updated by an admin';
-        
-        if (updatedFields.house) {
-          message = `Your house has been updated to ${updatedFields.house}`;
-        } else if (updatedFields.magicPoints !== undefined) {
-          message = `Your magic points have been updated to ${updatedFields.magicPoints}`;
+        // If resetAttempts was set, show notification
+        if (updatedFields.resetAttempts === true) {
+          console.log('[SOCKET] Reset attempts flag received from server');
+          
+          setNotifications(prev => [
+            {
+              id: Date.now(),
+              type: 'warning',
+              message: 'Your attempts have been reset by admin',
+              timestamp: new Date()
+            },
+            ...prev.slice(0, 9)
+          ]);
         }
-        
+      }
+      
+      // Handle special reset_attempts notification
+      if (data.type === 'reset_attempts') {
+        setNotifications(prev => [
+          {
+            id: Date.now(),
+            type: 'warning',
+            message: data.message || 'Your attempts have been reset by admin',
+            timestamp: new Date()
+          },
+          ...prev.slice(0, 9)
+        ]);
+      }
+      
+      // Handle force_sync notification
+      if (data.type === 'force_sync') {
         setNotifications(prev => [
           {
             id: Date.now(),
             type: 'info',
-            message,
+            message: 'Admin requested sync - updating your data...',
             timestamp: new Date()
           },
-          ...prev.slice(0, 9) 
+          ...prev.slice(0, 9)
         ]);
       }
     });
 
-    // Listen for house_update - for house-wide events
+    // Listen for house_update - events in the user's house room
     socket.on('house_update', (data) => {
       console.log('[SOCKET] Received house update:', data);
       setLastMessage({ type: 'house_update', data, timestamp: new Date() });
@@ -238,13 +269,11 @@ export const SocketProvider = ({ children }) => {
       });
       window.dispatchEvent(event);
       
-      // For house points changes
+      // Add notification for points changes
       if (data.type === 'house_points_changed' || data.type === 'member_points_changed') {
-        const message = data.reason || 
-                       (data.pointsChange ? 
-                        `House points ${data.pointsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(data.pointsChange)}` : 
-                        'House points updated');
-                        
+        const message = data.message || 
+          `${data.username || 'Someone'} in ${data.house} ${data.pointsChange > 0 ? 'earned' : 'lost'} ${Math.abs(data.pointsChange || 0)} points`;
+        
         setNotifications(prev => [
           {
             id: Date.now(),
@@ -280,8 +309,25 @@ export const SocketProvider = ({ children }) => {
       ]);
     });
 
+    // Listen for connection_status updates
+    socket.on('connection_status', (data) => {
+      console.log('[SOCKET] Connection status update:', data);
+      setConnectionQuality(data.quality || 'good');
+      
+      if (data.message) {
+        setNotifications(prev => [
+          {
+            id: Date.now(), 
+            type: data.quality === 'poor' ? 'warning' : 'info',
+            message: data.message,
+            timestamp: new Date()
+          },
+          ...prev.slice(0, 9)
+        ]);
+      }
+    });
+
     return () => {
-      // Remove all listeners when component unmounts or socket changes
       socket.off('sync_update');
       socket.off('house_update');
       socket.off('global_update');

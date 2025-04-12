@@ -197,22 +197,44 @@ export const AdminProvider = ({ children }) => {
         throw new Error('No users selected');
       }
       
-      // In a real implementation, this would call an API endpoint
-      // For now, we'll update the local state
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Call backend to reset points for these users
+      const response = await axios.post(`${API_URL}/users/bulk-update`, 
+        { 
+          userIds: targetUserIds,
+          magicPoints: 100,
+          reason: 'Points reset by admin'
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('Reset points response:', response.data);
+      
+      // Update local state to reflect changes
       setUsers(prevUsers => 
         prevUsers.map(user => 
-          targetUserIds.includes(user.id) 
+          targetUserIds.includes(user._id || user.id) 
             ? { ...user, magicPoints: 100 } 
             : user
         )
       );
       
-      // Reset points in the MagicPointsContext
-      // This is just for demonstration, in a real implementation
-      // the API would handle this
-      if (resetPoints) {
-        await resetPoints();
-      }
+      // Force sync all users who had points reset
+      await forceSyncForUsers(targetUserIds);
+      
+      // Refresh user data
+      await fetchUsers();
       
       return true;
     } catch (err) {
@@ -237,11 +259,41 @@ export const AdminProvider = ({ children }) => {
         throw new Error('No users selected');
       }
       
-      // In a real implementation, this would call an API endpoint
-      // For now, we'll just call the local resetRevelioAttempts
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // Call backend API to mark users for sync with resetAttempts flag
+      const response = await axios.post(`${API_URL}/users/bulk-update`, 
+        { 
+          userIds: targetUserIds,
+          resetAttempts: true,
+          needsSync: true,
+          reason: 'Attempts reset by admin' 
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('Reset attempts response:', response.data);
+      
+      // Force sync all affected users to ensure they get updated
+      await forceSyncForUsers(targetUserIds);
+      
+      // Also reset local revelioAttempts if available
       if (resetRevelioAttempts) {
         resetRevelioAttempts();
       }
+      
+      // Refresh user data
+      await fetchUsers();
       
       return true;
     } catch (err) {
@@ -324,25 +376,9 @@ export const AdminProvider = ({ children }) => {
       
       const userIds = houseUsers.map(user => user._id || user.id);
       
-      // Create a notification for users
-      const notification = {
-        type: pointsChange > 0 ? 'success' : 'warning',
-        title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
-        message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
-        timestamp: new Date().toISOString(),
-        targetUsers: userIds,
-        housesAffected: [house]
-      };
+      // Update points in the database first - this is the critical operation
+      const updatedUserIds = []; // Keep track of successfully updated users
       
-      // Send notification to the backend for real-time delivery
-      await axios.post(`${API_URL}/notifications`, notification, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Update points in the database
       for (const userId of userIds) {
         try {
           // Get current user's points
@@ -358,7 +394,11 @@ export const AdminProvider = ({ children }) => {
           
           // Update user's points
           await axios.patch(`${API_URL}/users/${userId}`, 
-            { magicPoints: newPoints },
+            { 
+              magicPoints: newPoints,
+              lastPointsUpdate: new Date().toISOString(),
+              lastUpdateReason: reason
+            },
             {
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -366,9 +406,62 @@ export const AdminProvider = ({ children }) => {
               }
             }
           );
+          
+          // Add to successful list
+          updatedUserIds.push(userId);
         } catch (userError) {
           console.error(`Error updating points for user ${userId}:`, userError);
           // Continue with other users even if one fails
+        }
+      }
+      
+      // Only try to send notification if points were updated successfully
+      if (updatedUserIds.length > 0) {
+        try {
+          // Create a notification for users - simplified format for better compatibility
+          const notification = {
+            type: pointsChange > 0 ? 'success' : 'warning',
+            title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
+            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
+            house: house,
+            pointsChange: pointsChange
+          };
+          
+          // Send notification to the backend for real-time delivery
+          // Use a try-catch block specifically for the notification
+          // to prevent notification errors from failing the whole operation
+          try {
+            await axios.post(`${API_URL}/notifications`, notification, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            console.log('House notification sent successfully');
+          } catch (notifError) {
+            // Log notification error but don't throw - this shouldn't stop the function
+            console.error('Failed to send notification (non-critical):', notifError);
+          }
+          
+          // Force sync for all affected users
+          // Use the bulk sync endpoint if available
+          try {
+            await axios.post(`${API_URL}/users/force-sync`, 
+              { userIds: updatedUserIds },
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log('Force sync initiated for updated users');
+          } catch (syncError) {
+            console.error('Error initiating sync (non-critical):', syncError);
+          }
+        } catch (postUpdateError) {
+          console.error('Error in post-update operations:', postUpdateError);
+          // Don't throw here - the points were already updated successfully
         }
       }
       
@@ -381,7 +474,7 @@ export const AdminProvider = ({ children }) => {
         )
       );
       
-      return true;
+      return updatedUserIds.length > 0;
     } catch (err) {
       console.error('Error updating house points:', err);
       setError('Failed to update house points: ' + (err.message || 'Unknown error'));
