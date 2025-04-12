@@ -41,6 +41,8 @@ export const MagicPointsProvider = ({ children }) => {
   const forceSyncWithDebugRef = useRef(null);
   // Create fetchCurrentPointsRef to avoid circular dependency
   const fetchCurrentPointsRef = useRef(null);
+  // Create checkServerPointsRef to avoid circular dependency
+  const checkServerPointsRef = useRef(null);
 
   // Fetch current points from server - define the function early to avoid circular dependencies
   const fetchCurrentPoints = useCallback(async () => {
@@ -504,9 +506,12 @@ export const MagicPointsProvider = ({ children }) => {
         // Even if no pending operations, do a lightweight check to ensure
         // our data is up-to-date with the server (could have been changed by admin)
         syncTimeout = setTimeout(() => {
-          checkServerPoints().catch(error => {
-            console.error("[POINTS] Error checking server points:", error);
-          });
+          // Use the ref instead of direct function call to avoid circular dependency
+          if (checkServerPointsRef.current) {
+            checkServerPointsRef.current().catch(error => {
+              console.error("[POINTS] Error checking server points:", error);
+            });
+          }
         }, 5000); // Longer delay for non-critical sync
       }
     }
@@ -565,6 +570,11 @@ export const MagicPointsProvider = ({ children }) => {
       // Don't throw error, just fail silently as this is a background check
     }
   }, [isAuthenticated, isSyncing, magicPoints, pendingChanges, pendingOperations.length]);
+
+  // Update the ref after checkServerPoints is defined
+  useEffect(() => {
+    checkServerPointsRef.current = checkServerPoints;
+  }, [checkServerPoints]);
 
   // Add event listener for socket updates with improved handling
   useEffect(() => {
