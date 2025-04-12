@@ -115,6 +115,7 @@ export const MagicPointsProvider = ({ children }) => {
   const forceSyncWithDebugRef = useRef(null);
   const fetchCurrentPointsRef = useRef(null);
   const checkServerPointsRef = useRef(null);
+  const resetRevelioAttemptsRef = useRef(null);
 
   // Fetch current points from server
   const fetchCurrentPoints = useCallback(async () => {
@@ -631,7 +632,42 @@ export const MagicPointsProvider = ({ children }) => {
     checkServerPointsRef.current = checkServerPoints;
   }, [checkServerPoints]);
 
-  // Add event listener for socket updates with improved handling
+  // Reset all Revelio attempts for a new exercise
+  const resetRevelioAttempts = useCallback((blankIds = []) => {
+    console.log(`[POINTS] Resetting Revelio attempts. Specific blanks: ${blankIds.length > 0 ? blankIds.join(', ') : 'none (all)'}`);
+    
+    if (blankIds.length === 0) {
+      // Reset all blanks if no specific IDs provided
+      console.log('[POINTS] Resetting all revelioAttempts and correctBlanks');
+      setRevelioAttempts({});
+      setCorrectBlanks({});
+      localStorage.removeItem('revelioAttempts');
+      localStorage.removeItem('correctBlanks');
+    } else {
+      // Reset only specific blanks
+      const newRevelioAttempts = { ...revelioAttempts };
+      const newCorrectBlanks = { ...correctBlanks };
+      
+      blankIds.forEach(id => {
+        newRevelioAttempts[id] = true; // true means it's ready for first attempt
+        delete newCorrectBlanks[id]; // Remove from correct blanks
+      });
+      
+      setRevelioAttempts(newRevelioAttempts);
+      setCorrectBlanks(newCorrectBlanks);
+      localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
+      localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
+      console.log('[POINTS] Updated revelioAttempts:', newRevelioAttempts);
+      console.log('[POINTS] Updated correctBlanks:', newCorrectBlanks);
+    }
+  }, [revelioAttempts, correctBlanks]);
+
+  // Store the resetRevelioAttempts function in a ref to avoid circular dependencies
+  useEffect(() => {
+    resetRevelioAttemptsRef.current = resetRevelioAttempts;
+  }, [resetRevelioAttempts]);
+
+  // Add event listener for socket updates with improved handling that avoids circular dependencies
   useEffect(() => {
     // Add event listener for socket sync events with improved handling
     const handleSocketUpdate = (event) => {
@@ -660,8 +696,10 @@ export const MagicPointsProvider = ({ children }) => {
           // Admin reset attempts for this user
           console.log('[POINTS] Admin reset attempts notification received');
           
-          // Clear all revelioAttempts and correctBlanks
-          resetRevelioAttempts();
+          // Clear all revelioAttempts and correctBlanks using the ref to avoid circular dependency
+          if (resetRevelioAttemptsRef.current) {
+            resetRevelioAttemptsRef.current();
+          }
           
           // Show notification with alert or toast
           if (typeof window !== 'undefined') {
@@ -672,7 +710,11 @@ export const MagicPointsProvider = ({ children }) => {
           }
           
           // Fetch updated points
-          setTimeout(() => checkServerPoints(), 200);
+          setTimeout(() => {
+            if (checkServerPointsRef.current) {
+              checkServerPointsRef.current();
+            }
+          }, 200);
         } else if (data.type === 'user_update') {
           // Direct user update (e.g., house change, points change)
           console.log('[POINTS] Received user update:', data.data);
@@ -709,11 +751,18 @@ export const MagicPointsProvider = ({ children }) => {
           // If resetAttempts flag was set, reset locally
           if (data.data?.updatedFields?.resetAttempts === true) {
             console.log('[POINTS] Resetting attempts due to admin request');
-            resetRevelioAttempts();
+            // Use the ref to avoid circular dependency
+            if (resetRevelioAttemptsRef.current) {
+              resetRevelioAttemptsRef.current();
+            }
           }
           
           // After receiving any update, check for any other changes after a short delay
-          setTimeout(() => checkServerPoints(), 500);
+          setTimeout(() => {
+            if (checkServerPointsRef.current) {
+              checkServerPointsRef.current();
+            }
+          }, 500);
         }
       } else if (event.detail?.type === 'global_update') {
         // Handle global updates that affect all users
@@ -723,7 +772,11 @@ export const MagicPointsProvider = ({ children }) => {
         if (['user_house_changed', 'house_points_bulk_update'].includes(event.detail.data.type)) {
           // Stagger the sync to prevent server overload
           const randomDelay = Math.floor(Math.random() * 2000) + 500; // 0.5-2.5 seconds
-          setTimeout(() => checkServerPoints(), randomDelay);
+          setTimeout(() => {
+            if (checkServerPointsRef.current) {
+              checkServerPointsRef.current();
+            }
+          }, randomDelay);
         }
       } else if (event.detail?.type === 'house_update') {
         // Handle house-specific updates
@@ -732,7 +785,11 @@ export const MagicPointsProvider = ({ children }) => {
         // Check for points updates from the server for all house members
         if (['house_points_changed', 'member_points_changed'].includes(event.detail.data.type)) {
           const randomDelay = Math.floor(Math.random() * 1500) + 500; // 0.5-2 seconds
-          setTimeout(() => checkServerPoints(), randomDelay);
+          setTimeout(() => {
+            if (checkServerPointsRef.current) {
+              checkServerPointsRef.current();
+            }
+          }, randomDelay);
         }
       }
     };
@@ -741,7 +798,7 @@ export const MagicPointsProvider = ({ children }) => {
     return () => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
     };
-  }, [checkServerPoints, isSyncing, resetRevelioAttempts]);
+  }, [isSyncing]); // Only depend on isSyncing, use refs for all function calls
 
   // Points management functions
   const addPoints = useCallback((amount, source = '') => {
@@ -833,36 +890,6 @@ export const MagicPointsProvider = ({ children }) => {
     console.log(`[POINTS] Removing ${amount} points (${source})`);
     removePoints(amount, source);
   }, [removePoints]);
-
-  // Reset all Revelio attempts for a new exercise
-  const resetRevelioAttempts = useCallback((blankIds = []) => {
-    console.log(`[POINTS] Resetting Revelio attempts. Specific blanks: ${blankIds.length > 0 ? blankIds.join(', ') : 'none (all)'}`);
-    
-    if (blankIds.length === 0) {
-      // Reset all blanks if no specific IDs provided
-      console.log('[POINTS] Resetting all revelioAttempts and correctBlanks');
-      setRevelioAttempts({});
-      setCorrectBlanks({});
-      localStorage.removeItem('revelioAttempts');
-      localStorage.removeItem('correctBlanks');
-    } else {
-      // Reset only specific blanks
-      const newRevelioAttempts = { ...revelioAttempts };
-      const newCorrectBlanks = { ...correctBlanks };
-      
-      blankIds.forEach(id => {
-        newRevelioAttempts[id] = true; // true means it's ready for first attempt
-        delete newCorrectBlanks[id]; // Remove from correct blanks
-      });
-      
-      setRevelioAttempts(newRevelioAttempts);
-      setCorrectBlanks(newCorrectBlanks);
-      localStorage.setItem('revelioAttempts', JSON.stringify(newRevelioAttempts));
-      localStorage.setItem('correctBlanks', JSON.stringify(newCorrectBlanks));
-      console.log('[POINTS] Updated revelioAttempts:', newRevelioAttempts);
-      console.log('[POINTS] Updated correctBlanks:', newCorrectBlanks);
-    }
-  }, [revelioAttempts, correctBlanks]);
   
   // Define processBlankSubmission first to avoid circular reference issues
   const processBlankSubmission = useCallback((blankId, isCorrect) => {
