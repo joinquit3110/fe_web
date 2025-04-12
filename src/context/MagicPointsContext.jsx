@@ -726,9 +726,9 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [revelioAttempts, correctBlanks]);
   
-  // First define the handleBlankRevelioAttempt before it's referenced by handleMultipleRevelioAttempts
-  const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
-    console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
+  // Define processBlankSubmission first to avoid circular reference issues
+  const processBlankSubmission = useCallback((blankId, isCorrect) => {
+    console.log(`[POINTS] Processing blank submission ${blankId}. Is correct: ${isCorrect}`);
     
     // Check if this blank has already been answered correctly previously
     if (correctBlanks[blankId]) {
@@ -782,13 +782,8 @@ export const MagicPointsProvider = ({ children }) => {
     return isCorrect;
   }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog, magicPoints]);
   
-  // Add a processBlankSubmission function for backward compatibility - MOVED UP TO AVOID CIRCULAR REFERENCE
-  const processBlankSubmission = useCallback((blankId, isCorrect) => {
-    console.log(`[POINTS] Processing blank submission ${blankId}. Is correct: ${isCorrect}`);
-    
-    // This is a backward compatibility function that just calls handleBlankRevelioAttempt
-    return handleBlankRevelioAttempt(blankId, isCorrect);
-  }, [handleBlankRevelioAttempt]);
+  // Then define handleBlankRevelioAttempt which is now just an alias to processBlankSubmission for consistency
+  const handleBlankRevelioAttempt = processBlankSubmission;
   
   // Add batch processing for multiple blanks - keep for backward compatibility
   const processMultipleBlanks = useCallback((results) => {
@@ -809,13 +804,13 @@ export const MagicPointsProvider = ({ children }) => {
     return Promise.all(processingPromises);
   }, [processBlankSubmission]);
 
-  // Then define handleMultipleRevelioAttempts which references handleBlankRevelioAttempt
+  // Then define handleMultipleRevelioAttempts which references processBlankSubmission
   const handleMultipleRevelioAttempts = useCallback((results) => {
     console.log('[POINTS] Processing multiple blanks submission:', results);
     
     // Process each blank individually with updated scoring rules
     const processingPromises = Object.entries(results).map(([blankId, isCorrect]) => 
-      handleBlankRevelioAttempt(blankId, isCorrect)
+      processBlankSubmission(blankId, isCorrect)
     );
     
     // Log overall results
@@ -824,7 +819,7 @@ export const MagicPointsProvider = ({ children }) => {
     console.log(`[POINTS] Revelio results: ${correctCount}/${totalBlanks} correct`);
     
     return Promise.all(processingPromises);
-  }, [handleBlankRevelioAttempt]);
+  }, [processBlankSubmission]);
   
   // Handle inequality format checks
   const handleInequalityFormatCheck = useCallback((isValid, index) => {
