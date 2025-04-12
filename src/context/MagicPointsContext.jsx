@@ -726,25 +726,6 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [revelioAttempts, correctBlanks]);
   
-  // Add batch processing for multiple blanks - keep for backward compatibility
-  const processMultipleBlanks = useCallback((results) => {
-    console.log('[POINTS] Processing multiple blanks submission:', results);
-    
-    let correctCount = 0;
-    let processingPromises = [];
-    
-    // Process each blank
-    Object.entries(results).forEach(([blankId, isCorrect]) => {
-      if (isCorrect) correctCount++;
-      processingPromises.push(processBlankSubmission(blankId, isCorrect));
-    });
-    
-    // No more bonus points for high accuracy
-    console.log(`[POINTS] Results: ${correctCount}/${Object.keys(results).length} correct`);
-    
-    return Promise.all(processingPromises);
-  }, [processBlankSubmission]);
-
   // First define the handleBlankRevelioAttempt before it's referenced by handleMultipleRevelioAttempts
   const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
     console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
@@ -801,6 +782,33 @@ export const MagicPointsProvider = ({ children }) => {
     return isCorrect;
   }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog, magicPoints]);
   
+  // Add a processBlankSubmission function for backward compatibility - MOVED UP TO AVOID CIRCULAR REFERENCE
+  const processBlankSubmission = useCallback((blankId, isCorrect) => {
+    console.log(`[POINTS] Processing blank submission ${blankId}. Is correct: ${isCorrect}`);
+    
+    // This is a backward compatibility function that just calls handleBlankRevelioAttempt
+    return handleBlankRevelioAttempt(blankId, isCorrect);
+  }, [handleBlankRevelioAttempt]);
+  
+  // Add batch processing for multiple blanks - keep for backward compatibility
+  const processMultipleBlanks = useCallback((results) => {
+    console.log('[POINTS] Processing multiple blanks submission:', results);
+    
+    let correctCount = 0;
+    let processingPromises = [];
+    
+    // Process each blank
+    Object.entries(results).forEach(([blankId, isCorrect]) => {
+      if (isCorrect) correctCount++;
+      processingPromises.push(processBlankSubmission(blankId, isCorrect));
+    });
+    
+    // No more bonus points for high accuracy
+    console.log(`[POINTS] Results: ${correctCount}/${Object.keys(results).length} correct`);
+    
+    return Promise.all(processingPromises);
+  }, [processBlankSubmission]);
+
   // Then define handleMultipleRevelioAttempts which references handleBlankRevelioAttempt
   const handleMultipleRevelioAttempts = useCallback((results) => {
     console.log('[POINTS] Processing multiple blanks submission:', results);
@@ -1010,14 +1018,6 @@ export const MagicPointsProvider = ({ children }) => {
     
     return true; // Return immediately after local update for better responsiveness
   }, [isOnline, isAuthenticated, syncToServer]);
-  
-  // Add a processBlankSubmission function for backward compatibility
-  const processBlankSubmission = useCallback((blankId, isCorrect) => {
-    console.log(`[POINTS] Processing blank submission ${blankId}. Is correct: ${isCorrect}`);
-    
-    // This is a backward compatibility function that just calls handleBlankRevelioAttempt
-    return handleBlankRevelioAttempt(blankId, isCorrect);
-  }, [handleBlankRevelioAttempt]);
   
   // Update authentication status (for debugging purposes)
   const updateAuthentication = useCallback((authData) => {
