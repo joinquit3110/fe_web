@@ -33,6 +33,31 @@ const UserProfile = () => {
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const imageRef = useRef(null);
   
+  // Listen for user data changes
+  useEffect(() => {
+    const handleUserDataChange = (event) => {
+      const updatedUser = event.detail.user;
+      if (updatedUser) {
+        // Force re-render by updating the avatar and form
+        setAvatar(updatedUser.avatar || null);
+        
+        // Update form data with latest user info
+        setForm(prevForm => ({
+          ...prevForm,
+          fullName: updatedUser.fullName || '',
+          school: updatedUser.school || '',
+          grade: updatedUser.grade || ''
+        }));
+      }
+    };
+    
+    window.addEventListener('userDataChanged', handleUserDataChange);
+    
+    return () => {
+      window.removeEventListener('userDataChanged', handleUserDataChange);
+    };
+  }, []);
+
   useEffect(() => {
     return () => {
       if (imagePreview) {
@@ -78,8 +103,14 @@ const UserProfile = () => {
     return name ? name.charAt(0).toUpperCase() : 'W';
   };
 
-  // Assign a Hogwarts house based on username
+  // Assign a Hogwarts house based on username or use the one from the database
   const getHouseClass = (username) => {
+    // If user has a house assigned in the database, use that
+    if (user && user.house) {
+      return user.house;
+    }
+    
+    // Otherwise, calculate it based on username
     if (!username) return 'gryffindor';
     
     // Simple hashing of username to pick a house
@@ -88,7 +119,8 @@ const UserProfile = () => {
     return houses[sum % houses.length];
   };
 
-  const userHouse = getHouseClass(user.username);
+  // Use the house class determined by the function
+  const houseClass = getHouseClass(user.username);
 
   const handleAvatarClick = () => {
     if (showCrop) return; // Don't open file dialog if in crop mode
@@ -231,7 +263,7 @@ const UserProfile = () => {
 
   return (
     <div className="profile-container">
-      <div className={`profile-icon ${userHouse}`} onClick={isAdmin ? null : toggleMenu} title={`${user.username}'s profile`}>
+      <div className={`profile-icon ${houseClass}`} onClick={isAdmin ? null : toggleMenu} title={`${user.username}'s profile`}>
         {avatar ? (
           <img src={avatar} alt={user.username} className="avatar-img" />
         ) : (
@@ -245,7 +277,7 @@ const UserProfile = () => {
             <div className="avatar-section">
               {!showCrop ? (
                 <div 
-                  className={`avatar-container ${userHouse}`} 
+                  className={`avatar-container ${houseClass}`} 
                   onClick={handleAvatarClick}
                   title="Change avatar"
                 >
@@ -305,7 +337,7 @@ const UserProfile = () => {
                 {isAdmin ? (
                   <select 
                     className="house-dropdown" 
-                    value={userHouse}
+                    value={houseClass}
                     onChange={(e) => {
                       // Save house preference in localStorage for persistence
                       localStorage.setItem('userHouse', e.target.value);
@@ -323,8 +355,8 @@ const UserProfile = () => {
                     <option value="muggle">MUGGLE</option>
                   </select>
                 ) : (
-                  <span className={`house-badge ${userHouse}`}>
-                    {userHouse.toUpperCase()}
+                  <span className={`house-badge ${houseClass}`}>
+                    {houseClass.toUpperCase()}
                   </span>
                 )}
               </div>
