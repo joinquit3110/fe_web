@@ -39,6 +39,133 @@ export const MagicPointsProvider = ({ children }) => {
   const syncToServerRef = useRef(null);
   // Create forceSyncWithDebug ref to avoid circular dependency
   const forceSyncWithDebugRef = useRef(null);
+  // Create fetchCurrentPointsRef to avoid circular dependency
+  const fetchCurrentPointsRef = useRef(null);
+
+  // Fetch current points from server - define the function early to avoid circular dependencies
+  const fetchCurrentPoints = useCallback(async () => {
+    if (!isAuthenticated || !isOnline) {
+      console.log('[POINTS] Cannot fetch points: offline or not authenticated');
+      return;
+    }
+    
+    // If already syncing, don't start another sync
+    if (isSyncing) {
+      console.log('[POINTS] Already syncing, skipping fetchCurrentPoints');
+      return;
+    }
+    
+    try {
+      setIsSyncing(true);
+      console.log('[POINTS] Fetching current points from server');
+      
+      // Get auth token
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      const response = await fetch(`${API_URL}/user/magic-points`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log(`[POINTS] Server points: ${data.magicPoints}, local: ${magicPoints}`);
+      
+      // Only update if different
+      if (data.magicPoints !== magicPoints) {
+        console.log(`[POINTS] Updating points from server ${data.magicPoints}`);
+        setMagicPoints(data.magicPoints);
+        localStorage.setItem('magicPoints', data.magicPoints.toString());
+        localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+        setLastSynced(new Date().toISOString());
+      } else {
+        console.log('[POINTS] Points are already in sync');
+      }
+      
+      // Check if user was marked for sync while offline
+      const user = await checkNeedSyncInternal();
+      if (user?.needsSync) {
+        console.log('[POINTS] User was marked for sync while offline, clearing flag');
+        await clearNeedSync();
+      }
+    } catch (error) {
+      console.error('[POINTS] Error fetching current points:', error);
+      throw error;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isAuthenticated, isOnline, isSyncing, magicPoints]);
+  
+  // Update the ref after fetchCurrentPoints is defined
+  useEffect(() => {
+    fetchCurrentPointsRef.current = fetchCurrentPoints;
+  }, [fetchCurrentPoints]);
+
+  // Internal implementation that doesn't have circular dependency
+  const checkNeedSyncInternal = async () => {
+    try {
+      if (!isAuthenticated || !isOnline) return null;
+      
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      
+      const response = await fetch(`${API_URL}/auth/verify`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (!data.authenticated) return null;
+      
+      // Get user details to check needsSync flag
+      const userResponse = await fetch(`${API_URL}/users/${data.userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!userResponse.ok) return null;
+      
+      const userData = await userResponse.json();
+      console.log('[POINTS] Check need sync:', userData.needsSync);
+      return userData;
+    } catch (error) {
+      console.error('[POINTS] Error checking sync status:', error);
+      return null;
+    }
+  };
+  
+  // Function to check if user needs sync (after being offline) - public version that uses the ref
+  const checkNeedSync = useCallback(async () => {
+    try {
+      const userData = await checkNeedSyncInternal();
+      
+      // If user needs sync, trigger an immediate sync operation
+      if (userData?.needsSync) {
+        console.log('[POINTS] User needs sync from server, initiating sync');
+        await fetchCurrentPointsRef.current();
+        await clearNeedSync(); // Clear the flag after sync
+      }
+      
+      return userData;
+    } catch (error) {
+      console.error('[POINTS] Error in checkNeedSync:', error);
+      return null;
+    }
+  }, [isAuthenticated, isOnline]);
 
   // Force sync with debug information and improved error handling
   const forceSyncWithDebug = useCallback(async () => {
@@ -439,51 +566,6 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [isAuthenticated, isSyncing, magicPoints, pendingChanges, pendingOperations.length]);
 
-  // Function to check if user needs sync (after being offline)
-  const checkNeedSync = useCallback(async () => {
-    try {
-      if (!isAuthenticated || !isOnline) return null;
-      
-      const token = localStorage.getItem('token');
-      if (!token) return null;
-      
-      const response = await fetch(`${API_URL}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) return null;
-      
-      const data = await response.json();
-      if (!data.authenticated) return null;
-      
-      // Get user details to check needsSync flag
-      const userResponse = await fetch(`${API_URL}/users/${data.userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!userResponse.ok) return null;
-      
-      const userData = await userResponse.json();
-      console.log('[POINTS] Check need sync:', userData.needsSync);
-      
-      // If user needs sync, trigger an immediate sync operation
-      if (userData.needsSync) {
-        console.log('[POINTS] User needs sync from server, initiating sync');
-        await fetchCurrentPoints();
-        await clearNeedSync(); // Clear the flag after sync
-      }
-      
-      return userData;
-    } catch (error) {
-      console.error('[POINTS] Error checking sync status:', error);
-      return null;
-    }
-  }, [isAuthenticated, isOnline, fetchCurrentPoints]);
-  
   // Add event listener for socket updates with improved handling
   useEffect(() => {
     // Add event listener for socket sync events with improved handling
@@ -571,70 +653,6 @@ export const MagicPointsProvider = ({ children }) => {
     };
   }, [checkServerPoints, isSyncing]);
 
-  // Fetch current points from server - new function
-  const fetchCurrentPoints = useCallback(async () => {
-    if (!isAuthenticated || !isOnline) {
-      console.log('[POINTS] Cannot fetch points: offline or not authenticated');
-      return;
-    }
-    
-    // If already syncing, don't start another sync
-    if (isSyncing) {
-      console.log('[POINTS] Already syncing, skipping fetchCurrentPoints');
-      return;
-    }
-    
-    try {
-      setIsSyncing(true);
-      console.log('[POINTS] Fetching current points from server');
-      
-      // Get auth token
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-      
-      const response = await fetch(`${API_URL}/user/magic-points`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`[POINTS] Server points: ${data.magicPoints}, local: ${magicPoints}`);
-      
-      // Only update if different
-      if (data.magicPoints !== magicPoints) {
-        console.log(`[POINTS] Updating points from server ${data.magicPoints}`);
-        setMagicPoints(data.magicPoints);
-        localStorage.setItem('magicPoints', data.magicPoints.toString());
-        localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
-        setLastSynced(new Date().toISOString());
-      } else {
-        console.log('[POINTS] Points are already in sync');
-      }
-      
-      // Check if user was marked for sync while offline
-      const user = await checkNeedSync();
-      if (user?.needsSync) {
-        console.log('[POINTS] User was marked for sync while offline, clearing flag');
-        await clearNeedSync();
-      }
-    } catch (error) {
-      console.error('[POINTS] Error fetching current points:', error);
-      throw error;
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isAuthenticated, isOnline, isSyncing, magicPoints]);
-  
   // Function to clear needsSync flag
   const clearNeedSync = useCallback(async () => {
     try {
