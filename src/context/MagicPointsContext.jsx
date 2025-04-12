@@ -667,9 +667,9 @@ export const MagicPointsProvider = ({ children }) => {
     resetRevelioAttemptsRef.current = resetRevelioAttempts;
   }, [resetRevelioAttempts]);
 
-  // Add event listener for socket updates with improved handling that avoids circular dependencies
+  // Add improved event listener for socket events to handle admin updates
   useEffect(() => {
-    // Add event listener for socket sync events with improved handling
+    // Event listener for direct socket updates from SocketContext
     const handleSocketUpdate = (event) => {
       if (event.detail?.type === 'sync_update') {
         const data = event.detail.data;
@@ -721,22 +721,23 @@ export const MagicPointsProvider = ({ children }) => {
           
           // If magic points were updated, reflect that change immediately
           if (data.data?.updatedFields?.magicPoints !== undefined) {
-            const newPoints = data.data.updatedFields.magicPoints;
-            console.log(`[POINTS] Updating points from server to: ${newPoints}`);
-            setMagicPoints(newPoints);
-            localStorage.setItem('magicPoints', newPoints.toString());
-            localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
-            setLastSynced(new Date().toISOString());
-            // Clear any pending operations
-            setPendingOperations([]);
-            localStorage.removeItem('pendingOperations');
+            const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
+            if (!isNaN(newPoints)) {
+              console.log(`[POINTS] Updating points from server to: ${newPoints}`);
+              setMagicPoints(newPoints);
+              localStorage.setItem('magicPoints', newPoints.toString());
+              localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+              setLastSynced(new Date().toISOString());
+              // Clear any pending operations since the server is now the source of truth
+              setPendingOperations([]);
+              localStorage.removeItem('pendingOperations');
+              setPendingChanges(false);
+            }
           }
           
           // If house was updated, dispatch a custom event to update UI
           if (data.data?.updatedFields?.house !== undefined) {
             console.log(`[POINTS] House updated to: ${data.data.updatedFields.house}`);
-            // Update local state if needed
-            // This is now handled by SocketContext which updates AuthContext directly
             
             // Dispatch server sync event to ensure other components can react to house changes
             const syncEvent = new CustomEvent('serverSyncCompleted', {
@@ -784,6 +785,7 @@ export const MagicPointsProvider = ({ children }) => {
         
         // Check for points updates from the server for all house members
         if (['house_points_changed', 'member_points_changed'].includes(event.detail.data.type)) {
+          // Stagger the sync to prevent server overload
           const randomDelay = Math.floor(Math.random() * 1500) + 500; // 0.5-2 seconds
           setTimeout(() => {
             if (checkServerPointsRef.current) {
@@ -799,6 +801,35 @@ export const MagicPointsProvider = ({ children }) => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
     };
   }, [isSyncing]); // Only depend on isSyncing, use refs for all function calls
+
+  // Add handler for direct "magicPointsUpdated" events from SocketContext
+  useEffect(() => {
+    const handleDirectPointsUpdate = (event) => {
+      const { points, source } = event.detail;
+      
+      if (points !== undefined && source === 'serverSync') {
+        console.log(`[POINTS] Received direct points update from server: ${points}`);
+        
+        // Only update if points are different from current state
+        if (points !== magicPoints) {
+          setMagicPoints(points);
+          localStorage.setItem('magicPoints', points.toString());
+          localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+          setLastSynced(new Date().toISOString());
+          
+          // Clear any pending operations since the server is now the source of truth
+          setPendingOperations([]);
+          localStorage.removeItem('pendingOperations');
+          setPendingChanges(false);
+        }
+      }
+    };
+    
+    window.addEventListener('magicPointsUpdated', handleDirectPointsUpdate);
+    return () => {
+      window.removeEventListener('magicPointsUpdated', handleDirectPointsUpdate);
+    };
+  }, [magicPoints]);
 
   // Points management functions
   const addPoints = useCallback((amount, source = '') => {

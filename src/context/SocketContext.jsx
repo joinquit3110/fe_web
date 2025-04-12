@@ -183,10 +183,26 @@ export const SocketProvider = ({ children }) => {
           console.log(`[SOCKET] House updated from server: ${updatedFields.house}`);
           
           // Update user object in AuthContext
-          setUser(prevUser => ({
-            ...prevUser,
-            house: updatedFields.house
-          }));
+          setUser(prevUser => {
+            if (!prevUser) return prevUser;
+            
+            // Create a new user object with updated house
+            const updatedUser = {
+              ...prevUser,
+              house: updatedFields.house
+            };
+            
+            // Also update localStorage to persist the change
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            
+            // Dispatch a custom event for other components that might need to react
+            const houseEvent = new CustomEvent('userHouseChanged', {
+              detail: { house: updatedFields.house }
+            });
+            window.dispatchEvent(houseEvent);
+            
+            return updatedUser;
+          });
           
           // Add notification about house change
           setNotifications(prev => [
@@ -200,34 +216,33 @@ export const SocketProvider = ({ children }) => {
           ]);
         }
         
-        // If magic points were updated, show notification
+        // If magic points were updated, show notification and dispatch event
         if (updatedFields.magicPoints !== undefined) {
-          console.log(`[SOCKET] Magic points updated from server: ${updatedFields.magicPoints}`);
+          const newPoints = parseInt(updatedFields.magicPoints, 10);
           
-          setNotifications(prev => [
-            {
-              id: Date.now(),
-              type: 'info',
-              message: `Your magic points have been updated to ${updatedFields.magicPoints}`,
-              timestamp: new Date()
-            },
-            ...prev.slice(0, 9)
-          ]);
-        }
-        
-        // If resetAttempts was set, show notification
-        if (updatedFields.resetAttempts === true) {
-          console.log('[SOCKET] Reset attempts flag received from server');
-          
-          setNotifications(prev => [
-            {
-              id: Date.now(),
-              type: 'warning',
-              message: 'Your attempts have been reset by admin',
-              timestamp: new Date()
-            },
-            ...prev.slice(0, 9)
-          ]);
+          if (!isNaN(newPoints)) {
+            console.log(`[SOCKET] Magic points updated from server: ${newPoints}`);
+            
+            // Add notification about points change
+            setNotifications(prev => [
+              {
+                id: Date.now(),
+                type: 'info',
+                message: `Your magic points have been updated to ${newPoints}`,
+                timestamp: new Date()
+              },
+              ...prev.slice(0, 9)
+            ]);
+            
+            // Dispatch a custom event for MagicPointsContext
+            const pointsEvent = new CustomEvent('magicPointsUpdated', {
+              detail: { 
+                points: newPoints,
+                source: 'serverSync'
+              }
+            });
+            window.dispatchEvent(pointsEvent);
+          }
         }
       }
       
