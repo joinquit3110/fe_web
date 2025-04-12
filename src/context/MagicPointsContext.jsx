@@ -686,10 +686,14 @@ export const MagicPointsProvider = ({ children }) => {
     };
   }, [checkServerPoints, isSyncing, resetRevelioAttempts]);
 
-  // Function to clear needsSync flag
+  // Function to clear needsSync flag - fixed to avoid circular reference
   const clearNeedSync = useCallback(async () => {
+    // Use closure values instead of dependencies to avoid circular reference
+    const isAuthNow = isAuthenticated;
+    const isOnlineNow = isOnline;
+    
     try {
-      if (!isAuthenticated || !isOnline) return;
+      if (!isAuthNow || !isOnlineNow) return;
       
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -720,7 +724,7 @@ export const MagicPointsProvider = ({ children }) => {
     } catch (error) {
       console.error('[POINTS] Error clearing sync flag:', error);
     }
-  }, [isAuthenticated, isOnline]);
+  }, []); // Empty dependency array to avoid circular dependency
 
   const addPoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
