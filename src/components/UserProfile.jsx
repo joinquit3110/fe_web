@@ -6,11 +6,15 @@ import 'react-image-crop/dist/ReactCrop.css'; // Import cropping styles
 
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
-const UserProfile = () => {
-  const { user, logout, updateProfile, updatePassword } = useAuth();
+const UserProfile = ({ user: propUser }) => {
+  const { user: contextUser, logout, updateProfile, updatePassword } = useAuth();
   const { isAdmin } = useAdmin(); // Get admin status
   const [showMenu, setShowMenu] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  
+  // Use the prop user if provided, otherwise fall back to the context user
+  const user = propUser || contextUser;
+  
   const [avatar, setAvatar] = useState(user?.avatar || null);
   const fileInputRef = useRef(null);
   const [form, setForm] = useState({

@@ -219,16 +219,21 @@ export const SocketProvider = ({ children }) => {
         // If magic points were updated, show notification and dispatch event
         if (updatedFields.magicPoints !== undefined) {
           const newPoints = parseInt(updatedFields.magicPoints, 10);
+          const prevPoints = user?.magicPoints || parseInt(localStorage.getItem('magicPoints') || '100', 10);
+          const diff = newPoints - prevPoints;
+          const changeDirection = diff > 0 ? 'increased by' : 'decreased by';
           
           if (!isNaN(newPoints)) {
-            console.log(`[SOCKET] Magic points updated from server: ${newPoints}`);
+            console.log(`[SOCKET] Magic points updated from server: ${newPoints} (change: ${diff})`);
             
-            // Add notification about points change
+            // Add notification about points change with more specific information
             setNotifications(prev => [
               {
                 id: Date.now(),
-                type: 'info',
-                message: `Your magic points have been updated to ${newPoints}`,
+                type: diff >= 0 ? 'success' : 'warning',
+                message: diff !== 0 
+                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin. New total: ${newPoints}`
+                  : `Your magic points have been updated to ${newPoints}`,
                 timestamp: new Date()
               },
               ...prev.slice(0, 9)
@@ -243,6 +248,58 @@ export const SocketProvider = ({ children }) => {
               }
             });
             window.dispatchEvent(pointsEvent);
+            
+            // Show a more prominent notification
+            try {
+              // Create a floating notification element if it doesn't exist
+              let notificationElement = document.getElementById('admin-points-notification');
+              if (!notificationElement) {
+                notificationElement = document.createElement('div');
+                notificationElement.id = 'admin-points-notification';
+                notificationElement.style.position = 'fixed';
+                notificationElement.style.top = '70px';
+                notificationElement.style.right = '20px';
+                notificationElement.style.background = diff >= 0 ? '#4caf50' : '#ff9800';
+                notificationElement.style.color = 'white';
+                notificationElement.style.padding = '15px 20px';
+                notificationElement.style.borderRadius = '8px';
+                notificationElement.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                notificationElement.style.zIndex = '10000';
+                notificationElement.style.transition = 'all 0.3s ease';
+                notificationElement.style.opacity = '0';
+                notificationElement.style.transform = 'translateY(-20px)';
+                document.body.appendChild(notificationElement);
+              }
+              
+              // Update content and show notification
+              notificationElement.innerHTML = `
+                <strong>${diff >= 0 ? 'Points Added!' : 'Points Removed!'}</strong>
+                <p>${diff !== 0 
+                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin.`
+                  : `Your magic points have been updated to ${newPoints}`}</p>
+                <p>New total: ${newPoints}</p>
+              `;
+              
+              // Show with animation
+              setTimeout(() => {
+                notificationElement.style.opacity = '1';
+                notificationElement.style.transform = 'translateY(0)';
+              }, 100);
+              
+              // Hide after 5 seconds
+              setTimeout(() => {
+                notificationElement.style.opacity = '0';
+                notificationElement.style.transform = 'translateY(-20px)';
+                // Remove from DOM after animation completes
+                setTimeout(() => {
+                  if (notificationElement.parentNode) {
+                    notificationElement.parentNode.removeChild(notificationElement);
+                  }
+                }, 300);
+              }, 5000);
+            } catch (error) {
+              console.error('[SOCKET] Error showing notification:', error);
+            }
           }
         }
       }

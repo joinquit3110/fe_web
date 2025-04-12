@@ -795,10 +795,10 @@ export const MagicPointsProvider = ({ children }) => {
   // Add handler for direct "magicPointsUpdated" events from SocketContext
   useEffect(() => {
     const handleDirectPointsUpdate = (event) => {
-      const { points, source } = event.detail;
+      const { points, source, immediate } = event.detail;
       
-      if (points !== undefined && source === 'serverSync') {
-        console.log(`[POINTS] Received direct points update from server: ${points}`);
+      if (points !== undefined && (source === 'serverSync' || source === 'adminUpdate')) {
+        console.log(`[POINTS] Received direct points update from server: ${points} (immediate: ${immediate})`);
         
         // Only update if points are different from current state
         if (points !== magicPoints) {
@@ -811,6 +811,16 @@ export const MagicPointsProvider = ({ children }) => {
           setPendingOperations([]);
           localStorage.removeItem('pendingOperations');
           setPendingChanges(false);
+          
+          // Dispatch an event to ensure UI updates without requiring a refresh
+          const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+            detail: { 
+              points: points,
+              source: 'serverUpdate',
+              timestamp: new Date().toISOString()
+            }
+          });
+          window.dispatchEvent(uiUpdateEvent);
         }
       }
     };
