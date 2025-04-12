@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { 
   fetchMagicPoints, 
   updateMagicPoints, 
@@ -35,7 +35,10 @@ export const MagicPointsProvider = ({ children }) => {
   // Track correctly answered blanks to avoid double counting
   const [correctBlanks, setCorrectBlanks] = useState({});
 
-  // Define syncToServer function declaration before using it
+  // Create syncToServerRef to avoid initialization issues
+  const syncToServerRef = useRef(null);
+
+  // Define syncToServer function declaration
   const syncToServer = useCallback(async () => {
     // Create a local reference to the current retry count that remains stable for this function call
     const currentRetryAttempt = parseInt(localStorage.getItem('syncRetryCount') || '0', 10);
@@ -163,7 +166,8 @@ export const MagicPointsProvider = ({ children }) => {
             // By this time, isSyncing should be false due to the finally block
             if (!isSyncing) {
               console.log(`[POINTS] Executing retry #${nextRetryCount + 1} with retry count ${nextRetryCount}`);
-              syncToServer();
+              // Use the ref to avoid dependency issues
+              syncToServerRef.current();
             } else {
               console.log(`[POINTS] Skipping retry #${nextRetryCount + 1} - sync already in progress`);
             }
@@ -188,6 +192,11 @@ export const MagicPointsProvider = ({ children }) => {
       setIsSyncing(false);
     }
   }, [isSyncing, isOnline, pendingOperations, pendingChanges, magicPoints]);
+
+  // Update the ref after syncToServer is defined
+  useEffect(() => {
+    syncToServerRef.current = syncToServer;
+  }, [syncToServer]);
 
   // Load authentication state from localStorage
   useEffect(() => {
