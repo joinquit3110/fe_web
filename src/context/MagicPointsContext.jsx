@@ -688,12 +688,9 @@ export const MagicPointsProvider = ({ children }) => {
 
   // Function to clear needsSync flag - fixed to avoid circular reference
   const clearNeedSync = useCallback(async () => {
-    // Use closure values instead of dependencies to avoid circular reference
-    const isAuthNow = isAuthenticated;
-    const isOnlineNow = isOnline;
-    
     try {
-      if (!isAuthNow || !isOnlineNow) return;
+      // Use current state values directly instead of relying on closure variables
+      if (!isAuthenticated || !isOnline) return;
       
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -724,7 +721,7 @@ export const MagicPointsProvider = ({ children }) => {
     } catch (error) {
       console.error('[POINTS] Error clearing sync flag:', error);
     }
-  }, []); // Empty dependency array to avoid circular dependency
+  }, [isOnline, isAuthenticated]); // Add dependencies directly
 
   const addPoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
