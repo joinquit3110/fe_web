@@ -1048,6 +1048,14 @@ export const MagicPointsProvider = ({ children }) => {
     return true; // Return immediately after local update for better responsiveness
   }, [isOnline, isAuthenticated, syncToServer]);
   
+  // Add a processBlankSubmission function for backward compatibility
+  const processBlankSubmission = useCallback((blankId, isCorrect) => {
+    console.log(`[POINTS] Processing blank submission ${blankId}. Is correct: ${isCorrect}`);
+    
+    // This is a backward compatibility function that just calls handleBlankRevelioAttempt
+    return handleBlankRevelioAttempt(blankId, isCorrect);
+  }, [handleBlankRevelioAttempt]);
+  
   // Update authentication status (for debugging purposes)
   const updateAuthentication = useCallback((authData) => {
     if (authData) {
