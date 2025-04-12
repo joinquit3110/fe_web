@@ -95,7 +95,7 @@ export const AdminProvider = ({ children }) => {
     }
   }, [isAuthenticated, user, fetchUsers]);
 
-  // Assign house to user in MongoDB
+  // Assign house to user in MongoDB with improved handling
   const assignHouse = async (userId, house) => {
     setLoading(true);
     setError(null);
@@ -136,7 +136,21 @@ export const AdminProvider = ({ children }) => {
             (user.id === userId || user._id === userId) ? { ...user, house } : user
           )
         );
-        console.log(`House updated in MongoDB for user ${userId}: ${house}`);
+        
+        // Force a sync for the user to ensure they get the house change immediately
+        console.log(`House updated in MongoDB for user ${userId}: ${house}. Triggering sync.`);
+        
+        // Force sync for the specific user
+        await forceSyncForUsers([userId]);
+        
+        // For admin users, ensure proper house setting
+        const adminUsers = ['hungpro', 'vipro'];
+        const targetUser = users.find(u => u.id === userId || u._id === userId);
+        
+        if (targetUser && adminUsers.includes(targetUser.username) && house !== 'admin') {
+          console.log(`Warning: Admin user ${targetUser.username} should have admin house.`);
+        }
+        
         return true;
       } else {
         throw new Error(`Failed to update house: ${response.statusText}`);

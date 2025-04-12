@@ -17,7 +17,7 @@ export const SocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, setUser } = useAuth();
   
   // Initialize socket on authentication state change
   useEffect(() => {
@@ -159,7 +159,7 @@ export const SocketProvider = ({ children }) => {
     }
   }, [socket, isConnected, user?.house, userHouse]);
 
-  // Enhanced socket event handling
+  // Enhanced socket event handling - now with user state updating capability
   useEffect(() => {
     if (!socket) return;
 
@@ -174,12 +174,41 @@ export const SocketProvider = ({ children }) => {
       });
       window.dispatchEvent(event);
       
-      // Add to notifications if appropriate
-      if (data.type === 'user_update') {
-        const updatedFields = data.data?.updatedFields || {};
+      // Enhanced user update handling
+      if (data.type === 'user_update' && data.data?.updatedFields) {
+        const updatedFields = data.data.updatedFields;
+        
+        // If house was updated, update the user object directly
+        if (updatedFields.house && user) {
+          console.log(`[SOCKET] House updated from server: ${updatedFields.house}`);
+          
+          // Update user object in AuthContext
+          setUser(prevUser => ({
+            ...prevUser,
+            house: updatedFields.house
+          }));
+          
+          // Also update localStorage to ensure persistence
+          try {
+            const storedUser = JSON.parse(localStorage.getItem('user'));
+            if (storedUser) {
+              storedUser.house = updatedFields.house;
+              localStorage.setItem('user', JSON.stringify(storedUser));
+            }
+          } catch (err) {
+            console.error('[SOCKET] Error updating house in localStorage:', err);
+          }
+          
+          // Dispatch house change event for any other components listening
+          const houseEvent = new CustomEvent('userHouseChanged', {
+            detail: { house: updatedFields.house }
+          });
+          window.dispatchEvent(houseEvent);
+        }
+        
+        // Add to notifications with more specific messages
         let message = 'Your profile has been updated by an admin';
         
-        // More specific messages based on what changed
         if (updatedFields.house) {
           message = `Your house has been updated to ${updatedFields.house}`;
         } else if (updatedFields.magicPoints !== undefined) {
@@ -194,16 +223,6 @@ export const SocketProvider = ({ children }) => {
             timestamp: new Date()
           },
           ...prev.slice(0, 9) 
-        ]);
-      } else if (data.type === 'force_sync') {
-        setNotifications(prev => [
-          {
-            id: Date.now(),
-            type: 'info',
-            message: data.message || 'Syncing data with server...',
-            timestamp: new Date()
-          },
-          ...prev.slice(0, 9)
         ]);
       }
     });
@@ -268,7 +287,7 @@ export const SocketProvider = ({ children }) => {
       socket.off('global_update');
       socket.off('connection_status');
     };
-  }, [socket]);
+  }, [socket, user, setUser]);
 
   // Extract user ID and house from user object
   const userId = user?.id || user?._id;

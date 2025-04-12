@@ -303,60 +303,6 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [isOnline, isAuthenticated, pendingOperations.length, syncToServer]);
 
-  // Listen for admin-forced sync and user data updates from socket
-  useEffect(() => {
-    // Handle admin-forced sync request
-    const handleAdminForceSync = async () => {
-      console.log("[POINTS] Received admin force sync request");
-      try {
-        await forceSyncWithDebug();
-      } catch (error) {
-        console.error("[POINTS] Error during admin-forced sync:", error);
-      }
-    };
-    
-    // Handle user house change events
-    const handleUserHouseChanged = (event) => {
-      const { house } = event.detail;
-      console.log(`[POINTS] User house changed to ${house}`);
-      
-      // Update local user data
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      if (userData) {
-        userData.house = house;
-        localStorage.setItem('user', JSON.stringify(userData));
-      }
-    };
-    
-    // Handle direct points updates
-    const handlePointsUpdated = (event) => {
-      const { points } = event.detail;
-      console.log(`[POINTS] Magic points updated directly to ${points}`);
-      
-      // Update local storage without operations
-      localStorage.setItem('magicPoints', points.toString());
-      localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
-      setMagicPoints(points);
-      setPendingChanges(false);
-      
-      // Clear any pending operations since we have a direct update
-      localStorage.removeItem('pendingOperations');
-      setPendingOperations([]);
-    };
-    
-    // Register event listeners
-    window.addEventListener('admin-force-sync', handleAdminForceSync);
-    window.addEventListener('user-house-changed', handleUserHouseChanged);
-    window.addEventListener('magic-points-updated', handlePointsUpdated);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('admin-force-sync', handleAdminForceSync);
-      window.removeEventListener('user-house-changed', handleUserHouseChanged);
-      window.removeEventListener('magic-points-updated', handlePointsUpdated);
-    };
-  }, [forceSyncWithDebug]);
-  
   // Perform background sync when reconnecting online
   useEffect(() => {
     let syncTimeout;
@@ -436,20 +382,74 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [isAuthenticated, isSyncing, magicPoints, pendingChanges, pendingOperations.length]);
 
-  // Add event listener for socket updates
+  // Function to check if user needs sync (after being offline)
+  const checkNeedSync = useCallback(async () => {
+    try {
+      if (!isAuthenticated || !isOnline) return null;
+      
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      
+      const response = await fetch(`${API_URL}/auth/verify`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (!data.authenticated) return null;
+      
+      // Get user details to check needsSync flag
+      const userResponse = await fetch(`${API_URL}/users/${data.userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!userResponse.ok) return null;
+      
+      const userData = await userResponse.json();
+      console.log('[POINTS] Check need sync:', userData.needsSync);
+      
+      // If user needs sync, trigger an immediate sync operation
+      if (userData.needsSync) {
+        console.log('[POINTS] User needs sync from server, initiating sync');
+        await fetchCurrentPoints();
+        await clearNeedSync(); // Clear the flag after sync
+      }
+      
+      return userData;
+    } catch (error) {
+      console.error('[POINTS] Error checking sync status:', error);
+      return null;
+    }
+  }, [isAuthenticated, isOnline, fetchCurrentPoints]);
+  
+  // Add event listener for socket updates with improved handling
   useEffect(() => {
-    // Add event listener for socket sync events
+    // Add event listener for socket sync events with improved handling
     const handleSocketUpdate = (event) => {
       if (event.detail?.type === 'sync_update') {
         const data = event.detail.data;
         console.log('[POINTS] Received socket sync update:', data);
         
         if (data.type === 'force_sync') {
-          // Admin triggered forced sync
+          // Admin triggered forced sync - prioritize this operation
           console.log('[POINTS] Admin triggered force sync');
-          forceSyncWithDebug().catch(err => 
-            console.error('[POINTS] Error during admin-triggered sync:', err)
-          );
+          
+          // Clear any pending sync operations
+          if (isSyncing) {
+            console.log('[POINTS] Cancelling current sync to prioritize admin-triggered sync');
+          }
+          
+          // Use immediate sync with high priority
+          setTimeout(() => {
+            forceSyncWithDebug().catch(err => 
+              console.error('[POINTS] Error during admin-triggered sync:', err)
+            );
+          }, 100);
         } else if (data.type === 'user_update') {
           // Direct user update (e.g., house change, points change)
           console.log('[POINTS] Received user update:', data.data);
@@ -461,60 +461,58 @@ export const MagicPointsProvider = ({ children }) => {
             setMagicPoints(newPoints);
             localStorage.setItem('magicPoints', newPoints.toString());
             localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+            setLastSynced(new Date().toISOString());
+            // Clear any pending operations
+            setPendingOperations([]);
+            localStorage.removeItem('pendingOperations');
           }
+          
+          // If house was updated, dispatch a custom event to update UI
+          if (data.data?.updatedFields?.house !== undefined) {
+            console.log(`[POINTS] House updated to: ${data.data.updatedFields.house}`);
+            // Update local state if needed
+            // This is now handled by SocketContext which updates AuthContext directly
+            
+            // Dispatch server sync event to ensure other components can react to house changes
+            const syncEvent = new CustomEvent('serverSyncCompleted', {
+              detail: { 
+                source: 'houseChange',
+                timestamp: new Date().toISOString()
+              }
+            });
+            window.dispatchEvent(syncEvent);
+          }
+          
+          // After receiving any update, check for any other changes after a short delay
+          setTimeout(() => checkServerPoints(), 500);
         }
-      }
-    };
-    
-    // Add event listener for online/offline status changes to sync when coming back online
-    const handleOnlineStatusChange = () => {
-      if (navigator.onLine && isAuthenticated) {
-        console.log('[POINTS] Back online, checking for updates...');
+      } else if (event.detail?.type === 'global_update') {
+        // Handle global updates that affect all users
+        console.log('[POINTS] Received global update:', event.detail.data);
         
-        // First check if there are pending operations to sync
-        const pendingOps = JSON.parse(localStorage.getItem('pendingOperations') || '[]');
+        // For certain types of updates, always check server for changes
+        if (['user_house_changed', 'house_points_bulk_update'].includes(event.detail.data.type)) {
+          // Stagger the sync to prevent server overload
+          const randomDelay = Math.floor(Math.random() * 2000) + 500; // 0.5-2.5 seconds
+          setTimeout(() => checkServerPoints(), randomDelay);
+        }
+      } else if (event.detail?.type === 'house_update') {
+        // Handle house-specific updates
+        console.log('[POINTS] Received house update:', event.detail.data);
         
-        if (pendingOps.length > 0) {
-          console.log(`[POINTS] Found ${pendingOps.length} pending operations, syncing...`);
-          syncToServer().catch(err => 
-            console.error('[POINTS] Error syncing after coming online:', err)
-          );
-        } else {
-          // If no pending operations, just check for server updates
-          console.log('[POINTS] No pending operations, checking for server changes...');
-          fetchCurrentPoints().catch(err => 
-            console.error('[POINTS] Error fetching current points after coming online:', err)
-          );
+        // Check for points updates from the server for all house members
+        if (['house_points_changed', 'member_points_changed'].includes(event.detail.data.type)) {
+          const randomDelay = Math.floor(Math.random() * 1500) + 500; // 0.5-2 seconds
+          setTimeout(() => checkServerPoints(), randomDelay);
         }
       }
     };
 
-    // Listen for custom events from SocketContext
     window.addEventListener('magicPointsSocketUpdate', handleSocketUpdate);
-    
-    // Listen for online status changes
-    window.addEventListener('online', handleOnlineStatusChange);
-    
-    // Check for service worker messages (from offline sync)
-    navigator.serviceWorker?.addEventListener('message', (event) => {
-      if (event.data?.type === 'SYNC_COMPLETED') {
-        console.log('[POINTS] Received sync completed message from service worker:', event.data);
-        setMagicPoints(event.data.magicPoints);
-        setLastSynced(event.data.timestamp);
-        localStorage.setItem('magicPoints', event.data.magicPoints.toString());
-        localStorage.setItem('magicPointsTimestamp', event.data.timestamp);
-      } else if (event.data?.type === 'POINTS_UPDATED') {
-        console.log('[POINTS] Received points update from service worker:', event.data);
-        setMagicPoints(event.data.magicPoints);
-        localStorage.setItem('magicPoints', event.data.magicPoints.toString());
-      }
-    });
-    
     return () => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
-      window.removeEventListener('online', handleOnlineStatusChange);
     };
-  }, [isAuthenticated, forceSyncWithDebug, syncToServer]);
+  }, [forceSyncWithDebug, checkServerPoints, isSyncing]);
 
   // Fetch current points from server - new function
   const fetchCurrentPoints = useCallback(async () => {
@@ -579,41 +577,6 @@ export const MagicPointsProvider = ({ children }) => {
       setIsSyncing(false);
     }
   }, [isAuthenticated, isOnline, isSyncing, magicPoints]);
-  
-  // Function to check if user needs sync (after being offline)
-  const checkNeedSync = useCallback(async () => {
-    try {
-      if (!isAuthenticated || !isOnline) return null;
-      
-      const token = localStorage.getItem('token');
-      if (!token) return null;
-      
-      const response = await fetch(`${API_URL}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) return null;
-      
-      const data = await response.json();
-      if (!data.authenticated) return null;
-      
-      // Get user details to check needsSync flag
-      const userResponse = await fetch(`${API_URL}/users/${data.userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!userResponse.ok) return null;
-      
-      return await userResponse.json();
-    } catch (error) {
-      console.error('[POINTS] Error checking sync status:', error);
-      return null;
-    }
-  }, [isAuthenticated, isOnline]);
   
   // Function to clear needsSync flag
   const clearNeedSync = useCallback(async () => {

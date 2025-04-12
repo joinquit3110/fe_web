@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, Heading, VStack, HStack, Badge, 
   Text, useToast, Divider, Flex, Spinner,
@@ -17,11 +18,22 @@ const AdminHousePoints = () => {
     updateGroupCriteriaPoints,
     criteriaPoints,
     loading,
-    error
+    error,
+    fetchUsers,
+    forceSyncForUsers
   } = useAdmin();
   
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
+  
+  // State for house statistics
+  const [houseStats, setHouseStats] = useState({
+    gryffindor: 0,
+    slytherin: 0,
+    ravenclaw: 0,
+    hufflepuff: 0
+  });
   
   // State for direct house points
   const [selectedHouse, setSelectedHouse] = useState('gryffindor');
@@ -57,6 +69,20 @@ const AdminHousePoints = () => {
     { value: 'veryPoor', label: 'Very Poor', points: criteriaPoints.veryPoor }
   ];
   
+  // Refresh data and calculate house statistics
+  useEffect(() => {
+    const refreshData = async () => {
+      await fetchUsers();
+    };
+    
+    refreshData();
+  }, [fetchUsers]);
+  
+  // Navigate to user management
+  const goToUserManagement = () => {
+    navigate('/admin');
+  };
+  
   // Add points to a house
   const handleAddPoints = async () => {
     if (!reason.trim()) {
@@ -80,6 +106,11 @@ const AdminHousePoints = () => {
           duration: 2000,
         });
         setReason('');
+        
+        // Force sync affected users to ensure they get the update
+        setTimeout(() => {
+          forceSyncAllHouseUsers(selectedHouse);
+        }, 500);
       }
     } catch (err) {
       toast({
@@ -114,6 +145,11 @@ const AdminHousePoints = () => {
           duration: 2000,
         });
         setReason('');
+        
+        // Force sync affected users to ensure they get the update
+        setTimeout(() => {
+          forceSyncAllHouseUsers(selectedHouse);
+        }, 500);
       }
     } catch (err) {
       toast({
@@ -122,6 +158,35 @@ const AdminHousePoints = () => {
         status: 'error',
         duration: 3000,
       });
+    }
+  };
+  
+  // Force sync for all users in a house
+  const forceSyncAllHouseUsers = async (house) => {
+    try {
+      const response = await fetch('https://be-web-6c4k.onrender.com/api/users', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const houseUsers = data.users.filter(user => user.house === house);
+      
+      if (houseUsers.length > 0) {
+        const userIds = houseUsers.map(user => user._id);
+        await forceSyncForUsers(userIds);
+        
+        console.log(`Forced sync for ${userIds.length} users in ${house} house`);
+      } else {
+        console.log(`No users found in ${house} house`);
+      }
+    } catch (err) {
+      console.error('Error syncing house users:', err);
     }
   };
   
@@ -146,6 +211,11 @@ const AdminHousePoints = () => {
           duration: 2000,
         });
         setDetails('');
+        
+        // Force sync affected users
+        setTimeout(() => {
+          forceSyncAllHouseUsers(groupHouse);
+        }, 500);
       }
     } catch (err) {
       toast({
@@ -169,6 +239,14 @@ const AdminHousePoints = () => {
           <Heading size="lg" className="highlight admin-title">Hogwarts House Points</Heading>
           <HStack>
             <Badge colorScheme="purple" fontSize="md" p={2}>Admin Console</Badge>
+            <Button 
+              colorScheme="purple" 
+              size="sm" 
+              onClick={goToUserManagement}
+              mr={2}
+            >
+              User Management
+            </Button>
             <Button colorScheme="red" size="sm" onClick={logout}>Logout</Button>
           </HStack>
         </HStack>
@@ -337,4 +415,4 @@ const AdminHousePoints = () => {
   );
 };
 
-export default AdminHousePoints; 
+export default AdminHousePoints;

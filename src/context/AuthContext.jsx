@@ -37,6 +37,73 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Listen for user house changes from sockets or other parts of the application
+  useEffect(() => {
+    const handleHouseChange = (event) => {
+      if (event.detail && event.detail.house && user) {
+        console.log(`[AUTH] Received house change event: ${event.detail.house}`);
+        
+        setUser(prevUser => {
+          if (!prevUser) return prevUser;
+          
+          // Create a new user object with updated house
+          const updatedUser = {
+            ...prevUser,
+            house: event.detail.house
+          };
+          
+          // Also update localStorage to persist the change
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          return updatedUser;
+        });
+      }
+    };
+    
+    // Listen for the custom event
+    window.addEventListener('userHouseChanged', handleHouseChange);
+    
+    return () => {
+      window.removeEventListener('userHouseChanged', handleHouseChange);
+    };
+  }, [user]);
+
+  // Add a function to update user's house directly
+  const updateUserHouse = async (house) => {
+    try {
+      if (!user || !token) {
+        throw new Error("Not logged in");
+      }
+      
+      // Update on the server
+      const response = await fetch(`${BACKEND_URL}/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ house })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to update house: ${response.status}`);
+      }
+      
+      // Update local state and storage
+      const updatedUser = {...user, house};
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Return success
+      return { success: true };
+    } catch (err) {
+      console.error("Error updating house:", err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
   const login = async (email, password) => {
     setIsLoading(true);
     setError(null);
@@ -95,7 +162,8 @@ export const AuthProvider = ({ children }) => {
       error,
       token,
       login, 
-      logout 
+      logout,
+      updateUserHouse
     }}>
       {children}
     </AuthContext.Provider>
