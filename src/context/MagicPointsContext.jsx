@@ -823,7 +823,7 @@ export const MagicPointsProvider = ({ children }) => {
     return Promise.all(processingPromises);
   }, [processBlankSubmission]);
 
-  // Handle Revelio attempts for fill-in-the-blank activities with updated scoring rules
+  // First define the handleBlankRevelioAttempt before it's referenced by handleMultipleRevelioAttempts
   const handleBlankRevelioAttempt = useCallback((blankId, isCorrect) => {
     console.log(`[POINTS] Processing Revelio for blank ${blankId}. Is correct: ${isCorrect}`);
     
@@ -879,7 +879,7 @@ export const MagicPointsProvider = ({ children }) => {
     return isCorrect;
   }, [revelioAttempts, correctBlanks, addPointsWithLog, removePointsWithLog, magicPoints]);
   
-  // Handle multiple blanks submission for Charm the Blanks activity
+  // Then define handleMultipleRevelioAttempts which references handleBlankRevelioAttempt
   const handleMultipleRevelioAttempts = useCallback((results) => {
     console.log('[POINTS] Processing multiple blanks submission:', results);
     
