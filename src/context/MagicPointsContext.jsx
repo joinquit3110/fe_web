@@ -20,8 +20,9 @@ export const useMagicPoints = () => useContext(MagicPointsContext);
 const MAX_RETRIES = 5;
 const DEFAULT_POINTS = 100;
 
+// Move utility functions outside of the component to avoid circular dependencies
+
 // Function to clear needsSync flag - completely rewritten to avoid circular dependencies
-// Define this before any functions that might call it
 const clearNeedSync = async (token) => {
   try {
     if (!token) return;
@@ -57,6 +58,43 @@ const clearNeedSync = async (token) => {
   }
 };
 
+// Function to check if user needs sync internally
+const checkNeedSyncInternal = async (isAuthenticated, isOnline) => {
+  try {
+    if (!isAuthenticated || !isOnline) return null;
+    
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    
+    const response = await fetch(`${API_URL}/auth/verify`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    if (!data.authenticated) return null;
+    
+    // Get user details to check needsSync flag
+    const userResponse = await fetch(`${API_URL}/users/${data.userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!userResponse.ok) return null;
+    
+    const userData = await userResponse.json();
+    console.log('[POINTS] Check need sync:', userData.needsSync);
+    return userData;
+  } catch (error) {
+    console.error('[POINTS] Error checking sync status:', error);
+    return null;
+  }
+};
+
 export const MagicPointsProvider = ({ children }) => {
   const [magicPoints, setMagicPoints] = useState(DEFAULT_POINTS);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -72,16 +110,13 @@ export const MagicPointsProvider = ({ children }) => {
   // Track correctly answered blanks to avoid double counting
   const [correctBlanks, setCorrectBlanks] = useState({});
 
-  // Create syncToServerRef to avoid initialization issues
+  // Create refs for function references to avoid circular dependencies
   const syncToServerRef = useRef(null);
-  // Create forceSyncWithDebug ref to avoid circular dependency
   const forceSyncWithDebugRef = useRef(null);
-  // Create fetchCurrentPointsRef to avoid circular dependency
   const fetchCurrentPointsRef = useRef(null);
-  // Create checkServerPointsRef to avoid circular dependency
   const checkServerPointsRef = useRef(null);
 
-  // Fetch current points from server - define the function early to avoid circular dependencies
+  // Fetch current points from server
   const fetchCurrentPoints = useCallback(async () => {
     if (!isAuthenticated || !isOnline) {
       console.log('[POINTS] Cannot fetch points: offline or not authenticated');
@@ -132,7 +167,7 @@ export const MagicPointsProvider = ({ children }) => {
       }
       
       // Check if user was marked for sync while offline
-      const user = await checkNeedSyncInternal();
+      const user = await checkNeedSyncInternal(isAuthenticated, isOnline);
       if (user?.needsSync) {
         console.log('[POINTS] User was marked for sync while offline, clearing flag');
         await clearNeedSync(token);
@@ -150,52 +185,17 @@ export const MagicPointsProvider = ({ children }) => {
     fetchCurrentPointsRef.current = fetchCurrentPoints;
   }, [fetchCurrentPoints]);
 
-  // Internal implementation that doesn't have circular dependency
-  const checkNeedSyncInternal = async () => {
-    try {
-      if (!isAuthenticated || !isOnline) return null;
-      
-      const token = localStorage.getItem('token');
-      if (!token) return null;
-      
-      const response = await fetch(`${API_URL}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) return null;
-      
-      const data = await response.json();
-      if (!data.authenticated) return null;
-      
-      // Get user details to check needsSync flag
-      const userResponse = await fetch(`${API_URL}/users/${data.userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!userResponse.ok) return null;
-      
-      const userData = await userResponse.json();
-      console.log('[POINTS] Check need sync:', userData.needsSync);
-      return userData;
-    } catch (error) {
-      console.error('[POINTS] Error checking sync status:', error);
-      return null;
-    }
-  };
-  
-  // Function to check if user needs sync (after being offline) - public version that uses the ref
+  // Function to check if user needs sync - public version that uses the ref
   const checkNeedSync = useCallback(async () => {
     try {
-      const userData = await checkNeedSyncInternal();
+      const userData = await checkNeedSyncInternal(isAuthenticated, isOnline);
       
       // If user needs sync, trigger an immediate sync operation
       if (userData?.needsSync) {
         console.log('[POINTS] User needs sync from server, initiating sync');
-        await fetchCurrentPointsRef.current();
+        if (fetchCurrentPointsRef.current) {
+          await fetchCurrentPointsRef.current();
+        }
         // Get token and use the standalone clearNeedSync function
         const token = localStorage.getItem('token');
         await clearNeedSync(token);
@@ -206,9 +206,9 @@ export const MagicPointsProvider = ({ children }) => {
       console.error('[POINTS] Error in checkNeedSync:', error);
       return null;
     }
-  }, []);
+  }, [isAuthenticated, isOnline]);
 
-  // Define syncToServer function declaration FIRST (moved up)
+  // Define syncToServer function
   const syncToServer = useCallback(async () => {
     // Create a local reference to the current retry count that remains stable for this function call
     const currentRetryAttempt = parseInt(localStorage.getItem('syncRetryCount') || '0', 10);
@@ -337,7 +337,9 @@ export const MagicPointsProvider = ({ children }) => {
             if (!isSyncing) {
               console.log(`[POINTS] Executing retry #${nextRetryCount + 1} with retry count ${nextRetryCount}`);
               // Use the ref to avoid dependency issues
-              syncToServerRef.current();
+              if (syncToServerRef.current) {
+                syncToServerRef.current();
+              }
             } else {
               console.log(`[POINTS] Skipping retry #${nextRetryCount + 1} - sync already in progress`);
             }
@@ -368,7 +370,7 @@ export const MagicPointsProvider = ({ children }) => {
     syncToServerRef.current = syncToServer;
   }, [syncToServer]);
 
-  // Force sync with debug information and improved error handling (moved down)
+  // Force sync with debug information
   const forceSyncWithDebug = useCallback(async () => {
     console.log('[POINTS DEBUG] Force syncing with debug info...');
     
@@ -410,15 +412,17 @@ export const MagicPointsProvider = ({ children }) => {
     }
     
     try {
-      await syncToServer();
+      if (syncToServerRef.current) {
+        await syncToServerRef.current();
+      }
       return true;
     } catch (error) {
       console.error('[POINTS DEBUG] Sync error:', error);
       return false;
     }
-  }, [pendingOperations, syncToServer, magicPoints, isAuthenticated]);
+  }, [pendingOperations, magicPoints, isAuthenticated]);
 
-  // Update the ref after forceSyncWithDebug is defined - MOVED HERE
+  // Update the ref after forceSyncWithDebug is defined
   useEffect(() => {
     forceSyncWithDebugRef.current = forceSyncWithDebug;
   }, [forceSyncWithDebug]);
@@ -443,7 +447,11 @@ export const MagicPointsProvider = ({ children }) => {
           if (pendingOps && JSON.parse(pendingOps).length > 0) {
             console.log('[POINTS] Found pending operations on load, triggering auto-sync');
             // Use a slight delay to ensure all states are properly initialized
-            setTimeout(() => syncToServer(), 1500);
+            setTimeout(() => {
+              if (syncToServerRef.current) {
+                syncToServerRef.current();
+              }
+            }, 1500);
           } else {
             console.log('[POINTS] No pending operations found on load');
           }
@@ -495,7 +503,11 @@ export const MagicPointsProvider = ({ children }) => {
       setIsOnline(true);
       // Attempt to sync when coming back online
       if (pendingOperations.length > 0 || pendingChanges) {
-        setTimeout(() => syncToServer(), 1000);
+        setTimeout(() => {
+          if (syncToServerRef.current) {
+            syncToServerRef.current();
+          }
+        }, 1000);
       }
     };
     
@@ -512,7 +524,7 @@ export const MagicPointsProvider = ({ children }) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [pendingChanges]);
 
   // Also add an initial sync attempt at the end of the useEffect
   useEffect(() => {
@@ -521,12 +533,14 @@ export const MagicPointsProvider = ({ children }) => {
       console.log('[POINTS] Auto-syncing points on app initialization');
       // Use timeout to ensure the component is fully mounted
       const autoSyncTimeout = setTimeout(() => {
-        syncToServer();
+        if (syncToServerRef.current) {
+          syncToServerRef.current();
+        }
       }, 2000);
       
       return () => clearTimeout(autoSyncTimeout);
     }
-  }, [isOnline, isAuthenticated, pendingOperations.length, syncToServer]);
+  }, [isOnline, isAuthenticated, pendingOperations.length]);
 
   // Perform background sync when reconnecting online
   useEffect(() => {
@@ -537,9 +551,11 @@ export const MagicPointsProvider = ({ children }) => {
       if (pendingOperations.length > 0 || pendingChanges) {
         console.log("[POINTS] Back online with pending changes, will sync shortly");
         syncTimeout = setTimeout(() => {
-          syncToServer().catch(error => {
-            console.error("[POINTS] Background sync error:", error);
-          });
+          if (syncToServerRef.current) {
+            syncToServerRef.current().catch(error => {
+              console.error("[POINTS] Background sync error:", error);
+            });
+          }
         }, 3000); // Delay by 3 seconds to allow other resources to load first
       } else {
         // Even if no pending operations, do a lightweight check to ensure
@@ -634,9 +650,11 @@ export const MagicPointsProvider = ({ children }) => {
           
           // Use immediate sync with high priority
           setTimeout(() => {
-            forceSyncWithDebugRef.current().catch(err => 
-              console.error('[POINTS] Error during admin-triggered sync:', err)
-            );
+            if (forceSyncWithDebugRef.current) {
+              forceSyncWithDebugRef.current().catch(err => 
+                console.error('[POINTS] Error during admin-triggered sync:', err)
+              );
+            }
           }, 100);
         } else if (data.type === 'reset_attempts') {
           // Admin reset attempts for this user
@@ -725,6 +743,7 @@ export const MagicPointsProvider = ({ children }) => {
     };
   }, [checkServerPoints, isSyncing, resetRevelioAttempts]);
 
+  // Points management functions
   const addPoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
     
@@ -751,11 +770,15 @@ export const MagicPointsProvider = ({ children }) => {
     
     // Only attempt to sync if we're online and authenticated - but do it on next tick to avoid UI lag
     if (isOnline && isAuthenticated) {
-      setTimeout(() => syncToServer(), 0);
+      setTimeout(() => {
+        if (syncToServerRef.current) {
+          syncToServerRef.current();
+        }
+      }, 0);
     } else {
       console.log('[POINTS] Working in offline mode, changes will sync when online');
     }
-  }, [magicPoints, isOnline, isAuthenticated, syncToServer]);
+  }, [magicPoints, isOnline, isAuthenticated]);
 
   const removePoints = useCallback((amount, source = '') => {
     if (amount <= 0) return;
@@ -791,11 +814,15 @@ export const MagicPointsProvider = ({ children }) => {
     
     // Only attempt to sync if we're online and authenticated - but do it on next tick to avoid UI lag
     if (isOnline && isAuthenticated) {
-      setTimeout(() => syncToServer(), 0);
+      setTimeout(() => {
+        if (syncToServerRef.current) {
+          syncToServerRef.current();
+        }
+      }, 0);
     } else {
       console.log('[POINTS] Working in offline mode, changes will sync when online');
     }
-  }, [magicPoints, isOnline, isAuthenticated, syncToServer]);
+  }, [magicPoints, isOnline, isAuthenticated]);
 
   const addPointsWithLog = useCallback((amount, source = 'general') => {
     console.log(`[POINTS] Adding ${amount} points (${source})`);
@@ -1008,8 +1035,10 @@ export const MagicPointsProvider = ({ children }) => {
     }
     
     console.log('[POINTS] Force syncing points to server');
-    return syncToServer();
-  }, [isOnline, syncToServer]);
+    if (syncToServerRef.current) {
+      return syncToServerRef.current();
+    }
+  }, [isOnline]);
 
   // Add debugging utility functions with silent option
   const debugPointsState = useCallback((silent = false) => {
@@ -1063,7 +1092,9 @@ export const MagicPointsProvider = ({ children }) => {
     if (isOnline && isAuthenticated) {
       setTimeout(async () => {
         try {
-          await syncToServer();
+          if (syncToServerRef.current) {
+            await syncToServerRef.current();
+          }
         } catch (error) {
           console.error('[POINTS DEBUG] Error syncing after reset:', error);
         }
@@ -1073,7 +1104,7 @@ export const MagicPointsProvider = ({ children }) => {
     }
     
     return true; // Return immediately after local update for better responsiveness
-  }, [isOnline, isAuthenticated, syncToServer]);
+  }, [isOnline, isAuthenticated]);
   
   // Update authentication status (for debugging purposes)
   const updateAuthentication = useCallback((authData) => {
