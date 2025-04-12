@@ -169,11 +169,6 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, [isAuthenticated, isOnline]);
 
-  // Update the ref after checkNeedSync is defined
-  useEffect(() => {
-    forceSyncWithDebugRef.current = forceSyncWithDebug;
-  }, [forceSyncWithDebug]);
-
   // Define syncToServer function declaration FIRST (moved up)
   const syncToServer = useCallback(async () => {
     // Create a local reference to the current retry count that remains stable for this function call
@@ -383,6 +378,11 @@ export const MagicPointsProvider = ({ children }) => {
       return false;
     }
   }, [pendingOperations, syncToServer, magicPoints, isAuthenticated]);
+
+  // Update the ref after forceSyncWithDebug is defined - MOVED HERE
+  useEffect(() => {
+    forceSyncWithDebugRef.current = forceSyncWithDebug;
+  }, [forceSyncWithDebug]);
 
   // Load authentication state from localStorage
   useEffect(() => {
