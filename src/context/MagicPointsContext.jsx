@@ -37,6 +37,63 @@ export const MagicPointsProvider = ({ children }) => {
 
   // Create syncToServerRef to avoid initialization issues
   const syncToServerRef = useRef(null);
+  // Create forceSyncWithDebug ref to avoid circular dependency
+  const forceSyncWithDebugRef = useRef(null);
+
+  // Force sync with debug information and improved error handling
+  const forceSyncWithDebug = useCallback(async () => {
+    console.log('[POINTS DEBUG] Force syncing with debug info...');
+    
+    // Log auth state
+    const token = localStorage.getItem('token');
+    const authToken = localStorage.getItem('authToken');
+    console.log(`[POINTS DEBUG] Auth token: ${token ? 'Present' : 'Missing'}`);
+    console.log(`[POINTS DEBUG] Alt auth token: ${authToken ? 'Present' : 'Missing'}`);
+    console.log(`[POINTS DEBUG] Token length: ${token?.length || 0}`);
+    console.log(`[POINTS DEBUG] isAuthenticated state: ${isAuthenticated}`);
+    
+    // Verify with server
+    try {
+      const authStatus = await checkAuthStatus();
+      console.log(`[POINTS DEBUG] Server auth check: ${JSON.stringify(authStatus)}`);
+    } catch (error) {
+      console.error('[POINTS DEBUG] Error checking auth:', error);
+    }
+    
+    // Verify local storage
+    console.log(`[POINTS DEBUG] Local magic points: ${localStorage.getItem('magicPoints')}`);
+    console.log(`[POINTS DEBUG] State magic points: ${magicPoints}`);
+    
+    // Log pending operations
+    const storedOps = localStorage.getItem('pendingOperations');
+    const parsedOps = storedOps ? JSON.parse(storedOps) : [];
+    console.log(`[POINTS DEBUG] Pending operations in localStorage: ${parsedOps.length}`);
+    console.log(`[POINTS DEBUG] Pending operations in state: ${pendingOperations.length}`);
+    
+    // Check for discrepancies
+    if (pendingOperations.length !== parsedOps.length) {
+      console.warn('[POINTS DEBUG] Discrepancy between state and localStorage operations!');
+      // Sync the state from localStorage to ensure consistency
+      setPendingOperations(parsedOps);
+    }
+    
+    if (pendingOperations.length > 0) {
+      console.log('[POINTS DEBUG] Pending operations:', pendingOperations);
+    }
+    
+    try {
+      await syncToServer();
+      return true;
+    } catch (error) {
+      console.error('[POINTS DEBUG] Sync error:', error);
+      return false;
+    }
+  }, [pendingOperations, syncToServer, magicPoints, isAuthenticated]);
+
+  // Update the ref after forceSyncWithDebug is defined
+  useEffect(() => {
+    forceSyncWithDebugRef.current = forceSyncWithDebug;
+  }, [forceSyncWithDebug]);
 
   // Define syncToServer function declaration
   const syncToServer = useCallback(async () => {
@@ -446,7 +503,7 @@ export const MagicPointsProvider = ({ children }) => {
           
           // Use immediate sync with high priority
           setTimeout(() => {
-            forceSyncWithDebug().catch(err => 
+            forceSyncWithDebugRef.current().catch(err => 
               console.error('[POINTS] Error during admin-triggered sync:', err)
             );
           }, 100);
@@ -512,7 +569,7 @@ export const MagicPointsProvider = ({ children }) => {
     return () => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
     };
-  }, [forceSyncWithDebug, checkServerPoints, isSyncing]);
+  }, [checkServerPoints, isSyncing]);
 
   // Fetch current points from server - new function
   const fetchCurrentPoints = useCallback(async () => {
@@ -924,56 +981,6 @@ export const MagicPointsProvider = ({ children }) => {
       correctBlanks
     };
   }, [magicPoints, isOnline, isAuthenticated, isSyncing, pendingOperations, lastSynced, revelioAttempts, correctBlanks]);
-  
-  // Force sync with debug information and improved error handling
-  const forceSyncWithDebug = useCallback(async () => {
-    console.log('[POINTS DEBUG] Force syncing with debug info...');
-    
-    // Log auth state
-    const token = localStorage.getItem('token');
-    const authToken = localStorage.getItem('authToken');
-    console.log(`[POINTS DEBUG] Auth token: ${token ? 'Present' : 'Missing'}`);
-    console.log(`[POINTS DEBUG] Alt auth token: ${authToken ? 'Present' : 'Missing'}`);
-    console.log(`[POINTS DEBUG] Token length: ${token?.length || 0}`);
-    console.log(`[POINTS DEBUG] isAuthenticated state: ${isAuthenticated}`);
-    
-    // Verify with server
-    try {
-      const authStatus = await checkAuthStatus();
-      console.log(`[POINTS DEBUG] Server auth check: ${JSON.stringify(authStatus)}`);
-    } catch (error) {
-      console.error('[POINTS DEBUG] Error checking auth:', error);
-    }
-    
-    // Verify local storage
-    console.log(`[POINTS DEBUG] Local magic points: ${localStorage.getItem('magicPoints')}`);
-    console.log(`[POINTS DEBUG] State magic points: ${magicPoints}`);
-    
-    // Log pending operations
-    const storedOps = localStorage.getItem('pendingOperations');
-    const parsedOps = storedOps ? JSON.parse(storedOps) : [];
-    console.log(`[POINTS DEBUG] Pending operations in localStorage: ${parsedOps.length}`);
-    console.log(`[POINTS DEBUG] Pending operations in state: ${pendingOperations.length}`);
-    
-    // Check for discrepancies
-    if (pendingOperations.length !== parsedOps.length) {
-      console.warn('[POINTS DEBUG] Discrepancy between state and localStorage operations!');
-      // Sync the state from localStorage to ensure consistency
-      setPendingOperations(parsedOps);
-    }
-    
-    if (pendingOperations.length > 0) {
-      console.log('[POINTS DEBUG] Pending operations:', pendingOperations);
-    }
-    
-    try {
-      await syncToServer();
-      return true;
-    } catch (error) {
-      console.error('[POINTS DEBUG] Sync error:', error);
-      return false;
-    }
-  }, [pendingOperations, syncToServer, magicPoints, isAuthenticated]);
   
   // Reset points to DEFAULT_POINTS
   const resetPoints = useCallback(async () => {
