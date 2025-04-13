@@ -586,24 +586,24 @@ export const AdminProvider = ({ children }) => {
     // Gọi updateHousePoints đầu tiên để cập nhật điểm
     const result = await updateHousePoints(house, pointsChange, reason);
     
+    // Create notification object outside the try block so it's accessible in the catch block
+    const notification = {
+      type: pointsChange > 0 ? 'success' : 'warning',
+      title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
+      message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
+      targetUsers: [], // Gửi cho tất cả người dùng
+      housesAffected: [house], // Chỉ định nhà bị ảnh hưởng
+      // Thêm các trường bổ sung cho frontend
+      house: house,
+      pointsChange: pointsChange,
+      reason: reason,
+      criteria: criteriaName, // Thêm thông tin criteria
+      level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1) // Thêm thông tin level
+    };
+    
     // Nếu updateHousePoints thành công, gửi thêm thông báo với criteria và level
     if (result) {
       try {
-        // Tạo thông báo với thông tin đầy đủ về criteria và level
-        const notification = {
-          type: pointsChange > 0 ? 'success' : 'warning',
-          title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
-          message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
-          targetUsers: [], // Gửi cho tất cả người dùng
-          housesAffected: [house], // Chỉ định nhà bị ảnh hưởng
-          // Thêm các trường bổ sung cho frontend
-          house: house,
-          pointsChange: pointsChange,
-          reason: reason,
-          criteria: criteriaName, // Thêm thông tin criteria
-          level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1) // Thêm thông tin level
-        };
-        
         // Gửi thông báo đến backend
         await axios.post(`${API_URL}/notifications`, notification, {
           headers: {
@@ -619,7 +619,7 @@ export const AdminProvider = ({ children }) => {
         try {
           const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
           const fallbackNotification = {
-            ...notification, // Use the notification variable from the outer try block
+            ...notification, // Now this reference works properly
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
             clientFallback: true
