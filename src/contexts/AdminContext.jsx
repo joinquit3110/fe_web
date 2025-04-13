@@ -594,68 +594,71 @@ export const AdminProvider = ({ children }) => {
           type: pointsChange > 0 ? 'success' : 'warning',
           title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
           message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
-          // Include required parameters - Chỉ gửi cho người dùng, không phải admin
+          // Include required parameters with correct types
           targetHouse: house,
-          targetUsers: [], // Để trống sẽ gửi cho tất cả người dùng của nhà đó
+          // Ensure targetUsers is always an empty array, not null
+          targetUsers: [], 
+          // Ensure housesAffected is a proper array of strings
           housesAffected: [house],
-          // Không gửi cho admin
-          skipAdmin: true, 
-          // Các trường cần thiết ở cấp root
-          house: house,
-          pointsChange: pointsChange,
-          reason: reason,
+          // Set skipAdmin flag to string "true" instead of boolean
+          skipAdmin: "true",
+          // Simplified fields at root level - make everything strings to avoid type issues
+          house,
+          pointsChange: pointsChange.toString(),
+          reason,
           criteria: criteriaName,
-          level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1),
-          meta: {
-            timestamp: new Date().toISOString(),
-            criteriaType: criteriaType
-          }
+          level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
         };
         
-        // Chỉ log ra thông báo đã gửi, không hiển thị cho admin
         console.log('Sending group criteria notification to users:', notificationPayload);
         
-        // Gửi thông báo đến backend chỉ cho người dùng
-        const response = await axios.post(`${API_URL}/notifications`, notificationPayload, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        console.log('Notification sent successfully to users');
-      } catch (notifError) {
-        console.error('Failed to send criteria notification (non-critical):', notifError);
-        // If available, log the detailed response
-        if (notifError.response) {
-          console.error('Error status:', notifError.response.status);
-          console.error('Error data:', notifError.response.data);
-        }
-        
-        // Client-side fallback: Add criteria notification to local storage
+        // Send notification to backend with proper error handling
         try {
-          const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-          const fallbackNotification = {
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            clientFallback: true,
-            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
-            type: pointsChange > 0 ? 'success' : 'warning',
-            title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
-            targetUsers: [],
-            housesAffected: [house],
-            skipAdmin: true, // Không gửi cho admin
-            house: house,
-            pointsChange: pointsChange,
-            reason: reason,
-            criteria: criteriaName,
-            level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
-          };
-          localNotifications.push(fallbackNotification);
-          localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
-          console.log('Added criteria notification to local fallback system');
-        } catch (fallbackError) {
-          console.error('Failed to store criteria notification in local fallback:', fallbackError);
+          const response = await axios.post(`${API_URL}/notifications`, notificationPayload, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          console.log('Notification sent successfully to users:', response.data);
+        } catch (notifError) {
+          console.error('Failed to send criteria notification (non-critical):', notifError);
+          // Log detailed error information for debugging
+          if (notifError.response) {
+            console.error('Error status:', notifError.response.status);
+            console.error('Error data:', notifError.response.data);
+            console.error('Server message:', notifError.response.data?.message);
+          }
+          
+          // Client-side fallback: Add criteria notification to local storage
+          try {
+            const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
+            const fallbackNotification = {
+              id: Date.now().toString(),
+              timestamp: new Date().toISOString(),
+              clientFallback: true,
+              message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
+              type: pointsChange > 0 ? 'success' : 'warning',
+              title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
+              targetUsers: [],
+              housesAffected: [house],
+              skipAdmin: "true", // Use string instead of boolean
+              house,
+              pointsChange: pointsChange.toString(), // Use string instead of number
+              reason,
+              criteria: criteriaName,
+              level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
+            };
+            localNotifications.push(fallbackNotification);
+            localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
+            console.log('Added criteria notification to local fallback system');
+          } catch (fallbackError) {
+            console.error('Failed to store criteria notification in local fallback:', fallbackError);
+          }
         }
+      } catch (outerError) {
+        console.error('Unexpected error in notification process:', outerError);
+        // This catch block handles any errors in the notification preparation
       }
     }
     
@@ -672,18 +675,19 @@ export const AdminProvider = ({ children }) => {
         message,
         type,
         title: typeDetails?.title || (type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notification'),
-        // Required fields for the backend API
-        targetUsers: user_id ? [user_id] : [],
-        housesAffected: typeDetails?.housesAffected || [],
+        // Required fields with consistent types (use strings where appropriate)
+        targetUsers: user_id ? [user_id.toString()] : [],
+        housesAffected: typeDetails?.housesAffected?.map(h => h.toString()) || [],
         targetHouse: typeDetails?.house || null,
-        // Include these fields directly in the root payload
+        // Make sure numeric values are sent as strings
+        pointsChange: typeDetails?.pointsChange ? typeDetails.pointsChange.toString() : null,
+        // Other fields
         reason: typeDetails?.reason || null,
         criteria: typeDetails?.criteria || null,
         level: typeDetails?.level || null,
         house: typeDetails?.house || null,
-        pointsChange: typeDetails?.pointsChange || null,
-        // Keep the original typeDetails for backward compatibility
-        typeDetails: typeDetails || null
+        // Make sure any boolean values are passed as strings
+        skipAdmin: typeDetails?.skipAdmin ? "true" : "false"
       };
 
       console.log('Sending notification payload:', payload);
@@ -703,6 +707,7 @@ export const AdminProvider = ({ children }) => {
       if (error.response) {
         console.error('Error status:', error.response.status);
         console.error('Error data:', error.response.data);
+        console.error('Server message:', error.response.data?.message);
       }
       
       // Store notification locally as fallback
@@ -715,16 +720,15 @@ export const AdminProvider = ({ children }) => {
         title: typeDetails?.title || (type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notification'),
         timestamp: Date.now(),
         clientFallback: true,
-        // Include these fields explicitly at the top level for consistent access
-        targetUsers: user_id ? [user_id] : [],
-        housesAffected: typeDetails?.housesAffected || [],
+        // Include these fields explicitly with consistent types
+        targetUsers: user_id ? [user_id.toString()] : [],
+        housesAffected: typeDetails?.housesAffected?.map(h => h.toString()) || [],
         reason: typeDetails?.reason || null,
         criteria: typeDetails?.criteria || null,
         level: typeDetails?.level || null,
         house: typeDetails?.house || null,
-        pointsChange: typeDetails?.pointsChange || null,
-        // Also preserve the full typeDetails for reference
-        typeDetails: typeDetails || null
+        pointsChange: typeDetails?.pointsChange ? typeDetails.pointsChange.toString() : null,
+        skipAdmin: typeDetails?.skipAdmin ? "true" : "false"
       };
       
       pendingNotifications.push(fallbackNotification);
@@ -752,15 +756,17 @@ export const AdminProvider = ({ children }) => {
         message,
         type: 'criteria',
         title: `Criteria Updated: ${criteria}`,
-        // Include these fields directly in the top-level payload
+        // Include these fields directly in the top-level payload as strings
         reason: reason || null,
         criteria: criteria,
         level: level,
-        // These fields are required by backend
-        targetUsers: user_id ? [user_id] : [],
-        housesAffected: [], // No specific house affected for criteria notifications
+        // These fields are required by backend with proper types
+        targetUsers: user_id ? [user_id.toString()] : [],
+        housesAffected: [], // Empty array for no specific house affected
         targetHouse: null,
-        // Include the typeDetails for backward compatibility
+        // Make sure skipAdmin is a string
+        skipAdmin: "false",
+        // Include the typeDetails as simple objects with string values
         typeDetails: {
           criteria: criteria,
           level: level,
@@ -790,6 +796,7 @@ export const AdminProvider = ({ children }) => {
       if (error.response) {
         console.error('Error status:', error.response.status);
         console.error('Error data:', error.response.data);
+        console.error('Server message:', error.response.data?.message);
       }
       
       // Store notification locally as fallback
@@ -808,13 +815,14 @@ export const AdminProvider = ({ children }) => {
         title: `Criteria Updated: ${criteria}`,
         timestamp: Date.now(),
         clientFallback: true,
-        // Include these fields directly for easier access
+        // Include these fields with consistent types
         reason: reason || null,
         criteria: criteria,
         level: level,
-        targetUsers: user_id ? [user_id] : [],
+        targetUsers: user_id ? [user_id.toString()] : [],
         housesAffected: [],
-        // Include the full typeDetails structure
+        skipAdmin: "false",
+        // Include the typeDetails with strings
         typeDetails: {
           criteria: criteria,
           level: level,
