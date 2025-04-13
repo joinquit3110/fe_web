@@ -277,7 +277,7 @@ const NotificationDisplay = () => {
   if (activeNotifications.length === 0) return null;
   
   return (
-    <Stack spacing={4} position="fixed" top="100px" right="20px" zIndex={1000} maxWidth="400px">
+    <Stack spacing={4} position="fixed" top="100px" right="20px" zIndex={1000} maxWidth="450px" maxHeight="calc(100vh - 150px)" overflowY="auto">
       {activeNotifications.map(notification => (
         <Fade key={notification.id} in={true}>
           <Box
@@ -296,6 +296,8 @@ const NotificationDisplay = () => {
             animation={`pop-in 0.4s ease-out, float-${notification.id % 3} 3s ease-in-out infinite`}
             position="relative"
             overflow="hidden"
+            minHeight="150px"
+            minWidth="350px"
           >
             <CloseButton 
               position="absolute" 
@@ -324,8 +326,8 @@ const NotificationDisplay = () => {
                 <Box
                   position="relative"
                   className={notification.pointsChange > 0 ? 'increase-point-container' : 'decrease-point-container'}
-                  width="300px"
-                  height="300px"
+                  width="320px"
+                  height="320px"
                   display="flex"
                   justifyContent="center"
                   alignItems="center"
@@ -344,12 +346,12 @@ const NotificationDisplay = () => {
                     }}
                   />
                   <Text
-                    fontSize="40px"
+                    fontSize="45px"
                     fontWeight="bold"
                     color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
                     textShadow="0 0 10px rgba(0,0,0,0.7)"
                     position="absolute"
-                    bottom="40px"
+                    bottom="55px"
                     className="points-text-animation"
                   >
                     {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
@@ -363,8 +365,8 @@ const NotificationDisplay = () => {
               position="absolute"
               top="-20px"
               left="-20px"
-              width="60px"
-              height="60px"
+              width="70px"
+              height="70px"
               borderRadius="50%"
               backgroundColor="rgba(255,255,255,0.1)"
               opacity="0.6"
@@ -381,9 +383,10 @@ const NotificationDisplay = () => {
                   notification.type === 'announcement' ? 'purple' :
                   'blue'
                 }
-                px={2}
+                px={3}
                 py={1}
                 borderRadius="md"
+                fontWeight="bold"
               >
                 {notification.title}
               </Badge>
@@ -395,6 +398,7 @@ const NotificationDisplay = () => {
                 fontWeight="semibold"
                 fontFamily="'Cinzel', serif"
                 letterSpacing="0.5px"
+                mb={3}
               >
                 {notification.message}
               </Text>
@@ -402,38 +406,47 @@ const NotificationDisplay = () => {
               {/* Show reason if available */}
               {notification.reason && (
                 <Text 
-                  fontSize="sm" 
-                  mt={1}
+                  fontSize="md" 
+                  mt={2}
                   fontStyle="italic"
-                  color="rgba(255,255,255,0.85)"
+                  color="white"
+                  p={2}
+                  borderLeft="3px solid white"
+                  background="rgba(255,255,255,0.1)"
+                  borderRadius="0 4px 4px 0"
                 >
                   <strong>Reason:</strong> {notification.reason}
                 </Text>
               )}
               
               {/* Show criteria and level for house points if available */}
-              {notification.criteria && (
-                <Text 
-                  fontSize="sm" 
-                  mt={1}
-                  color="rgba(255,255,255,0.85)"
-                >
-                  <strong>Criteria:</strong> {notification.criteria}
-                </Text>
-              )}
-              
-              {notification.level && (
-                <Text 
-                  fontSize="sm" 
-                  mt={0.5}
-                  color="rgba(255,255,255,0.85)"
-                >
-                  <strong>Level:</strong> {notification.level}
-                </Text>
-              )}
+              <Box 
+                mt={notification.criteria ? 3 : 0} 
+                bg="rgba(0,0,0,0.15)" 
+                borderRadius="md" 
+                p={notification.criteria ? 2 : 0}
+                display={notification.criteria ? "block" : "none"}
+              >
+                {notification.criteria && (
+                  <Text 
+                    fontSize="md" 
+                    color="white"
+                  >
+                    <strong>Criteria:</strong> {notification.criteria}
+                  </Text>
+                )}
+                
+                {notification.level && (
+                  <Text 
+                    fontSize="md" 
+                    mt={1}
+                    color="white"
+                  >
+                    <strong>Level:</strong> {notification.level}
+                  </Text>
+                )}
+              </Box>
             </Flex>
-            
-            {/* Magic sparkle animation using pseudo-elements handled in CSS */}
           </Box>
         </Fade>
       ))}
@@ -511,7 +524,7 @@ const NotificationDisplay = () => {
           20% { opacity: 1; transform: scale(1.1); }
           40% { opacity: 1; transform: scale(1); }
           80% { opacity: 1; }
-          100% { opacity: 0.2; }
+          100% { opacity: 1; }
         }
         
         @keyframes rotate-pulse {

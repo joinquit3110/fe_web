@@ -212,6 +212,24 @@ const Login = () => {
     }
   };
 
+  const getHouseColor = (house) => {
+    if (!house) return 'white';
+    
+    const houseName = house.toLowerCase();
+    switch (houseName) {
+      case 'gryffindor':
+        return '#D61A1F';
+      case 'slytherin':
+        return '#1A472A';
+      case 'ravenclaw':
+        return '#0E1A64';
+      case 'hufflepuff':
+        return '#ECB939';
+      default:
+        return 'white';
+    }
+  };
+
   // If login is successful and we have a house, show the house logo animation
   if (loginSuccess && userHouse) {
     return (
@@ -239,7 +257,7 @@ const Login = () => {
           <Image
             src={getHouseLogo(userHouse)}
             alt={`${userHouse} house`}
-            width="250px"
+            width="280px"
             height="auto"
             className="house-logo-animation"
             sx={{
@@ -249,6 +267,24 @@ const Login = () => {
               objectFit: 'contain',
             }}
           />
+          
+          {/* House logo particles */}
+          <Box className="house-particles">
+            {[...Array(20)].map((_, i) => (
+              <Box
+                key={i}
+                className="house-particle"
+                style={{
+                  '--size': `${Math.random() * 8 + 3}px`,
+                  '--x': `${Math.random() * 400 - 200}px`,
+                  '--y': `${Math.random() * 400 - 200}px`,
+                  '--delay': `${Math.random() * 2}s`,
+                  '--duration': `${Math.random() * 3 + 2}s`,
+                  backgroundColor: getHouseColor(userHouse)
+                }}
+              />
+            ))}
+          </Box>
         </Box>
       </Box>
     );
@@ -273,16 +309,21 @@ const Login = () => {
       {/* Hogwarts logo animation */}
       <Box
         position="absolute"
-        top="50px"
+        top="30px"
         left="50%"
         transform="translateX(-50%)"
-        width="180px"
+        width="140px"
         height="auto"
         className="hogwarts-logo-container"
         textAlign="center"
         display="flex"
         justifyContent="center"
         alignItems="center"
+        zIndex="10"
+        boxShadow="0px 0px 15px rgba(211, 166, 37, 0.7)" 
+        borderRadius="50%"
+        background="rgba(10, 14, 35, 0.6)"
+        padding="5px"
       >
         <Image
           src={hogwartsLogoImg}
@@ -460,6 +501,36 @@ const Login = () => {
         @keyframes fade-in {
           0% { opacity: 0; }
           100% { opacity: 1; }
+        }
+
+        .house-particles {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+
+        .house-particle {
+          position: absolute;
+          width: var(--size);
+          height: var(--size);
+          background-color: white;
+          border-radius: 50%;
+          animation: particle-float var(--duration) ease-in-out var(--delay) infinite;
+        }
+
+        @keyframes particle-float {
+          0% {
+            transform: translate(0, 0);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(var(--x), var(--y));
+            opacity: 0;
+          }
         }
       `}</style>
     </Box>
