@@ -19,6 +19,7 @@ import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import NotificationDisplay from './components/NotificationDisplay';
+import { SocketProvider } from './context/SocketContext';
 
 // Fix theme definition - must use proper color format
 const theme = extendTheme({
@@ -448,9 +449,9 @@ const App = () => {
     <ChakraProvider theme={theme}>
       <AuthProvider>
         <AdminProvider>
-          <MagicPointsProvider>
+          <SocketProvider>
             <AppContent />
-          </MagicPointsProvider>
+          </SocketProvider>
         </AdminProvider>
       </AuthProvider>
     </ChakraProvider>

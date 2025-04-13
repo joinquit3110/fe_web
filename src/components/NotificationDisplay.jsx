@@ -10,7 +10,20 @@ const NotificationDisplay = () => {
   const [serverNotifications, setServerNotifications] = useState([]);
   const [activeNotifications, setActiveNotifications] = useState([]);
   const { user, isAuthenticated } = useAuth();
-  const { notifications: socketNotifications, removeNotification } = useSocket();
+  
+  // Add a try-catch to safely use the socket context
+  let socketNotifications = [];
+  let removeNotification = () => {};
+  
+  try {
+    // Try to get socket context - this might not be available if SocketProvider is not in the tree
+    const socketContext = useSocket();
+    socketNotifications = socketContext?.notifications || [];
+    removeNotification = socketContext?.removeNotification || (() => {});
+  } catch (error) {
+    console.warn('Socket context not available:', error.message);
+  }
+  
   const notificationQueue = useRef([]);
   const processingQueue = useRef(false);
   
@@ -149,7 +162,11 @@ const NotificationDisplay = () => {
     
     // If it's a socket notification, remove it from the socket context
     if (nextNotification.source === 'socket') {
-      removeNotification(nextNotification.id);
+      try {
+        removeNotification(nextNotification.id);
+      } catch (error) {
+        console.warn('Error removing notification:', error.message);
+      }
     }
     
     // Schedule next notification to be displayed after a delay
