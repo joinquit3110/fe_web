@@ -512,11 +512,93 @@ const NotificationDisplay = () => {
     // Log how many notifications are being processed before deduplication
     console.log(`[NOTIFICATION] Processing ${notificationQueue.current.length} notifications`);
 
-    // Sort and deduplicate notifications (existing code...)
-    // ... existing deduplication code ...
+    // ENHANCED DEDUPLICATION: Sort and deduplicate notifications
+    // First, sort by timestamp (newest first)
+    notificationQueue.current.sort((a, b) => {
+      const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : Date.now();
+      const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : Date.now();
+      return timeB - timeA; // newest first
+    });
+    
+    // Create a map to group notifications by criteria/reason/level for deduplication
+    const dedupeGroups = new Map();
+    
+    // Group notifications by their deduplication keys
+    notificationQueue.current.forEach(notification => {
+      // Create a hash for this notification
+      const hash = getNotificationHash(notification);
+      
+      // Check if this hash is already in the global registry
+      if (globalDedupeRegistry.current.has(hash)) {
+        console.log(`[NOTIFICATION] Skipping recently seen notification hash: ${hash}`);
+        return; // Skip this notification
+      }
+      
+      // Special handling for point change notifications
+      if (notification.pointsChange) {
+        // Create a key that combines important attributes
+        const pointChangeKey = `pointChange:${notification.house || 'all'}:${notification.criteria || ''}`;
+        
+        if (!dedupeGroups.has(pointChangeKey)) {
+          dedupeGroups.set(pointChangeKey, []);
+        }
+        
+        // Add to the group
+        dedupeGroups.get(pointChangeKey).push(notification);
+      } else {
+        // For non-point change notifications, use a standard key
+        const key = `${notification.type}:${notification.message?.substring(0, 20)}`;
+        
+        if (!dedupeGroups.has(key)) {
+          dedupeGroups.set(key, []);
+        }
+        
+        // Add to the group
+        dedupeGroups.get(key).push(notification);
+      }
+    });
+    
+    // Process each group - keep only the newest notification from each group
+    const uniqueNotifications = [];
+    dedupeGroups.forEach((group, key) => {
+      // If there's only one, just keep it
+      if (group.length === 1) {
+        uniqueNotifications.push(group[0]);
+      } 
+      // If there are multiple in a group, only keep the newest one
+      else if (group.length > 1) {
+        console.log(`[NOTIFICATION] Deduplicated ${group.length} similar notifications with key ${key}`);
+        // The notifications are already sorted by timestamp, so take the first one
+        uniqueNotifications.push(group[0]);
+      }
+    });
+    
+    // Replace the queue with deduplicated notifications
+    notificationQueue.current = uniqueNotifications;
+    
+    // Skip total point update notifications if we have criteria-specific ones
+    const hasCriteriaNotifications = notificationQueue.current.some(
+      n => n.criteria && n.level && n.pointsChange
+    );
+    
+    if (hasCriteriaNotifications) {
+      // Filter out generic points total notifications that don't have criteria
+      notificationQueue.current = notificationQueue.current.filter(
+        n => !(n.pointsChange && !n.criteria && !n.level && 
+             (n.message?.includes('updated to') || 
+              n.message?.includes('points have been')))
+      );
+    }
+    
+    console.log(`[NOTIFICATION] After deduplication: ${notificationQueue.current.length} notifications`);
 
+    // Get the next notification to display
     const notification = notificationQueue.current.shift();
     if (notification) {
+      // Add this notification hash to the global registry to prevent duplicates
+      const hash = getNotificationHash(notification);
+      globalDedupeRegistry.current.set(hash, Date.now());
+      
       // Ensure point changes have appropriate titles
       if (notification.pointsChange) {
         if (notification.pointsChange > 0 && (!notification.title || !notification.title.includes('POINTS'))) {
@@ -546,7 +628,7 @@ const NotificationDisplay = () => {
       // Generate a consistent ID for this notification if it doesn't have one
       const notifId = notification.id || createId();
       
-      // Always show the notification - debugging mode to ensure notifications appear
+      // Log the notification being displayed
       console.log('[NOTIFICATION] Displaying notification:', notification);
       
       setActiveNotifications(prev => {
