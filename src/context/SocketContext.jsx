@@ -221,19 +221,22 @@ export const SocketProvider = ({ children }) => {
           const newPoints = parseInt(updatedFields.magicPoints, 10);
           const prevPoints = user?.magicPoints || parseInt(localStorage.getItem('magicPoints') || '100', 10);
           const diff = newPoints - prevPoints;
+          const isReset = newPoints === 100 && prevPoints !== 100;
           const changeDirection = diff > 0 ? 'increased by' : 'decreased by';
           
           if (!isNaN(newPoints)) {
-            console.log(`[SOCKET] Magic points updated from server: ${newPoints} (change: ${diff})`);
+            console.log(`[SOCKET] Magic points updated from server: ${newPoints} (change: ${diff}, isReset: ${isReset})`);
             
             // Add notification about points change with more specific information
             setNotifications(prev => [
               {
                 id: Date.now(),
-                type: diff >= 0 ? 'success' : 'warning',
-                message: diff !== 0 
-                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin. New total: ${newPoints}`
-                  : `Your magic points have been updated to ${newPoints}`,
+                type: isReset ? 'warning' : (diff >= 0 ? 'success' : 'warning'),
+                message: isReset 
+                  ? `Your magic points have been RESET to 100 by admin!`
+                  : (diff !== 0 
+                    ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin. New total: ${newPoints}`
+                    : `Your magic points have been updated to ${newPoints}`),
                 timestamp: new Date()
               },
               ...prev.slice(0, 9)
@@ -244,12 +247,21 @@ export const SocketProvider = ({ children }) => {
               detail: { 
                 points: newPoints,
                 source: 'serverSync',
-                immediate: true
+                immediate: true,
+                isReset: isReset
               }
             });
             window.dispatchEvent(pointsEvent);
             
-            // Update user object with new points
+            // Play a notification sound for important point changes
+            if (isReset || Math.abs(diff) >= 20) {
+              const notificationSound = document.getElementById('notification-sound');
+              if (notificationSound) {
+                notificationSound.play().catch(e => console.log('Could not play notification sound'));
+              }
+            }
+            
+            // Update user object with new points immediately
             setUser(prevUser => {
               if (!prevUser) return prevUser;
               
@@ -259,6 +271,10 @@ export const SocketProvider = ({ children }) => {
               };
               
               localStorage.setItem('user', JSON.stringify(updatedUser));
+              
+              // Force update localStorage magic points separately for redundancy
+              localStorage.setItem('magicPoints', newPoints.toString());
+              
               return updatedUser;
             });
           }

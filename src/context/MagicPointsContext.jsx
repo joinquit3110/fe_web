@@ -795,13 +795,20 @@ export const MagicPointsProvider = ({ children }) => {
   // Add handler for direct "magicPointsUpdated" events from SocketContext
   useEffect(() => {
     const handleDirectPointsUpdate = (event) => {
-      const { points, source, immediate } = event.detail;
+      const { points, source, immediate, isReset } = event.detail;
       
       if (points !== undefined && (source === 'serverSync' || source === 'adminUpdate')) {
-        console.log(`[POINTS] Received direct points update from server: ${points} (immediate: ${immediate})`);
+        console.log(`[POINTS] Received direct points update from server: ${points} (immediate: ${immediate}, isReset: ${isReset})`);
         
-        // Only update if points are different from current state
-        if (points !== magicPoints) {
+        // Always update immediately if it's a reset or flagged as immediate
+        const shouldForceUpdate = immediate === true || isReset === true;
+        
+        // Check if this is a significant points change (more than 20 points or a reset)
+        const isSignificantChange = isReset || Math.abs(points - magicPoints) >= 20;
+        
+        // Only update if points are different from current state or it's a forced update
+        if (points !== magicPoints || shouldForceUpdate) {
+          // Make the update
           setMagicPoints(points);
           localStorage.setItem('magicPoints', points.toString());
           localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
@@ -812,11 +819,51 @@ export const MagicPointsProvider = ({ children }) => {
           localStorage.removeItem('pendingOperations');
           setPendingChanges(false);
           
+          // If it's a reset or significant change, show more prominent feedback
+          if (isReset) {
+            console.log('[POINTS] Points have been reset to 100 by admin');
+            
+            // Create a more visible notification for resets
+            try {
+              const resetNotification = document.createElement('div');
+              resetNotification.className = 'admin-reset-notification';
+              resetNotification.style.position = 'fixed';
+              resetNotification.style.top = '50%';
+              resetNotification.style.left = '50%';
+              resetNotification.style.transform = 'translate(-50%, -50%)';
+              resetNotification.style.background = 'rgba(220, 53, 69, 0.9)';
+              resetNotification.style.color = 'white';
+              resetNotification.style.padding = '20px 30px';
+              resetNotification.style.borderRadius = '8px';
+              resetNotification.style.zIndex = '9999';
+              resetNotification.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+              resetNotification.style.fontSize = '18px';
+              resetNotification.style.fontWeight = 'bold';
+              resetNotification.style.textAlign = 'center';
+              resetNotification.innerHTML = `
+                <div>Your magic points have been RESET to 100 by admin!</div>
+                <div style="font-size: 14px; margin-top: 8px; opacity: 0.8;">All operations have been synchronized.</div>
+              `;
+              
+              document.body.appendChild(resetNotification);
+              
+              // Remove after 5 seconds
+              setTimeout(() => {
+                if (resetNotification.parentNode) {
+                  resetNotification.parentNode.removeChild(resetNotification);
+                }
+              }, 5000);
+            } catch (error) {
+              console.error('[POINTS] Error showing reset notification:', error);
+            }
+          }
+          
           // Dispatch an event to ensure UI updates without requiring a refresh
           const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
             detail: { 
               points: points,
-              source: 'serverUpdate',
+              source: isReset ? 'adminReset' : 'serverUpdate',
+              isSignificantChange,
               timestamp: new Date().toISOString()
             }
           });

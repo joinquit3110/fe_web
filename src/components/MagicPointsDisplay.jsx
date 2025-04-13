@@ -21,6 +21,34 @@ const magicPointsStyles = `
     80% { opacity: 1; transform: translateY(-30px); }
     100% { opacity: 0; transform: translateY(-50px); }
   }
+  
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+  
+  @keyframes reset-pulse {
+    0% { background-color: transparent; }
+    25% { background-color: rgba(220, 53, 69, 0.6); box-shadow: 0 0 25px rgba(220, 53, 69, 0.8); }
+    75% { background-color: rgba(220, 53, 69, 0.6); box-shadow: 0 0 25px rgba(220, 53, 69, 0.8); }
+    100% { background-color: transparent; }
+  }
+  
+  @keyframes major-increase-pulse {
+    0% { background-color: transparent; }
+    25% { background-color: rgba(40, 167, 69, 0.6); box-shadow: 0 0 25px rgba(40, 167, 69, 0.8); }
+    75% { background-color: rgba(40, 167, 69, 0.6); box-shadow: 0 0 25px rgba(40, 167, 69, 0.8); }
+    100% { background-color: transparent; }
+  }
+  
+  @keyframes major-decrease-pulse {
+    0% { background-color: transparent; }
+    25% { background-color: rgba(255, 193, 7, 0.6); box-shadow: 0 0 25px rgba(255, 193, 7, 0.8); }
+    75% { background-color: rgba(255, 193, 7, 0.6); box-shadow: 0 0 25px rgba(255, 193, 7, 0.8); }
+    100% { background-color: transparent; }
+  }
 
   .point-change {
     position: absolute;
@@ -111,6 +139,28 @@ const magicPointsStyles = `
   .magic-points-indicator {
     animation: magical-glow 2s infinite;
   }
+  
+  .magic-points-indicator.reset-pulse {
+    animation: reset-pulse 3s ease-in-out, shake 0.5s cubic-bezier(.36,.07,.19,.97) both !important;
+  }
+  
+  .magic-points-indicator.major-increase {
+    animation: major-increase-pulse 3s ease-in-out !important;
+  }
+  
+  .magic-points-indicator.major-decrease {
+    animation: major-decrease-pulse 3s ease-in-out !important;
+  }
+  
+  .magic-points-indicator.admin-reset {
+    background-color: rgba(220, 53, 69, 0.3);
+    border: 2px solid rgba(220, 53, 69, 0.8);
+  }
+  
+  .magic-points-indicator.admin-update {
+    background-color: rgba(52, 152, 219, 0.3);
+    border: 2px solid rgba(52, 152, 219, 0.8);
+  }
 
   .magic-exceeded .magic-points-value {
     color: #9b59b6;
@@ -167,6 +217,34 @@ const MagicPointsDisplay = () => {
         setPointChangeAmount(pointDiff);
         setShowPointChange(true);
         
+        // Create extra visual effects for major changes or resets
+        const isReset = magicPoints === 100 && prevPoints !== 100 && prevPoints !== 0;
+        const isMajorChange = Math.abs(pointDiff) >= 20;
+        
+        // Add extra visual feedback for major changes
+        if (isReset || isMajorChange) {
+          try {
+            // Add pulsing background to the points display
+            const pointsDisplay = document.querySelector('.magic-points-indicator');
+            if (pointsDisplay) {
+              // Add intense pulse animation
+              pointsDisplay.style.animation = 'none'; // Reset animation
+              void pointsDisplay.offsetWidth; // Trigger reflow
+              
+              const animationType = isReset ? 'reset-pulse' : (pointDiff > 0 ? 'major-increase' : 'major-decrease');
+              pointsDisplay.classList.add(animationType);
+              
+              // Remove the animation class after it completes
+              setTimeout(() => {
+                pointsDisplay.classList.remove(animationType);
+                pointsDisplay.style.animation = 'magical-glow 2s infinite';
+              }, 3000);
+            }
+          } catch (error) {
+            console.error('Error creating visual effects:', error);
+          }
+        }
+        
         // Hide after animation completes
         pointChangeTimeoutRef.current = setTimeout(() => {
           setShowPointChange(false);
@@ -182,6 +260,43 @@ const MagicPointsDisplay = () => {
       }
     };
   }, [magicPoints, prevPoints]);
+
+  // Listen for special real-time updates from server
+  useEffect(() => {
+    const handleMagicPointsUIUpdate = (event) => {
+      if (event.detail?.source === 'adminReset' || event.detail?.isSignificantChange) {
+        // Show special animation for admin resets or significant changes
+        try {
+          const pointsDisplay = document.querySelector('.magic-points-indicator');
+          if (pointsDisplay) {
+            // Add special effect class
+            const isReset = event.detail.source === 'adminReset';
+            pointsDisplay.classList.add(isReset ? 'admin-reset' : 'admin-update');
+            
+            // Shake effect for resets
+            if (isReset) {
+              pointsDisplay.style.animation = 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both, magical-glow 2s infinite';
+            }
+            
+            // Remove after animation completes
+            setTimeout(() => {
+              pointsDisplay.classList.remove(isReset ? 'admin-reset' : 'admin-update');
+              if (isReset) {
+                pointsDisplay.style.animation = 'magical-glow 2s infinite';
+              }
+            }, 3000);
+          }
+        } catch (error) {
+          console.error('Error creating reset visual effects:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('magicPointsUIUpdate', handleMagicPointsUIUpdate);
+    return () => {
+      window.removeEventListener('magicPointsUIUpdate', handleMagicPointsUIUpdate);
+    };
+  }, []);
 
   // Format the last synced time
   const formatLastSynced = () => {
