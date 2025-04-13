@@ -85,23 +85,16 @@ const AdminHousePoints = () => {
   
   // Add points to a house
   const handleAddPoints = async () => {
-    if (!reason.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please provide a reason for awarding points',
-        status: 'error',
-        duration: 3000,
-      });
-      return;
-    }
+    // Sử dụng reason mặc định nếu người dùng không nhập
+    const pointReason = reason.trim() ? reason : "Points adjustment";
     
     try {
-      const success = await updateHousePoints(selectedHouse, 10, reason);
+      const success = await updateHousePoints(selectedHouse, 10, pointReason);
       
       if (success) {
         toast({
           title: 'Points Added',
-          description: `10 points awarded to ${selectedHouse}: ${reason}`,
+          description: `10 points awarded to ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
           status: 'success',
           duration: 2000,
         });
@@ -124,23 +117,16 @@ const AdminHousePoints = () => {
   
   // Deduct points from a house
   const handleDeductPoints = async () => {
-    if (!reason.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please provide a reason for deducting points',
-        status: 'error',
-        duration: 3000,
-      });
-      return;
-    }
+    // Sử dụng reason mặc định nếu người dùng không nhập
+    const pointReason = reason.trim() ? reason : "Points deduction";
     
     try {
-      const success = await updateHousePoints(selectedHouse, -10, reason);
+      const success = await updateHousePoints(selectedHouse, -10, pointReason);
       
       if (success) {
         toast({
           title: 'Points Deducted',
-          description: `10 points deducted from ${selectedHouse}: ${reason}`,
+          description: `10 points deducted from ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
           status: 'success',
           duration: 2000,
         });
@@ -305,7 +291,7 @@ const AdminHousePoints = () => {
                       onClick={handleAddPoints}
                       isLoading={loading}
                       leftIcon={<span>+10</span>}
-                      isDisabled={!reason.trim()}
+                      isDisabled={false} 
                       className="spellcast-button"
                     >
                       Award Points
@@ -315,7 +301,7 @@ const AdminHousePoints = () => {
                       onClick={handleDeductPoints}
                       isLoading={loading}
                       leftIcon={<span>-10</span>}
-                      isDisabled={!reason.trim()}
+                      isDisabled={false}
                       className="spellcast-button"
                     >
                       Deduct Points

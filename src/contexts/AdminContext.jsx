@@ -461,8 +461,12 @@ export const AdminProvider = ({ children }) => {
             type: pointsChange > 0 ? 'success' : 'warning',
             title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
             message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
+            targetUsers: [], // Trường bắt buộc - rỗng để gửi cho tất cả người dùng
+            housesAffected: [house], // Trường bắt buộc - chỉ định nhà bị ảnh hưởng
+            // Thêm các trường mở rộng cho frontend
             house: house,
-            pointsChange: pointsChange
+            pointsChange: pointsChange,
+            reason: reason || 'House points update'
           };
           
           // Send notification to the backend for real-time delivery
@@ -555,9 +559,50 @@ export const AdminProvider = ({ children }) => {
         criteriaName = 'Group work';
     }
     
+    // Thay vì chỉ gọi updateHousePoints với reason, chúng ta sẽ thêm các trường bổ sung
     const reason = `${criteriaName}: ${performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)}${details ? ` - ${details}` : ''}`;
     
-    return await updateHousePoints(house, pointsChange, reason);
+    // Chuẩn bị dữ liệu thông báo
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    
+    // Gọi updateHousePoints đầu tiên để cập nhật điểm
+    const result = await updateHousePoints(house, pointsChange, reason);
+    
+    // Nếu updateHousePoints thành công, gửi thêm thông báo với criteria và level
+    if (result) {
+      try {
+        // Tạo thông báo với thông tin đầy đủ về criteria và level
+        const notification = {
+          type: pointsChange > 0 ? 'success' : 'warning',
+          title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
+          message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
+          targetUsers: [], // Gửi cho tất cả người dùng
+          housesAffected: [house], // Chỉ định nhà bị ảnh hưởng
+          // Thêm các trường bổ sung cho frontend
+          house: house,
+          pointsChange: pointsChange,
+          reason: reason,
+          criteria: criteriaName, // Thêm thông tin criteria
+          level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1) // Thêm thông tin level
+        };
+        
+        // Gửi thông báo đến backend
+        await axios.post(`${API_URL}/notifications`, notification, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('Group criteria notification sent successfully with criteria and level information');
+      } catch (notifError) {
+        console.error('Failed to send criteria notification (non-critical):', notifError);
+      }
+    }
+    
+    return result;
   };
 
   return (
