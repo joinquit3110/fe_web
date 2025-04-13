@@ -22,6 +22,12 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/HarryPotter.css';
 import '../styles/LoginHogwarts.css';
+// Import house logo images
+import gryffindorImg from '../asset/Gryffindor.png';
+import slytherinImg from '../asset/Slytherin.png';
+import ravenclawImg from '../asset/Ravenclaw.png';
+import hufflepuffImg from '../asset/Hufflepuff.png';
+import hogwartsLogoImg from '../asset/Hogwarts logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -194,15 +200,15 @@ const Login = () => {
     const houseName = house.toLowerCase();
     switch (houseName) {
       case 'gryffindor':
-        return '../asset/Gryffindor.png';
+        return gryffindorImg;
       case 'slytherin':
-        return '../asset/Slytherin.png';
+        return slytherinImg;
       case 'ravenclaw':
-        return '../asset/Ravenclaw.png';
+        return ravenclawImg;
       case 'hufflepuff':
-        return '../asset/Hufflepuff.png';
+        return hufflepuffImg;
       default:
-        return '../asset/Hogwarts logo.png';
+        return hogwartsLogoImg;
     }
   };
 
@@ -236,6 +242,12 @@ const Login = () => {
             width="250px"
             height="auto"
             className="house-logo-animation"
+            sx={{
+              aspectRatio: '1/1',
+              maxWidth: '700px',
+              maxHeight: '700px',
+              objectFit: 'contain',
+            }}
           />
         </Box>
       </Box>
@@ -269,9 +281,15 @@ const Login = () => {
         className="hogwarts-logo-container"
       >
         <Image
-          src="../asset/Hogwarts logo.png"
+          src={hogwartsLogoImg}
           alt="Hogwarts Logo"
           className="hogwarts-logo-animation"
+          sx={{
+            aspectRatio: '1/1',
+            maxWidth: '700px',
+            maxHeight: '700px',
+            objectFit: 'contain',
+          }}
         />
       </Box>
       

@@ -322,7 +322,28 @@ const UserProfile = ({ user: propUser }) => {
       
       {/* Profile menu */}
       {showMenu && (
-        <div className="profile-menu">
+        <div className="profile-menu" style={{ 
+          maxHeight: 'calc(100vh - 80px)', 
+          overflowY: 'auto',
+          paddingRight: '10px',
+          msOverflowStyle: 'none',  /* IE và Edge */
+          scrollbarWidth: 'thin',   /* Firefox */
+          scrollbarColor: 'rgba(211, 166, 37, 0.5) transparent'
+        }}>
+          {/* Custom scrollbar for Webkit browsers */}
+          <style jsx>{`
+            .profile-menu::-webkit-scrollbar {
+              width: 6px;
+            }
+            .profile-menu::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .profile-menu::-webkit-scrollbar-thumb {
+              background-color: rgba(211, 166, 37, 0.5);
+              border-radius: 6px;
+            }
+          `}</style>
+
           {/* File input for avatar (hidden) */}
           <input 
             type="file" 
@@ -344,7 +365,7 @@ const UserProfile = ({ user: propUser }) => {
                   onComplete={onCropComplete}
                   circularCrop
                 >
-                  <img ref={imageRef} src={imagePreview} alt="Avatar preview" />
+                  <img ref={imageRef} src={imagePreview} alt="Avatar preview" style={{ maxWidth: '100%' }} />
                 </ReactCrop>
               </div>
               <div className="crop-actions">

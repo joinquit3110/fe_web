@@ -3,6 +3,9 @@ import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex } from '@chakra
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import axios from 'axios';
+// Import the image assets
+import increasePointImg from '../asset/IncreasePoint.png';
+import decreasePointImg from '../asset/DecreasePoint.png';
 
 const API_URL = 'https://be-web-6c4k.onrender.com/api';
 
@@ -328,12 +331,17 @@ const NotificationDisplay = () => {
                   alignItems="center"
                 >
                   <Image 
-                    src={notification.pointsChange > 0 ? '../asset/IncreasePoint.png' : '../asset/DecreasePoint.png'}
+                    src={notification.pointsChange > 0 ? increasePointImg : decreasePointImg}
                     alt={notification.pointsChange > 0 ? 'Points increased' : 'Points decreased'}
                     className={notification.pointsChange > 0 ? 'increase-animation' : 'decrease-animation'}
                     width="100%"
                     height="100%"
                     objectFit="contain"
+                    sx={{
+                      aspectRatio: '1/1',
+                      maxWidth: '700px',
+                      maxHeight: '700px',
+                    }}
                   />
                   <Text
                     fontSize="32px"
@@ -519,4 +527,4 @@ const NotificationDisplay = () => {
   );
 };
 
-export default NotificationDisplay; 
+export default NotificationDisplay;
