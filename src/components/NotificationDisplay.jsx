@@ -426,14 +426,17 @@ const NotificationDisplay = () => {
     if (nextNotification.message) {
       console.log('Processing notification message:', nextNotification.message);
       
+      // Define possible criteria and levels
+      const possibleCriteria = [
+        'Level of participation of group members',
+        'Level of English usage in the group',
+        'Time taken by the group to complete tasks'
+      ];
+      
+      const possibleLevels = ['Excellent', 'Good', 'Satisfactory', 'Poor', 'Very Poor'];
+      
       // Check for criteria in message if not already present
       if (!nextNotification.criteria) {
-        const possibleCriteria = [
-          'Level of participation of group members',
-          'Level of English usage in the group',
-          'Time taken by the group to complete tasks'
-        ];
-        
         for (const criteria of possibleCriteria) {
           if (nextNotification.message.toLowerCase().includes(criteria.toLowerCase())) {
             nextNotification.criteria = criteria;
@@ -445,8 +448,6 @@ const NotificationDisplay = () => {
       
       // Check for level in message if not already present
       if (!nextNotification.level) {
-        const possibleLevels = ['Excellent', 'Good', 'Satisfactory', 'Poor', 'Very Poor'];
-        
         for (const level of possibleLevels) {
           if (nextNotification.message.toLowerCase().includes(level.toLowerCase())) {
             nextNotification.level = level;

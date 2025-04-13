@@ -618,12 +618,13 @@ export const AdminProvider = ({ children }) => {
         // Client-side fallback: Add criteria notification to local storage
         try {
           const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-          localNotifications.push({
-            ...notification,
+          const fallbackNotification = {
+            ...notification, // Use the notification variable from the outer try block
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
             clientFallback: true
-          });
+          };
+          localNotifications.push(fallbackNotification);
           localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
           console.log('Added criteria notification to local fallback system');
         } catch (fallbackError) {
