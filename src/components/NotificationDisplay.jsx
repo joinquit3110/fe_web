@@ -301,14 +301,16 @@ const NotificationDisplay = () => {
             height="auto"
             backgroundColor={
               notification.type === 'success' ? 'rgba(46, 204, 113, 0.95)' :
-              notification.type === 'warning' ? 'rgba(231, 76, 60, 0.95)' : // Đổi màu warning từ cam sang đỏ
+              notification.type === 'warning' ? 'rgba(231, 76, 60, 0.95)' : 
               notification.type === 'error' ? 'rgba(231, 76, 60, 0.95)' :
               notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.95)' :
               'rgba(52, 152, 219, 0.95)'
             }
             animation={`pop-in 0.4s ease-out, float-${notification.id % 3} 3s ease-in-out infinite`}
             position="relative"
-            overflow="hidden"
+            overflow="visible"
+            backdropFilter="blur(10px)"
+            border="1px solid rgba(255, 255, 255, 0.2)"
           >
             <CloseButton 
               position="absolute" 
@@ -339,12 +341,19 @@ const NotificationDisplay = () => {
                 <Box
                   position="relative"
                   className={notification.pointsChange > 0 ? 'increase-point-container' : 'decrease-point-container'}
-                  width="250px"  // Giảm kích thước từ 320px
-                  height="250px" // Giảm kích thước từ 320px
+                  width="260px"
+                  height="260px"
                   display="flex"
                   justifyContent="center"
                   alignItems="center"
-                  marginBottom="20px" // Tạo khoảng trống cho phần thông tin
+                  marginBottom="30px"
+                  borderRadius="50%"
+                  overflow="hidden"
+                  boxShadow={
+                    notification.pointsChange > 0 
+                      ? "0 0 30px rgba(46, 204, 113, 0.8), inset 0 0 20px rgba(46, 204, 113, 0.5)" 
+                      : "0 0 30px rgba(231, 76, 60, 0.8), inset 0 0 20px rgba(231, 76, 60, 0.5)"
+                  }
                 >
                   <Image 
                     src={notification.pointsChange > 0 ? increasePointImg : decreasePointImg}
@@ -355,18 +364,26 @@ const NotificationDisplay = () => {
                     objectFit="contain"
                     sx={{
                       aspectRatio: '1/1',
-                      maxWidth: '250px',
-                      maxHeight: '250px',
+                      maxWidth: '260px',
+                      maxHeight: '260px',
+                      filter: notification.pointsChange > 0 
+                        ? "drop-shadow(0 0 15px rgba(46, 204, 113, 0.8))" 
+                        : "drop-shadow(0 0 15px rgba(231, 76, 60, 0.8))"
                     }}
                   />
                   <Text
-                    fontSize="40px"  // Giảm font size
+                    fontSize="48px"
                     fontWeight="bold"
                     color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
-                    textShadow="0 0 10px rgba(0,0,0,0.7)"
+                    textShadow={
+                      notification.pointsChange > 0 
+                        ? "0 0 15px rgba(46, 204, 113, 0.8), 0 0 5px rgba(0,0,0,0.7)" 
+                        : "0 0 15px rgba(231, 76, 60, 0.8), 0 0 5px rgba(0,0,0,0.7)"
+                    }
                     position="absolute"
-                    bottom="45px"
+                    bottom="55px"
                     className="points-text-animation"
+                    zIndex="5"
                   >
                     {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
                   </Text>
@@ -409,63 +426,75 @@ const NotificationDisplay = () => {
             {/* Phần thông tin quan trọng với z-index cao để hiển thị trên cùng */}
             <Flex direction="column" position="relative" zIndex="5" mt={notification.pointsChange ? '220px' : '0'}>
               <Text 
-                fontSize="md" 
+                fontSize="lg" 
                 fontWeight="semibold"
                 fontFamily="'Cinzel', serif"
                 letterSpacing="0.5px"
                 mb={3}
-                bg="rgba(0,0,0,0.2)"  // Tạo nền để text dễ đọc hơn
-                p={2}
+                bg="rgba(0,0,0,0.2)"  
+                p={3}
                 borderRadius="md"
+                textShadow="0 1px 2px rgba(0,0,0,0.5)"
               >
                 {notification.message}
               </Text>
               
-              {/* Show reason if available - with stronger styling */}
+              {/* Show reason if available - improved styling */}
               {notification.reason && (
                 <Text 
                   fontSize="md" 
                   mt={2}
                   fontStyle="italic"
                   color="white"
-                  p={2}
-                  borderLeft="3px solid white"
-                  background="rgba(0,0,0,0.25)"
+                  p={3}
+                  borderLeft="4px solid white"
+                  background="rgba(0,0,0,0.3)"
                   borderRadius="0 4px 4px 0"
-                  boxShadow="0 2px 5px rgba(0,0,0,0.2)"
+                  boxShadow="0 2px 8px rgba(0,0,0,0.3)"
+                  textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                  mb={2}
                 >
                   <strong>Reason:</strong> {notification.reason}
                 </Text>
               )}
               
-              {/* Show criteria and level for house points if available - with stronger styling */}
-              <Box 
-                mt={notification.criteria ? 3 : 0} 
-                bg="rgba(0,0,0,0.25)" 
-                borderRadius="md" 
-                p={notification.criteria ? 2 : 0}
-                display={notification.criteria ? "block" : "none"}
-                boxShadow="0 2px 5px rgba(0,0,0,0.2)"
-              >
-                {notification.criteria && (
-                  <Text 
-                    fontSize="md" 
-                    color="white"
-                  >
-                    <strong>Criteria:</strong> {notification.criteria}
-                  </Text>
-                )}
-                
-                {notification.level && (
-                  <Text 
-                    fontSize="md" 
-                    mt={1}
-                    color="white"
-                  >
-                    <strong>Level:</strong> {notification.level}
-                  </Text>
-                )}
-              </Box>
+              {/* Show criteria and level for house points if available - improved styling */}
+              {(notification.criteria || notification.level) && (
+                <Box 
+                  mt={2} 
+                  bg="rgba(0,0,0,0.3)" 
+                  borderRadius="md" 
+                  p={3}
+                  boxShadow="0 2px 8px rgba(0,0,0,0.3)"
+                  borderTop="1px solid rgba(255,255,255,0.2)"
+                  borderBottom="1px solid rgba(255,255,255,0.2)"
+                >
+                  {notification.criteria && (
+                    <Text 
+                      fontSize="md" 
+                      color="white"
+                      textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                      display="flex"
+                      alignItems="center"
+                    >
+                      <Box as="span" fontWeight="bold" mr={2}>Criteria:</Box> {notification.criteria}
+                    </Text>
+                  )}
+                  
+                  {notification.level && (
+                    <Text 
+                      fontSize="md" 
+                      mt={notification.criteria ? 2 : 0}
+                      color="white"
+                      textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                      display="flex"
+                      alignItems="center"
+                    >
+                      <Box as="span" fontWeight="bold" mr={2}>Level:</Box> {notification.level}
+                    </Text>
+                  )}
+                </Box>
+              )}
             </Flex>
           </Box>
         </Fade>
@@ -513,30 +542,33 @@ const NotificationDisplay = () => {
           position: relative;
           animation: appear-fade 3s ease-out forwards;
           filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.8));
+          z-index: 2;
         }
         
         .decrease-point-container {
           position: relative;
           animation: appear-fade 3s ease-out forwards;
           filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.8));
+          z-index: 2;
         }
         
         .increase-animation {
-          animation: rotate-pulse 2s ease-in-out infinite;
-          filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.7));
+          animation: rotate-pulse 2.5s ease-in-out infinite;
+          filter: drop-shadow(0 0 25px rgba(46, 204, 113, 0.8));
           transform-origin: center center;
         }
         
         .decrease-animation {
-          animation: rotate-pulse 2s ease-in-out infinite;
-          filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.7));
+          animation: rotate-pulse 2.5s ease-in-out infinite;
+          filter: drop-shadow(0 0 25px rgba(231, 76, 60, 0.8));
           transform-origin: center center;
         }
         
         .points-text-animation {
-          animation: pulse-text 2s infinite;
-          text-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+          animation: pulse-text 2.5s infinite;
+          text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
           font-family: 'Cinzel', serif;
+          letter-spacing: 1px;
         }
         
         @keyframes appear-fade {
@@ -549,13 +581,15 @@ const NotificationDisplay = () => {
         
         @keyframes rotate-pulse {
           0% { transform: scale(1) rotate(0deg); }
-          50% { transform: scale(1.05) rotate(3deg); }
+          25% { transform: scale(1.05) rotate(2deg); }
+          50% { transform: scale(1.1) rotate(0deg); }
+          75% { transform: scale(1.05) rotate(-2deg); }
           100% { transform: scale(1) rotate(0deg); }
         }
         
         @keyframes pulse-text {
           0%, 100% { opacity: 0.9; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
+          50% { opacity: 1; transform: scale(1.2); }
         }
       `}</style>
     </Stack>

@@ -270,18 +270,20 @@ const Login = () => {
           
           {/* House particles animation - now around the house logo */}
           <div className="house-particles-container">
-            {[...Array(30)].map((_, i) => (
+            {[...Array(50)].map((_, i) => (
               <div 
                 key={i}
                 className="house-particle"
                 style={{
-                  '--size': `${Math.random() * 8 + 3}px`,
-                  '--x': `${Math.random() * 150 - 75}%`,
-                  '--y': `${Math.random() * 150 - 75}%`,
-                  '--delay': `${Math.random() * 2}s`,
-                  '--duration': `${Math.random() * 2 + 2}s`,
-                  '--opacity': Math.random() * 0.7 + 0.3,
-                  backgroundColor: getHouseColor(userHouse)
+                  '--size': `${Math.random() * 10 + 4}px`,
+                  '--x': `${Math.random() * 200 - 100}%`,
+                  '--y': `${Math.random() * 200 - 100}%`,
+                  '--delay': `${Math.random() * 3}s`,
+                  '--duration': `${Math.random() * 3 + 3}s`,
+                  '--opacity': Math.random() * 0.8 + 0.4,
+                  backgroundColor: getHouseColor(userHouse),
+                  boxShadow: `0 0 15px 3px ${getHouseColor(userHouse)}`,
+                  zIndex: Math.floor(Math.random() * 10)
                 }}
               />
             ))}
@@ -292,7 +294,7 @@ const Login = () => {
         <style jsx>{`
           .house-logo-animation {
             animation: appear 0.7s ease-out, pulse 2s ease-in-out infinite;
-            filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.8));
+            filter: drop-shadow(0 0 35px rgba(255, 255, 255, 0.9));
           }
           
           @keyframes appear {
@@ -302,8 +304,8 @@ const Login = () => {
           }
           
           @keyframes pulse {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7)); }
-            50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.9)); }
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.8)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 40px rgba(255, 255, 255, 1)); }
           }
           
           .house-logo-container {
@@ -318,8 +320,8 @@ const Login = () => {
           
           .house-particles-container {
             position: absolute;
-            width: 300px;
-            height: 300px;
+            width: 500px;
+            height: 500px;
             pointer-events: none;
           }
           
@@ -329,11 +331,12 @@ const Login = () => {
             left: 50%;
             width: var(--size);
             height: var(--size);
-            opacity: var(--opacity);
+            opacity: 0;
             border-radius: 50%;
             box-shadow: 0 0 10px 2px currentColor;
             animation: particle-float var(--duration) ease-in-out infinite;
             animation-delay: var(--delay);
+            z-index: 10;
           }
           
           @keyframes particle-float {
@@ -343,9 +346,15 @@ const Login = () => {
             }
             25% {
               opacity: var(--opacity);
+              transform: translate(calc(var(--x) * 0.3), calc(var(--y) * 0.3));
+            }
+            50% {
+              opacity: var(--opacity);
+              transform: translate(calc(var(--x) * 0.6), calc(var(--y) * 0.6));
             }
             75% {
               opacity: var(--opacity);
+              transform: translate(calc(var(--x) * 0.9), calc(var(--y) * 0.9));
             }
             100% {
               transform: translate(var(--x), var(--y));
@@ -385,6 +394,15 @@ const Login = () => {
         <Box className="panel-decoration right" />
         
         <VStack spacing={6} align="center" className="control-panel-content">
+          <Image 
+            src={hogwartsLogoImg}
+            alt="Hogwarts School of Witchcraft and Wizardry"
+            width="120px"
+            height="auto"
+            mb={2}
+            className="hogwarts-logo"
+          />
+          
           <Heading as="h1" size="xl" className="hogwarts-title" textAlign="center">
             Hogwarts
           </Heading>
