@@ -266,9 +266,14 @@ const AdminHousePoints = () => {
                       color={houses.find(h => h.value === selectedHouse)?.textColor || 'white'}
                       borderColor={houses.find(h => h.value === selectedHouse)?.color || 'gray.500'}
                       _hover={{ borderColor: 'white' }}
+                      size={{ base: "md", md: "md" }}
+                      fontSize={{ base: "md", md: "md" }}
+                      h={{ base: "auto", md: "auto" }}
+                      py={{ base: 2 }}
+                      iconSize="20px"
                     >
                       {houses.map(house => (
-                        <option key={house.value} value={house.value}>
+                        <option key={house.value} value={house.value} style={{fontSize: "16px"}}>
                           {house.label}
                         </option>
                       ))}
@@ -325,9 +330,14 @@ const AdminHousePoints = () => {
                       color={houses.find(h => h.value === groupHouse)?.textColor || 'white'}
                       borderColor={houses.find(h => h.value === groupHouse)?.color || 'gray.500'}
                       _hover={{ borderColor: 'white' }}
+                      size={{ base: "md", md: "md" }}
+                      fontSize={{ base: "md", md: "md" }}
+                      h={{ base: "auto", md: "auto" }}
+                      py={{ base: 2 }}
+                      iconSize="20px"
                     >
                       {houses.map(house => (
-                        <option key={house.value} value={house.value}>
+                        <option key={house.value} value={house.value} style={{fontSize: "16px"}}>
                           {house.label}
                         </option>
                       ))}
@@ -343,6 +353,11 @@ const AdminHousePoints = () => {
                       bg="rgba(0, 0, 0, 0.6)"
                       color="white"
                       _hover={{ borderColor: 'white' }}
+                      size={{ base: "md", md: "md" }}
+                      fontSize={{ base: "md", md: "md" }}
+                      h={{ base: "auto", md: "auto" }}
+                      py={{ base: 2 }}
+                      iconSize="20px"
                     >
                       {criteriaTypes.map(criteria => (
                         <option 
@@ -350,7 +365,8 @@ const AdminHousePoints = () => {
                           value={criteria.value}
                           style={{
                             backgroundColor: '#1A202C',
-                            color: 'white'
+                            color: 'white',
+                            fontSize: "16px"
                           }}
                         >
                           {criteria.label}
