@@ -188,7 +188,7 @@ const AdminUserManagement = () => {
       { value: 'unknown', label: 'Unknown', bgColor: 'gray.700', textColor: 'white', color: 'gray.500' };
     
     return (
-      <Menu>
+      <Menu placement="bottom" strategy="fixed" closeOnSelect={true}>
         <MenuButton 
           as={Button}
           bg={house.bgColor}
@@ -203,7 +203,11 @@ const AdminUserManagement = () => {
         >
           {house.label}
         </MenuButton>
-        <MenuList>
+        <MenuList 
+          zIndex={10} 
+          maxH="300px" 
+          overflowY="auto"
+        >
           {houses.map(house => (
             <MenuItem 
               key={house.value}
@@ -211,7 +215,8 @@ const AdminUserManagement = () => {
               onClick={() => handleHouseChange(user.id || user._id, house.value)}
               bg={house.bgColor}
               color={house.textColor}
-              _hover={{ bg: 'gray.600' }}
+              _hover={{ bg: `${house.bgColor}`, opacity: 0.8 }}
+              fontWeight="bold"
             >
               {house.label}
             </MenuItem>
@@ -219,6 +224,63 @@ const AdminUserManagement = () => {
         </MenuList>
       </Menu>
     );
+  };
+
+  // Function to handle bulk house assignment
+  const handleBulkHouseChange = async (house) => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: 'No students selected',
+        description: 'Please select students first',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+    
+    try {
+      let successCount = 0;
+      
+      // Update each user one by one
+      for (const userId of selectedUsers) {
+        const success = await assignHouse(userId, house);
+        if (success) successCount++;
+      }
+      
+      toast({
+        title: 'House updated',
+        description: `Successfully assigned ${successCount} students to ${house}`,
+        status: 'success',
+        duration: 2000,
+      });
+      
+      // Refresh users data
+      fetchUsers();
+      
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to update houses',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  // Function to trigger test notifications
+  const triggerTestNotifications = () => {
+    // Set the flag to trigger test notifications in NotificationDisplay
+    localStorage.setItem('testNotifications', 'true');
+    
+    toast({
+      title: 'Test Notifications',
+      description: 'Test notifications have been triggered',
+      status: 'info',
+      duration: 2000,
+    });
+    
+    // Force refresh to trigger the useEffect in NotificationDisplay
+    window.location.reload();
   };
 
   return (
@@ -263,6 +325,18 @@ const AdminUserManagement = () => {
         
         <Divider />
         
+        {/* Debug tools - only visible to admins */}
+        <Flex direction="row" justify="flex-end" my={2}>
+          <Button 
+            size="xs" 
+            colorScheme="cyan" 
+            onClick={triggerTestNotifications}
+            title="Trigger test notifications with all fields"
+          >
+            Test Notifications
+          </Button>
+        </Flex>
+        
         {error && (
           <Box className="message-box error">
             <Text className="message-content">{error}</Text>
@@ -277,7 +351,38 @@ const AdminUserManagement = () => {
           spacing={3}
           className="admin-control-bar"
         >
-          <Text fontSize={{ base: "sm", md: "md" }}>{selectedUsers.length} students selected</Text>
+          <Text fontSize={{ base: "sm", md: "md" }}>
+            <strong>{selectedUsers.length}</strong> students selected
+          </Text>
+          
+          {selectedUsers.length > 0 && (
+            <Menu placement="bottom-end" strategy="fixed" closeOnSelect={true}>
+              <MenuButton
+                as={Button}
+                colorScheme="yellow"
+                size={{ base: "xs", md: "sm" }}
+                mr={2}
+              >
+                Assign House
+              </MenuButton>
+              <MenuList zIndex={10} maxH="300px" overflowY="auto">
+                {houses.map(house => (
+                  <MenuItem 
+                    key={house.value}
+                    value={house.value}
+                    onClick={() => handleBulkHouseChange(house.value)}
+                    bg={house.bgColor}
+                    color={house.textColor}
+                    _hover={{ bg: `${house.bgColor}`, opacity: 0.8 }}
+                    fontWeight="bold"
+                  >
+                    Assign to {house.label}
+                  </MenuItem>
+                ))}
+              </MenuList>
+            </Menu>
+          )}
+          
           <Flex 
             className="admin-actions" 
             wrap="wrap" 

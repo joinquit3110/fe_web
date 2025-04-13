@@ -340,9 +340,19 @@ const AdminHousePoints = () => {
                       value={criteriaType} 
                       onChange={(e) => setCriteriaType(e.target.value)}
                       className="inequality-input-field"
+                      bg="rgba(0, 0, 0, 0.6)"
+                      color="white"
+                      _hover={{ borderColor: 'white' }}
                     >
                       {criteriaTypes.map(criteria => (
-                        <option key={criteria.value} value={criteria.value}>
+                        <option 
+                          key={criteria.value} 
+                          value={criteria.value}
+                          style={{
+                            backgroundColor: '#1A202C',
+                            color: 'white'
+                          }}
+                        >
                           {criteria.label}
                         </option>
                       ))}
@@ -358,11 +368,27 @@ const AdminHousePoints = () => {
                             key={level.value} 
                             value={level.value}
                             colorScheme={level.points > 0 ? "green" : "red"}
+                            sx={{
+                              ".chakra-radio__control": {
+                                borderWidth: "2px",
+                                borderColor: level.points > 0 ? "green.500" : "red.500",
+                                bg: "transparent",
+                                _checked: {
+                                  bg: level.points > 0 ? "green.500" : "red.500",
+                                  borderColor: level.points > 0 ? "green.500" : "red.500"
+                                }
+                              }
+                            }}
                           >
                             <HStack>
-                              <Text>{level.label}</Text>
+                              <Text fontWeight="medium">{level.label}</Text>
                               <Badge 
                                 colorScheme={level.points > 0 ? "green" : "red"}
+                                fontSize="sm"
+                                px={2}
+                                py={1}
+                                borderRadius="full"
+                                fontWeight="bold"
                               >
                                 {level.points > 0 ? `+${level.points}` : level.points}
                               </Badge>

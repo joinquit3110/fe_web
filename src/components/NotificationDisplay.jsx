@@ -357,6 +357,50 @@ const NotificationDisplay = () => {
     // Get the next notification
     const nextNotification = notificationQueue.current.shift();
     
+    // Make sure notification has all required fields
+    nextNotification.reason = nextNotification.reason || null;
+    nextNotification.criteria = nextNotification.criteria || null;
+    nextNotification.level = nextNotification.level || null;
+    
+    // Special handling for criteria notifications - check for specific keys
+    if (nextNotification.message && 
+        (nextNotification.message.includes('criteria') || 
+         nextNotification.message.includes('Criteria'))) {
+      
+      // Log detection of potential criteria notification
+      console.log('Potential criteria notification detected:', nextNotification);
+      
+      // Try to extract criteria information if not already present
+      if (!nextNotification.criteria) {
+        const possibleCriteria = [
+          'Level of participation of group members',
+          'Level of English usage in the group',
+          'Time taken by the group to complete tasks'
+        ];
+        
+        for (const criteria of possibleCriteria) {
+          if (nextNotification.message.includes(criteria)) {
+            nextNotification.criteria = criteria;
+            console.log('Criteria extracted from message:', criteria);
+            break;
+          }
+        }
+      }
+      
+      // Try to extract level information if not already present
+      if (!nextNotification.level) {
+        const possibleLevels = ['Excellent', 'Good', 'Satisfactory', 'Poor', 'Very Poor'];
+        
+        for (const level of possibleLevels) {
+          if (nextNotification.message.includes(level)) {
+            nextNotification.level = level;
+            console.log('Level extracted from message:', level);
+            break;
+          }
+        }
+      }
+    }
+    
     // More detailed debug logging
     console.log('Processing notification (DETAILED):', {
       id: nextNotification.id,
@@ -396,6 +440,65 @@ const NotificationDisplay = () => {
       setTimeout(processNotificationQueue, 500);
     }, nextNotification.duration);
   };
+  
+  // Add a self-test function to create test notifications with all fields
+  // This is for debugging only
+  useEffect(() => {
+    // Check for a special flag in localStorage (can be set in browser console for testing)
+    const shouldRunTest = localStorage.getItem('testNotifications') === 'true';
+    if (shouldRunTest) {
+      console.log('Creating test notifications...');
+      
+      // Helper to create a random ID
+      const createId = () => Math.random().toString(36).substring(2, 15);
+      
+      // Create a positive points test notification
+      const positiveNotification = {
+        id: createId(),
+        type: 'success',
+        title: 'Points Awarded!',
+        message: '15 points awarded to Gryffindor for excellent participation',
+        timestamp: new Date(),
+        source: 'test',
+        duration: 10000,
+        pointsChange: 15,
+        reason: 'Active participation in Potions class',
+        criteria: 'Level of participation of group members',
+        level: 'Excellent'
+      };
+      
+      // Create a negative points test notification
+      const negativeNotification = {
+        id: createId(),
+        type: 'warning',
+        title: 'Points Deducted!',
+        message: '10 points deducted from Slytherin for poor spell casting',
+        timestamp: new Date(),
+        source: 'test',
+        duration: 10000,
+        pointsChange: -10,
+        reason: 'Failed to complete assigned tasks on time',
+        criteria: 'Time taken by the group to complete tasks',
+        level: 'Poor'
+      };
+      
+      // Add to queue
+      notificationQueue.current.push(positiveNotification);
+      
+      // Add the negative notification after a delay
+      setTimeout(() => {
+        notificationQueue.current.push(negativeNotification);
+      }, 1000);
+      
+      // Process queue
+      if (!processingQueue.current) {
+        processNotificationQueue();
+      }
+      
+      // Clear the flag
+      localStorage.removeItem('testNotifications');
+    }
+  }, []);
   
   // Clear a specific notification
   const handleClose = (id) => {
