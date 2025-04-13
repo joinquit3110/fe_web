@@ -268,7 +268,7 @@ const Login = () => {
             }}
           />
           
-          {/* House particles animation */}
+          {/* House particles animation - now around the house logo */}
           <div className="house-particles-container">
             {[...Array(30)].map((_, i) => (
               <div 
@@ -276,8 +276,8 @@ const Login = () => {
                 className="house-particle"
                 style={{
                   '--size': `${Math.random() * 8 + 3}px`,
-                  '--x': `${Math.random() * 300 - 150}%`,
-                  '--y': `${Math.random() * 300 - 150}%`,
+                  '--x': `${Math.random() * 150 - 75}%`,
+                  '--y': `${Math.random() * 150 - 75}%`,
                   '--delay': `${Math.random() * 2}s`,
                   '--duration': `${Math.random() * 2 + 2}s`,
                   '--opacity': Math.random() * 0.7 + 0.3,
@@ -318,11 +318,8 @@ const Login = () => {
           
           .house-particles-container {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 100%;
-            height: 100%;
-            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
             pointer-events: none;
           }
           
@@ -375,39 +372,6 @@ const Login = () => {
       <Box className="floating-element wand" position="absolute" top="15%" left="10%" />
       <Box className="floating-element spellbook" position="absolute" bottom="15%" right="10%" />
       <Box className="floating-element potion" position="absolute" top="20%" right="15%" />
-      
-      {/* Hogwarts logo animation - extremely small and centered above HOGWARTS text */}
-      <Box
-        position="absolute"
-        top="10px"
-        left="50%"
-        transform="translateX(-50%)"
-        width="14px" 
-        height="auto"
-        className="hogwarts-logo-container"
-        textAlign="center"
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        zIndex="10"
-        boxShadow="0px 0px 5px rgba(211, 166, 37, 0.5)" 
-        borderRadius="50%"
-        background="rgba(10, 14, 35, 0.7)"
-        padding="2px"
-      >
-        <Image
-          src={hogwartsLogoImg}
-          alt="Hogwarts Logo"
-          className="hogwarts-logo-animation"
-          sx={{
-            aspectRatio: '1/1',
-            maxWidth: '14px',
-            maxHeight: '14px',
-            objectFit: 'contain',
-            margin: '0 auto'
-          }}
-        />
-      </Box>
       
       <Box 
         p={8} 
@@ -535,13 +499,8 @@ const Login = () => {
         </VStack>
       </Box>
       
-      {/* CSS for Logo animations */}
+      {/* CSS for house logo animations */}
       <style jsx global>{`
-        .hogwarts-logo-animation {
-          animation: logo-float 4s ease-in-out infinite;
-          filter: drop-shadow(0 0 15px rgba(211, 166, 37, 0.7));
-        }
-        
         @keyframes logo-float {
           0%, 100% { transform: translateY(0) rotate(0deg); }
           50% { transform: translateY(-15px) rotate(3deg); }
@@ -573,13 +532,10 @@ const Login = () => {
           100% { opacity: 1; }
         }
 
-        .house-particles {
+        .house-particles-container {
           position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 100%;
-          height: 100%;
+          width: 350px;
+          height: 350px;
           pointer-events: none;
         }
 

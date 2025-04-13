@@ -242,6 +242,16 @@ const NotificationDisplay = () => {
     // Get the next notification
     const nextNotification = notificationQueue.current.shift();
     
+    // Debug log for notification data
+    console.log('Processing notification:', {
+      id: nextNotification.id,
+      message: nextNotification.message,
+      reason: nextNotification.reason,
+      criteria: nextNotification.criteria,
+      level: nextNotification.level,
+      source: nextNotification.source
+    });
+    
     // Add to active notifications (limit to 3 at a time)
     setActiveNotifications(prev => {
       const updated = [...prev, nextNotification].slice(-3);
@@ -286,9 +296,12 @@ const NotificationDisplay = () => {
             color="white"
             className="wizard-panel notification-panel"
             boxShadow="0 0 20px rgba(0,0,0,0.5)"
+            minHeight="180px" 
+            minWidth="400px"
+            height="auto"
             backgroundColor={
               notification.type === 'success' ? 'rgba(46, 204, 113, 0.95)' :
-              notification.type === 'warning' ? 'rgba(230, 126, 34, 0.95)' :
+              notification.type === 'warning' ? 'rgba(231, 76, 60, 0.95)' : // Đổi màu warning từ cam sang đỏ
               notification.type === 'error' ? 'rgba(231, 76, 60, 0.95)' :
               notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.95)' :
               'rgba(52, 152, 219, 0.95)'
@@ -296,8 +309,6 @@ const NotificationDisplay = () => {
             animation={`pop-in 0.4s ease-out, float-${notification.id % 3} 3s ease-in-out infinite`}
             position="relative"
             overflow="hidden"
-            minHeight="150px"
-            minWidth="350px"
           >
             <CloseButton 
               position="absolute" 
@@ -307,7 +318,7 @@ const NotificationDisplay = () => {
               zIndex="3"
             />
             
-            {/* Point change animations and images */}
+            {/* Point change animations and images - with reduced size to make room for details */}
             {notification.pointsChange && (
               <Box 
                 className="point-change-animation"
@@ -322,15 +333,18 @@ const NotificationDisplay = () => {
                 justifyContent="center"
                 alignItems="center"
                 pointerEvents="none"
+                maxHeight="250px"  // Giới hạn chiều cao tối đa
+                overflow="hidden"
               >
                 <Box
                   position="relative"
                   className={notification.pointsChange > 0 ? 'increase-point-container' : 'decrease-point-container'}
-                  width="320px"
-                  height="320px"
+                  width="250px"  // Giảm kích thước từ 320px
+                  height="250px" // Giảm kích thước từ 320px
                   display="flex"
                   justifyContent="center"
                   alignItems="center"
+                  marginBottom="20px" // Tạo khoảng trống cho phần thông tin
                 >
                   <Image 
                     src={notification.pointsChange > 0 ? increasePointImg : decreasePointImg}
@@ -341,17 +355,17 @@ const NotificationDisplay = () => {
                     objectFit="contain"
                     sx={{
                       aspectRatio: '1/1',
-                      maxWidth: '700px',
-                      maxHeight: '700px',
+                      maxWidth: '250px',
+                      maxHeight: '250px',
                     }}
                   />
                   <Text
-                    fontSize="45px"
+                    fontSize="40px"  // Giảm font size
                     fontWeight="bold"
                     color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
                     textShadow="0 0 10px rgba(0,0,0,0.7)"
                     position="absolute"
-                    bottom="55px"
+                    bottom="45px"
                     className="points-text-animation"
                   >
                     {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
@@ -378,7 +392,7 @@ const NotificationDisplay = () => {
                 fontSize="sm" 
                 colorScheme={
                   notification.type === 'success' ? 'green' :
-                  notification.type === 'warning' ? 'orange' :
+                  notification.type === 'warning' ? 'red' :  // Sửa màu badge thành red luôn
                   notification.type === 'error' ? 'red' :
                   notification.type === 'announcement' ? 'purple' :
                   'blue'
@@ -392,18 +406,22 @@ const NotificationDisplay = () => {
               </Badge>
             </Box>
             
-            <Flex direction="column" position="relative" zIndex="2">
+            {/* Phần thông tin quan trọng với z-index cao để hiển thị trên cùng */}
+            <Flex direction="column" position="relative" zIndex="5" mt={notification.pointsChange ? '220px' : '0'}>
               <Text 
                 fontSize="md" 
                 fontWeight="semibold"
                 fontFamily="'Cinzel', serif"
                 letterSpacing="0.5px"
                 mb={3}
+                bg="rgba(0,0,0,0.2)"  // Tạo nền để text dễ đọc hơn
+                p={2}
+                borderRadius="md"
               >
                 {notification.message}
               </Text>
               
-              {/* Show reason if available */}
+              {/* Show reason if available - with stronger styling */}
               {notification.reason && (
                 <Text 
                   fontSize="md" 
@@ -412,20 +430,22 @@ const NotificationDisplay = () => {
                   color="white"
                   p={2}
                   borderLeft="3px solid white"
-                  background="rgba(255,255,255,0.1)"
+                  background="rgba(0,0,0,0.25)"
                   borderRadius="0 4px 4px 0"
+                  boxShadow="0 2px 5px rgba(0,0,0,0.2)"
                 >
                   <strong>Reason:</strong> {notification.reason}
                 </Text>
               )}
               
-              {/* Show criteria and level for house points if available */}
+              {/* Show criteria and level for house points if available - with stronger styling */}
               <Box 
                 mt={notification.criteria ? 3 : 0} 
-                bg="rgba(0,0,0,0.15)" 
+                bg="rgba(0,0,0,0.25)" 
                 borderRadius="md" 
                 p={notification.criteria ? 2 : 0}
                 display={notification.criteria ? "block" : "none"}
+                boxShadow="0 2px 5px rgba(0,0,0,0.2)"
               >
                 {notification.criteria && (
                   <Text 
