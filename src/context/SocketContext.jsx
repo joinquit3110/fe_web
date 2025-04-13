@@ -235,7 +235,7 @@ export const SocketProvider = ({ children }) => {
                 message: isReset 
                   ? `Your magic points have been RESET to 100 by admin!`
                   : (diff !== 0 
-                    ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin. New total: ${newPoints}`
+                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin. New total: ${newPoints}`
                     : `Your magic points have been updated to ${newPoints}`),
                 timestamp: new Date()
               },
@@ -350,15 +350,15 @@ export const SocketProvider = ({ children }) => {
       setLastMessage({ type: 'global_announcement', data, timestamp: new Date() });
       
       // Add to notifications with special styling
-      setNotifications(prev => [
-        {
-          id: Date.now(),
+        setNotifications(prev => [
+          {
+            id: Date.now(), 
           type: 'announcement',
           message: `ANNOUNCEMENT: ${data.message}`,
-          timestamp: new Date()
-        },
-        ...prev.slice(0, 9)
-      ]);
+            timestamp: new Date()
+          },
+          ...prev.slice(0, 9)
+        ]);
       
       // Play announcement sound if enabled
       const announcementSound = document.getElementById('announcement-sound');
@@ -410,14 +410,14 @@ export const SocketProvider = ({ children }) => {
   return (
     <SocketContext.Provider
       value={{
-        socket,
-        isConnected,
-        connectionQuality,
-        lastMessage,
-        notifications,
+    socket,
+    isConnected,
+    connectionQuality,
+    lastMessage,
+    notifications,
         lastHeartbeat,
         sendMessage,
-        requestSync,
+    requestSync,
         clearNotifications,
         removeNotification
       }}

@@ -15,7 +15,8 @@ import {
   AlertIcon,
   Link,
   useColorModeValue,
-  Flex
+  Flex,
+  Image
 } from '@chakra-ui/react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,6 +29,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [userHouse, setUserHouse] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -101,6 +104,17 @@ const Login = () => {
     return cleanup;
   }, []);
 
+  // Effect for house logo transition after login
+  useEffect(() => {
+    if (loginSuccess && userHouse) {
+      // Delay navigation to allow house animation to be displayed
+      const timer = setTimeout(() => {
+        navigate('/dashboard');
+      }, 2500); // Show logo for 2.5 seconds before navigating
+      return () => clearTimeout(timer);
+    }
+  }, [loginSuccess, userHouse, navigate]);
+
   const handleTogglePassword = () => setShowPassword(!showPassword);
   
   const handleEnrollClick = () => {
@@ -140,19 +154,26 @@ const Login = () => {
         localStorage.setItem('token', `admin-token-${Date.now()}`);
         localStorage.setItem('isAuthenticated', 'true');
         
-        // Navigate to dashboard
-        navigate('/dashboard');
+        // Set admin house for animation
+        setUserHouse('admin');
+        setLoginSuccess(true);
         return;
       }
       
       // Regular user flow
       // Use the credentials object format expected by the API
-      await login({
+      const userData = await login({
         username: email, // Server expects username
         password: password
       });
       
-      navigate('/dashboard');
+      // Get user house for animation
+      if (userData && userData.house) {
+        setUserHouse(userData.house.toLowerCase());
+        setLoginSuccess(true);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login form error:', error);
       
@@ -162,10 +183,64 @@ const Login = () => {
       } else {
         setError(error.message || 'Login failed. Please check your credentials.');
       }
-    } finally {
       setIsLoading(false);
     }
   };
+
+  // Get house logo based on house name
+  const getHouseLogo = (house) => {
+    if (!house) return null;
+    
+    const houseName = house.toLowerCase();
+    switch (houseName) {
+      case 'gryffindor':
+        return '/fe_web/asset/Gryffindor.png';
+      case 'slytherin':
+        return '/fe_web/asset/Slytherin.png';
+      case 'ravenclaw':
+        return '/fe_web/asset/Ravenclaw.png';
+      case 'hufflepuff':
+        return '/fe_web/asset/Hufflepuff.png';
+      default:
+        return '/fe_web/asset/Hogwarts logo.png';
+    }
+  };
+
+  // If login is successful and we have a house, show the house logo animation
+  if (loginSuccess && userHouse) {
+    return (
+      <Box 
+        width="100%" 
+        height="100vh"
+        className="hogwarts-app"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        position="relative"
+        overflow="hidden"
+      >
+        <Box
+          position="absolute"
+          top="0"
+          left="0"
+          right="0"
+          bottom="0"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          className="house-logo-container"
+        >
+          <Image
+            src={getHouseLogo(userHouse)}
+            alt={`${userHouse} house`}
+            width="250px"
+            height="auto"
+            className="house-logo-animation"
+          />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box 
@@ -182,6 +257,23 @@ const Login = () => {
       <Box className="floating-element wand" position="absolute" top="15%" left="10%" />
       <Box className="floating-element spellbook" position="absolute" bottom="15%" right="10%" />
       <Box className="floating-element potion" position="absolute" top="20%" right="15%" />
+      
+      {/* Hogwarts logo animation */}
+      <Box
+        position="absolute"
+        top="50px"
+        left="50%"
+        transform="translateX(-50%)"
+        width="180px"
+        height="auto"
+        className="hogwarts-logo-container"
+      >
+        <Image
+          src="/fe_web/asset/Hogwarts logo.png"
+          alt="Hogwarts Logo"
+          className="hogwarts-logo-animation"
+        />
+      </Box>
       
       <Box 
         p={8} 
@@ -308,6 +400,45 @@ const Login = () => {
           </Text>
         </VStack>
       </Box>
+      
+      {/* CSS for Logo animations */}
+      <style jsx global>{`
+        .hogwarts-logo-animation {
+          animation: logo-float 4s ease-in-out infinite;
+          filter: drop-shadow(0 0 15px rgba(211, 166, 37, 0.7));
+        }
+        
+        @keyframes logo-float {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(3deg); }
+        }
+        
+        .house-logo-container {
+          background: radial-gradient(circle, rgba(0,0,0,0.7) 0%, rgba(14,26,64,0.9) 100%);
+          animation: fade-in 0.5s ease-out;
+        }
+        
+        .house-logo-animation {
+          animation: appear 0.5s ease-out, pulse 2s infinite;
+          filter: drop-shadow(0 0 20px rgba(255,255,255,0.8));
+        }
+        
+        @keyframes appear {
+          0% { transform: scale(0); opacity: 0; }
+          70% { transform: scale(1.2); opacity: 0.9; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { filter: drop-shadow(0 0 15px rgba(255,255,255,0.7)); }
+          50% { filter: drop-shadow(0 0 30px rgba(255,255,255,0.9)); }
+        }
+        
+        @keyframes fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+      `}</style>
     </Box>
   );
 };

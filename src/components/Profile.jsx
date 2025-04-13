@@ -56,7 +56,16 @@ const Profile = ({ user }) => {
       </div>
       
       {showMenu && (
-        <div ref={menuRef} className="profile-menu">
+        <div 
+          ref={menuRef} 
+          className="profile-menu"
+          style={{
+            maxHeight: 'calc(100vh - 100px)', 
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           <div className="profile-email">{user?.email || 'wizard@hogwarts.edu'}</div>
           <div className="profile-house">
             HOUSE OF 
@@ -71,42 +80,72 @@ const Profile = ({ user }) => {
             </select>
           </div>
           
-          <button>
-            <i className="fas fa-user"></i>
-            Profile
-          </button>
+          <div className="profile-menu-buttons" style={{ flexGrow: 1, overflow: 'auto' }}>
+            <button>
+              <i className="fas fa-user"></i>
+              Profile
+            </button>
+            
+            <button>
+              <i className="fas fa-key"></i>
+              Password
+            </button>
+            
+            <button>
+              <i className="fas fa-user-graduate"></i>
+              <span>Full Name</span>
+            </button>
+            
+            <button>
+              <i className="fas fa-school"></i>
+              <span>School</span>
+            </button>
+            
+            <button>
+              <i className="fas fa-graduation-cap"></i>
+              <span>Class/Grade</span>
+            </button>
+            
+            <button>
+              <i className="fas fa-save"></i>
+              Update Profile
+            </button>
+          </div>
           
-          <button>
-            <i className="fas fa-key"></i>
-            Password
-          </button>
-          
-          <button>
-            <i className="fas fa-user-graduate"></i>
-            <span>Full Name</span>
-          </button>
-          
-          <button>
-            <i className="fas fa-school"></i>
-            <span>School</span>
-          </button>
-          
-          <button>
-            <i className="fas fa-graduation-cap"></i>
-            <span>Class/Grade</span>
-          </button>
-          
-          <button>
-            <i className="fas fa-save"></i>
-            Update Profile
-          </button>
-          
-          <button className="logout-btn">
+          <button className="logout-btn" style={{ marginTop: 'auto' }}>
             <i className="fas fa-sign-out-alt"></i>
             Leave Hogwarts
           </button>
         </div>
       )}
+      
+      {/* Add styles to fix profile menu scrolling */}
+      <style jsx>{`
+        .profile-menu {
+          scrollbar-width: thin;
+          scrollbar-color: var(--hogwarts-secondary) rgba(14, 26, 64, 0.4);
+        }
+        
+        .profile-menu::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .profile-menu::-webkit-scrollbar-track {
+          background: rgba(14, 26, 64, 0.4);
+          border-radius: 3px;
+        }
+        
+        .profile-menu::-webkit-scrollbar-thumb {
+          background-color: var(--hogwarts-secondary);
+          border-radius: 3px;
+        }
+        
+        .profile-menu-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+      `}</style>
     </div>
   );
 };
