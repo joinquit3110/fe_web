@@ -390,14 +390,14 @@ export const SocketProvider = ({ children }) => {
   return (
     <SocketContext.Provider
       value={{
-    socket,
-    isConnected,
-    connectionQuality,
-    lastMessage,
-    notifications,
+        socket,
+        isConnected,
+        connectionQuality,
+        lastMessage,
+        notifications,
         lastHeartbeat,
         sendMessage,
-    requestSync,
+        requestSync,
         clearNotifications,
         removeNotification
       }}

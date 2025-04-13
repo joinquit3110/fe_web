@@ -376,12 +376,13 @@ const Login = () => {
       <Box className="floating-element spellbook" position="absolute" bottom="15%" right="10%" />
       <Box className="floating-element potion" position="absolute" top="20%" right="15%" />
       
-      {/* Hogwarts logo animation - extremely small */}
+      {/* Hogwarts logo animation - extremely small and centered above HOGWARTS text */}
       <Box
         position="absolute"
         top="10px"
-        left="10px"
-        width="20px" 
+        left="50%"
+        transform="translateX(-50%)"
+        width="14px" 
         height="auto"
         className="hogwarts-logo-container"
         textAlign="center"
@@ -400,8 +401,8 @@ const Login = () => {
           className="hogwarts-logo-animation"
           sx={{
             aspectRatio: '1/1',
-            maxWidth: '700px',
-            maxHeight: '700px',
+            maxWidth: '14px',
+            maxHeight: '14px',
             objectFit: 'contain',
             margin: '0 auto'
           }}
