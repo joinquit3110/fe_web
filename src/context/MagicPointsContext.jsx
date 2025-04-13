@@ -462,6 +462,45 @@ export const MagicPointsProvider = ({ children }) => {
     forceSyncWithDebugRef.current = forceSyncWithDebug;
   }, [forceSyncWithDebug]);
 
+  // A debug function to expose current state for debugging purposes
+  const debugPointsState = useCallback((silent = false) => {
+    if (!silent) {
+      console.log('[POINTS DEBUG] Current state:');
+      console.log(`[POINTS DEBUG] Magic points: ${magicPoints}`);
+      console.log(`[POINTS DEBUG] Is online: ${isOnline}`);
+      console.log(`[POINTS DEBUG] Is authenticated: ${isAuthenticated}`);
+      console.log(`[POINTS DEBUG] Is syncing: ${isSyncing}`);
+      console.log(`[POINTS DEBUG] Last synced: ${lastSynced}`);
+      console.log(`[POINTS DEBUG] Pending changes: ${pendingChanges}`);
+      console.log(`[POINTS DEBUG] Pending operations: ${pendingOperations.length}`);
+      console.log(`[POINTS DEBUG] Sync retries: ${syncRetries}`);
+    }
+    
+    return {
+      magicPoints,
+      isOnline,
+      isAuthenticated,
+      isSyncing,
+      lastSynced,
+      pendingChanges,
+      pendingOperations,
+      syncRetries,
+      revelioAttempts: Object.keys(revelioAttempts).length,
+      correctBlanks: Object.keys(correctBlanks).length
+    };
+  }, [
+    magicPoints, 
+    isOnline, 
+    isAuthenticated, 
+    isSyncing, 
+    lastSynced, 
+    pendingChanges, 
+    pendingOperations,
+    syncRetries,
+    revelioAttempts,
+    correctBlanks
+  ]);
+
   // Load authentication state from localStorage
   useEffect(() => {
     const authState = localStorage.getItem('isAuthenticated');
