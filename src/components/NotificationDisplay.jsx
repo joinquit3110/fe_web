@@ -242,14 +242,17 @@ const NotificationDisplay = () => {
     // Get the next notification
     const nextNotification = notificationQueue.current.shift();
     
-    // Debug log for notification data
-    console.log('Processing notification:', {
+    // More detailed debug logging
+    console.log('Processing notification (DETAILED):', {
       id: nextNotification.id,
+      type: nextNotification.type,
       message: nextNotification.message,
       reason: nextNotification.reason,
       criteria: nextNotification.criteria,
       level: nextNotification.level,
-      source: nextNotification.source
+      source: nextNotification.source,
+      pointsChange: nextNotification.pointsChange,
+      fullObject: nextNotification
     });
     
     // Add to active notifications (limit to 3 at a time)
@@ -287,215 +290,262 @@ const NotificationDisplay = () => {
   if (activeNotifications.length === 0) return null;
   
   return (
-    <Stack spacing={4} position="fixed" top="100px" right="20px" zIndex={1000} maxWidth="450px" maxHeight="calc(100vh - 150px)" overflowY="auto">
+    <Stack spacing={5} position="fixed" top="100px" right="20px" zIndex={1000} maxWidth="480px" maxHeight="calc(100vh - 150px)" overflowY="auto">
       {activeNotifications.map(notification => (
         <Fade key={notification.id} in={true}>
           <Box
-            padding="16px"
-            borderRadius="8px"
+            padding="0"
+            borderRadius="12px"
             color="white"
             className="wizard-panel notification-panel"
-            boxShadow="0 0 20px rgba(0,0,0,0.5)"
-            minHeight="180px" 
-            minWidth="400px"
+            boxShadow="0 10px 30px rgba(0,0,0,0.5)"
+            minHeight="auto" 
+            width="100%"
             height="auto"
-            backgroundColor={
-              notification.type === 'success' ? 'rgba(46, 204, 113, 0.95)' :
-              notification.type === 'warning' ? 'rgba(231, 76, 60, 0.95)' : 
-              notification.type === 'error' ? 'rgba(231, 76, 60, 0.95)' :
-              notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.95)' :
-              'rgba(52, 152, 219, 0.95)'
-            }
-            animation={`pop-in 0.4s ease-out, float-${notification.id % 3} 3s ease-in-out infinite`}
             position="relative"
-            overflow="visible"
-            backdropFilter="blur(10px)"
+            overflow="hidden"
             border="1px solid rgba(255, 255, 255, 0.2)"
+            background={`linear-gradient(135deg, 
+              ${notification.type === 'success' ? 'rgba(46, 204, 113, 0.95)' : 
+                notification.type === 'warning' || notification.type === 'error' ? 'rgba(231, 76, 60, 0.95)' :
+                notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.95)' : 
+                'rgba(52, 152, 219, 0.95)'} 0%,
+              ${notification.type === 'success' ? 'rgba(39, 174, 96, 0.98)' : 
+                notification.type === 'warning' || notification.type === 'error' ? 'rgba(192, 57, 43, 0.98)' :
+                notification.type === 'announcement' ? 'rgba(113, 54, 138, 0.98)' : 
+                'rgba(41, 128, 185, 0.98)'} 100%)`
+            }
+            transform="perspective(1000px)"
+            _before={{
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `url(${notification.pointsChange > 0 ? increasePointImg : decreasePointImg}) no-repeat center`,
+              backgroundSize: '250px',
+              opacity: notification.pointsChange ? 0.07 : 0,
+              zIndex: 0,
+              filter: 'blur(2px)'
+            }}
           >
-            <CloseButton 
-              position="absolute" 
-              right="8px" 
-              top="8px" 
-              onClick={() => handleClose(notification.id)} 
-              zIndex="3"
-            />
-            
-            {/* Point change animations and images - with reduced size to make room for details */}
-            {notification.pointsChange && (
-              <Box 
-                className="point-change-animation"
-                position="absolute"
-                top="0"
-                left="0"
-                right="0"
-                bottom="0"
-                zIndex="0"
-                display="flex"
-                flexDirection="column"
-                justifyContent="center"
-                alignItems="center"
-                pointerEvents="none"
-                maxHeight="250px"  // Giới hạn chiều cao tối đa
-                overflow="hidden"
-              >
-                <Box
-                  position="relative"
-                  className={notification.pointsChange > 0 ? 'increase-point-container' : 'decrease-point-container'}
-                  width="260px"
-                  height="260px"
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  marginBottom="30px"
-                  borderRadius="50%"
-                  overflow="hidden"
-                  boxShadow={
-                    notification.pointsChange > 0 
-                      ? "0 0 30px rgba(46, 204, 113, 0.8), inset 0 0 20px rgba(46, 204, 113, 0.5)" 
-                      : "0 0 30px rgba(231, 76, 60, 0.8), inset 0 0 20px rgba(231, 76, 60, 0.5)"
-                  }
-                >
-                  <Image 
-                    src={notification.pointsChange > 0 ? increasePointImg : decreasePointImg}
-                    alt={notification.pointsChange > 0 ? 'Points increased' : 'Points decreased'}
-                    className={notification.pointsChange > 0 ? 'increase-animation' : 'decrease-animation'}
-                    width="100%"
-                    height="100%"
-                    objectFit="contain"
-                    sx={{
-                      aspectRatio: '1/1',
-                      maxWidth: '260px',
-                      maxHeight: '260px',
-                      filter: notification.pointsChange > 0 
-                        ? "drop-shadow(0 0 15px rgba(46, 204, 113, 0.8))" 
-                        : "drop-shadow(0 0 15px rgba(231, 76, 60, 0.8))"
-                    }}
-                  />
-                  <Text
-                    fontSize="48px"
-                    fontWeight="bold"
-                    color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
-                    textShadow={
-                      notification.pointsChange > 0 
-                        ? "0 0 15px rgba(46, 204, 113, 0.8), 0 0 5px rgba(0,0,0,0.7)" 
-                        : "0 0 15px rgba(231, 76, 60, 0.8), 0 0 5px rgba(0,0,0,0.7)"
-                    }
-                    position="absolute"
-                    bottom="55px"
-                    className="points-text-animation"
-                    zIndex="5"
-                  >
-                    {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
-                  </Text>
-                </Box>
-              </Box>
-            )}
-            
-            {/* Decorative magical effect */}
+            {/* Top ribbon with badge */}
             <Box 
-              position="absolute"
-              top="-20px"
-              left="-20px"
-              width="70px"
-              height="70px"
-              borderRadius="50%"
-              backgroundColor="rgba(255,255,255,0.1)"
-              opacity="0.6"
-              zIndex="1"
-            />
-            
-            <Box mb={2} position="relative" zIndex="2">
+              width="100%" 
+              p="15px 15px 5px"
+              borderBottom="1px solid rgba(255,255,255,0.2)"
+              background="rgba(0,0,0,0.2)"
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              backdropFilter="blur(10px)"
+            >
               <Badge 
                 fontSize="sm" 
                 colorScheme={
                   notification.type === 'success' ? 'green' :
-                  notification.type === 'warning' ? 'red' :  // Sửa màu badge thành red luôn
-                  notification.type === 'error' ? 'red' :
+                  notification.type === 'warning' || notification.type === 'error' ? 'red' :
                   notification.type === 'announcement' ? 'purple' :
                   'blue'
                 }
                 px={3}
                 py={1}
-                borderRadius="md"
+                borderRadius="full"
                 fontWeight="bold"
               >
                 {notification.title}
               </Badge>
+              
+              <CloseButton 
+                size="sm"
+                onClick={() => handleClose(notification.id)} 
+                zIndex="3"
+                _hover={{
+                  background: "rgba(0,0,0,0.2)", 
+                  transform: "scale(1.1)"
+                }}
+                transition="all 0.2s"
+              />
             </Box>
             
-            {/* Phần thông tin quan trọng với z-index cao để hiển thị trên cùng */}
-            <Flex direction="column" position="relative" zIndex="5" mt={notification.pointsChange ? '220px' : '0'}>
-              <Text 
-                fontSize="lg" 
-                fontWeight="semibold"
-                fontFamily="'Cinzel', serif"
-                letterSpacing="0.5px"
-                mb={3}
-                bg="rgba(0,0,0,0.2)"  
-                p={3}
-                borderRadius="md"
-                textShadow="0 1px 2px rgba(0,0,0,0.5)"
-              >
-                {notification.message}
-              </Text>
-              
-              {/* Show reason if available - improved styling */}
-              {notification.reason && (
-                <Text 
-                  fontSize="md" 
-                  mt={2}
-                  fontStyle="italic"
-                  color="white"
-                  p={3}
-                  borderLeft="4px solid white"
-                  background="rgba(0,0,0,0.3)"
-                  borderRadius="0 4px 4px 0"
-                  boxShadow="0 2px 8px rgba(0,0,0,0.3)"
-                  textShadow="0 1px 2px rgba(0,0,0,0.5)"
-                  mb={2}
+            {/* Main content area */}
+            <Box position="relative" zIndex={2} p={4}>
+              {/* Point change visualization - more compact and magical */}
+              {notification.pointsChange && (
+                <Flex 
+                  justifyContent="center" 
+                  alignItems="center"
+                  mb={3}
+                  position="relative"
+                  className="point-change-wrapper"
                 >
-                  <strong>Reason:</strong> {notification.reason}
-                </Text>
+                  <Box
+                    position="relative"
+                    width="130px"
+                    height="130px"
+                    borderRadius="50%"
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                    className={notification.pointsChange > 0 ? "point-glow-positive" : "point-glow-negative"}
+                    background="rgba(0,0,0,0.2)"
+                    border="2px solid rgba(255,255,255,0.3)"
+                  >
+                    <Text
+                      fontSize="3xl"
+                      fontWeight="bold"
+                      color="white"
+                      textShadow="0 0 10px rgba(0,0,0,0.5)"
+                      className="points-text-animation"
+                    >
+                      {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
+                    </Text>
+                    
+                    {/* Orbiting particles */}
+                    <Box className="orbiting-particles">
+                      {[...Array(12)].map((_, i) => (
+                        <Box 
+                          key={i} 
+                          className="particle" 
+                          style={{
+                            '--angle': `${i * 30}deg`,
+                            '--delay': `${i * 0.1}s`,
+                            backgroundColor: notification.pointsChange > 0 ? '#2ecc71' : '#e74c3c'
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </Flex>
               )}
               
-              {/* Show criteria and level for house points if available - improved styling */}
-              {(notification.criteria || notification.level) && (
-                <Box 
-                  mt={2} 
-                  bg="rgba(0,0,0,0.3)" 
-                  borderRadius="md" 
-                  p={3}
-                  boxShadow="0 2px 8px rgba(0,0,0,0.3)"
-                  borderTop="1px solid rgba(255,255,255,0.2)"
-                  borderBottom="1px solid rgba(255,255,255,0.2)"
+              {/* Message with parchment-like styling */}
+              <Box 
+                bg="rgba(255,255,255,0.15)" 
+                p={4} 
+                borderRadius="md" 
+                backdropFilter="blur(10px)"
+                boxShadow="0 4px 8px rgba(0,0,0,0.1)"
+                mb={3}
+                className="message-parchment"
+              >
+                <Text 
+                  fontSize="md" 
+                  fontWeight="semibold"
+                  fontFamily="'Cinzel', serif"
+                  letterSpacing="0.5px"
+                  color="white"
+                  textShadow="0 1px 2px rgba(0,0,0,0.5)"
                 >
-                  {notification.criteria && (
-                    <Text 
-                      fontSize="md" 
-                      color="white"
-                      textShadow="0 1px 2px rgba(0,0,0,0.5)"
-                      display="flex"
-                      alignItems="center"
+                  {notification.message}
+                </Text>
+              </Box>
+              
+              {/* House points details section */}
+              {(notification.reason || notification.criteria || notification.level) && (
+                <Box 
+                  borderRadius="md"
+                  overflow="hidden"
+                  className="details-scroll"
+                  border="1px solid rgba(255,255,255,0.2)"
+                >
+                  {/* Reason section with icon */}
+                  {notification.reason && (
+                    <Box 
+                      p={3}
+                      borderBottom={notification.criteria || notification.level ? "1px solid rgba(255,255,255,0.1)" : "none"}
+                      bg="rgba(0,0,0,0.15)"
                     >
-                      <Box as="span" fontWeight="bold" mr={2}>Criteria:</Box> {notification.criteria}
-                    </Text>
+                      <Flex alignItems="center">
+                        <Box 
+                          width="24px" 
+                          height="24px" 
+                          borderRadius="50%" 
+                          bg="rgba(255,255,255,0.2)" 
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          mr={3}
+                        >
+                          <Text fontSize="xs" fontWeight="bold">R</Text>
+                        </Box>
+                        <Box flex="1">
+                          <Text fontSize="xs" opacity="0.8" mb="2px">REASON</Text>
+                          <Text fontSize="sm" fontWeight="medium">{notification.reason}</Text>
+                        </Box>
+                      </Flex>
+                    </Box>
                   )}
                   
-                  {notification.level && (
-                    <Text 
-                      fontSize="md" 
-                      mt={notification.criteria ? 2 : 0}
-                      color="white"
-                      textShadow="0 1px 2px rgba(0,0,0,0.5)"
-                      display="flex"
-                      alignItems="center"
+                  {/* Criteria section with icon */}
+                  {notification.criteria && (
+                    <Box 
+                      p={3}
+                      borderBottom={notification.level ? "1px solid rgba(255,255,255,0.1)" : "none"}
+                      bg="rgba(0,0,0,0.1)"
                     >
-                      <Box as="span" fontWeight="bold" mr={2}>Level:</Box> {notification.level}
-                    </Text>
+                      <Flex alignItems="center">
+                        <Box 
+                          width="24px" 
+                          height="24px" 
+                          borderRadius="50%" 
+                          bg="rgba(255,255,255,0.2)" 
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          mr={3}
+                        >
+                          <Text fontSize="xs" fontWeight="bold">C</Text>
+                        </Box>
+                        <Box flex="1">
+                          <Text fontSize="xs" opacity="0.8" mb="2px">CRITERIA</Text>
+                          <Text fontSize="sm" fontWeight="medium">{notification.criteria}</Text>
+                        </Box>
+                      </Flex>
+                    </Box>
+                  )}
+                  
+                  {/* Level section with icon */}
+                  {notification.level && (
+                    <Box 
+                      p={3}
+                      bg="rgba(0,0,0,0.15)"
+                    >
+                      <Flex alignItems="center">
+                        <Box 
+                          width="24px" 
+                          height="24px" 
+                          borderRadius="50%" 
+                          bg="rgba(255,255,255,0.2)" 
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          mr={3}
+                        >
+                          <Text fontSize="xs" fontWeight="bold">L</Text>
+                        </Box>
+                        <Box flex="1">
+                          <Text fontSize="xs" opacity="0.8" mb="2px">LEVEL</Text>
+                          <Text fontSize="sm" fontWeight="medium">{notification.level}</Text>
+                        </Box>
+                      </Flex>
+                    </Box>
                   )}
                 </Box>
               )}
-            </Flex>
+              
+              {/* Timestamp footer */}
+              <Text 
+                fontSize="xs" 
+                color="rgba(255,255,255,0.7)" 
+                textAlign="right"
+                mt={2}
+                fontStyle="italic"
+              >
+                {new Date(notification.timestamp).toLocaleTimeString()}
+              </Text>
+            </Box>
           </Box>
         </Fade>
       ))}
@@ -503,23 +553,28 @@ const NotificationDisplay = () => {
       {/* Custom CSS for animations */}
       <style jsx global>{`
         @keyframes pop-in {
-          0% { transform: scale(0.8); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
+          0% { transform: scale(0.9) translateY(-10px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         
         @keyframes float-0 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-5px) rotate(0.5deg); }
         }
         
         @keyframes float-1 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(-0.5deg); }
         }
         
         @keyframes float-2 {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-6px) rotate(0.3deg); }
+        }
+        
+        .notification-panel {
+          animation: pop-in 0.4s ease-out, float-${Math.floor(Math.random() * 3)} 4s ease-in-out infinite;
+          transform-origin: center center;
         }
         
         .notification-panel::after {
@@ -530,6 +585,7 @@ const NotificationDisplay = () => {
           right: 0;
           height: 3px;
           background: rgba(255,255,255,0.7);
+          z-index: 10;
           animation: wipe-through 3s linear forwards;
         }
         
@@ -538,58 +594,88 @@ const NotificationDisplay = () => {
           100% { left: 0; right: 0; }
         }
         
-        .increase-point-container {
-          position: relative;
-          animation: appear-fade 3s ease-out forwards;
-          filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.8));
-          z-index: 2;
-        }
-        
-        .decrease-point-container {
-          position: relative;
-          animation: appear-fade 3s ease-out forwards;
-          filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.8));
-          z-index: 2;
-        }
-        
-        .increase-animation {
-          animation: rotate-pulse 2.5s ease-in-out infinite;
-          filter: drop-shadow(0 0 25px rgba(46, 204, 113, 0.8));
-          transform-origin: center center;
-        }
-        
-        .decrease-animation {
-          animation: rotate-pulse 2.5s ease-in-out infinite;
-          filter: drop-shadow(0 0 25px rgba(231, 76, 60, 0.8));
-          transform-origin: center center;
-        }
-        
         .points-text-animation {
-          animation: pulse-text 2.5s infinite;
-          text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-          font-family: 'Cinzel', serif;
-          letter-spacing: 1px;
-        }
-        
-        @keyframes appear-fade {
-          0% { opacity: 0; transform: scale(0.5); }
-          20% { opacity: 1; transform: scale(1.1); }
-          40% { opacity: 1; transform: scale(1); }
-          80% { opacity: 1; }
-          100% { opacity: 1; }
-        }
-        
-        @keyframes rotate-pulse {
-          0% { transform: scale(1) rotate(0deg); }
-          25% { transform: scale(1.05) rotate(2deg); }
-          50% { transform: scale(1.1) rotate(0deg); }
-          75% { transform: scale(1.05) rotate(-2deg); }
-          100% { transform: scale(1) rotate(0deg); }
+          animation: pulse-text 2s infinite;
+          position: relative;
+          z-index: 3;
         }
         
         @keyframes pulse-text {
-          0%, 100% { opacity: 0.9; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.2); }
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.1); }
+        }
+        
+        .point-glow-positive {
+          box-shadow: 0 0 20px rgba(46, 204, 113, 0.7);
+          animation: pulse-glow-positive 2s infinite;
+        }
+        
+        .point-glow-negative {
+          box-shadow: 0 0 20px rgba(231, 76, 60, 0.7);
+          animation: pulse-glow-negative 2s infinite;
+        }
+        
+        @keyframes pulse-glow-positive {
+          0%, 100% { box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); }
+          50% { box-shadow: 0 0 30px rgba(46, 204, 113, 0.9); }
+        }
+        
+        @keyframes pulse-glow-negative {
+          0%, 100% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.7); }
+          50% { box-shadow: 0 0 30px rgba(231, 76, 60, 0.9); }
+        }
+        
+        .message-parchment {
+          position: relative;
+          animation: hover-gentle 3s ease-in-out infinite;
+        }
+        
+        @keyframes hover-gentle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+        
+        .details-scroll {
+          position: relative;
+          transform: translateZ(0);
+          transition: all 0.3s;
+        }
+        
+        .details-scroll:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .orbiting-particles {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          animation: rotate-slow 15s linear infinite;
+        }
+        
+        .orbiting-particles .particle {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          top: calc(50% - 3px);
+          left: calc(50% - 3px);
+          transform-origin: center 65px;
+          transform: rotate(var(--angle)) translateY(-65px);
+          animation: particle-pulse 2s ease-in-out infinite;
+          animation-delay: var(--delay);
+        }
+        
+        @keyframes rotate-slow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes particle-pulse {
+          0%, 100% { opacity: 0.4; transform: rotate(var(--angle)) translateY(-65px) scale(1); }
+          50% { opacity: 1; transform: rotate(var(--angle)) translateY(-65px) scale(1.5); }
         }
       `}</style>
     </Stack>
