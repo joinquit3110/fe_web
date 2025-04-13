@@ -221,7 +221,8 @@ export const SocketProvider = ({ children }) => {
           const newPoints = parseInt(updatedFields.magicPoints, 10);
           const prevPoints = user?.magicPoints || parseInt(localStorage.getItem('magicPoints') || '100', 10);
           const diff = newPoints - prevPoints;
-          const isReset = newPoints === 100 && prevPoints !== 100;
+          // Only consider it a reset if it comes with a reason indicating it's a reset by admin
+          const isReset = updatedFields.lastUpdateReason === 'Points reset by admin';
           const changeDirection = diff > 0 ? 'increased by' : 'decreased by';
           
           if (!isNaN(newPoints)) {
@@ -235,7 +236,7 @@ export const SocketProvider = ({ children }) => {
                 message: isReset 
                   ? `Your magic points have been RESET to 100 by admin!`
                   : (diff !== 0 
-                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin. New total: ${newPoints}`
+                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)}`
                     : `Your magic points have been updated to ${newPoints}`),
                 timestamp: new Date()
               },

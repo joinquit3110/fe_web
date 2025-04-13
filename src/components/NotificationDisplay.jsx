@@ -61,7 +61,7 @@ const NotificationDisplay = () => {
         // If direct properties aren't available, try to extract from message
         if (notification.message) {
           // Remove "by admin" from message if present
-          let message = notification.message.replace(' by admin', '');
+          let message = notification.message.replace(/ by admin/g, '');
           
           // Extract points change information if not already set
           if (pointsChange === null) {
@@ -211,7 +211,7 @@ const NotificationDisplay = () => {
               // If direct properties aren't available, try to extract from message
               if (notification.message) {
                 // Remove "by admin" from message if present
-                let message = notification.message.replace(' by admin', '');
+                let message = notification.message.replace(/ by admin/g, '');
                 
                 // Extract points change information if not already set
                 if (pointsChange === null) {
@@ -323,6 +323,66 @@ const NotificationDisplay = () => {
     };
   }, [isAuthenticated, user]);
   
+  // Check for locally stored notifications from localStorage fallback
+  useEffect(() => {
+    const checkLocalFallbackNotifications = () => {
+      try {
+        const pendingNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
+        
+        if (pendingNotifications.length > 0) {
+          console.log('Found local fallback notifications:', pendingNotifications);
+          
+          // Process each notification and add it to the queue
+          pendingNotifications.forEach(notification => {
+            // Check if this notification is already in the queue
+            const existingNotification = notificationQueue.current.find(
+              item => item.id === notification.id
+            );
+            
+            if (!existingNotification) {
+              console.log('Adding local fallback notification to queue:', notification);
+              
+              const notificationItem = {
+                id: notification.id,
+                type: notification.type || 'info',
+                title: notification.title || getNotificationTitle(notification.type || 'info'),
+                message: notification.message,
+                timestamp: new Date(notification.timestamp),
+                source: 'local-fallback',
+                duration: getDurationByType(notification.type || 'info'),
+                pointsChange: notification.pointsChange,
+                reason: notification.reason,
+                criteria: notification.criteria || notification.typeDetails?.criteria,
+                level: notification.level || notification.typeDetails?.level
+              };
+              notificationQueue.current.push(notificationItem);
+            }
+          });
+          
+          // Clear the processed notifications
+          localStorage.setItem('pendingNotifications', '[]');
+          
+          // Process the queue if not already processing
+          if (!processingQueue.current) {
+            processNotificationQueue();
+          }
+        }
+      } catch (error) {
+        console.error('Error processing local fallback notifications:', error);
+      }
+    };
+    
+    // Initial check
+    checkLocalFallbackNotifications();
+    
+    // Set up interval to check for new local fallback notifications
+    const interval = setInterval(checkLocalFallbackNotifications, 3000);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+  
   // Helper function to get appropriate title
   const getNotificationTitle = (type) => {
     switch (type) {
@@ -357,20 +417,16 @@ const NotificationDisplay = () => {
     // Get the next notification
     const nextNotification = notificationQueue.current.shift();
     
-    // Make sure notification has all required fields
+    // Initialize fields if they don't exist
     nextNotification.reason = nextNotification.reason || null;
     nextNotification.criteria = nextNotification.criteria || null;
     nextNotification.level = nextNotification.level || null;
     
-    // Special handling for criteria notifications - check for specific keys
-    if (nextNotification.message && 
-        (nextNotification.message.includes('criteria') || 
-         nextNotification.message.includes('Criteria'))) {
+    // Special handling for criteria notifications - check for specific keys in message
+    if (nextNotification.message) {
+      console.log('Processing notification message:', nextNotification.message);
       
-      // Log detection of potential criteria notification
-      console.log('Potential criteria notification detected:', nextNotification);
-      
-      // Try to extract criteria information if not already present
+      // Check for criteria in message if not already present
       if (!nextNotification.criteria) {
         const possibleCriteria = [
           'Level of participation of group members',
@@ -379,7 +435,7 @@ const NotificationDisplay = () => {
         ];
         
         for (const criteria of possibleCriteria) {
-          if (nextNotification.message.includes(criteria)) {
+          if (nextNotification.message.toLowerCase().includes(criteria.toLowerCase())) {
             nextNotification.criteria = criteria;
             console.log('Criteria extracted from message:', criteria);
             break;
@@ -387,22 +443,76 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Try to extract level information if not already present
+      // Check for level in message if not already present
       if (!nextNotification.level) {
         const possibleLevels = ['Excellent', 'Good', 'Satisfactory', 'Poor', 'Very Poor'];
         
         for (const level of possibleLevels) {
-          if (nextNotification.message.includes(level)) {
+          if (nextNotification.message.toLowerCase().includes(level.toLowerCase())) {
             nextNotification.level = level;
             console.log('Level extracted from message:', level);
             break;
           }
         }
       }
+      
+      // Extract reason from message if not already present
+      if (!nextNotification.reason && nextNotification.message.includes('for')) {
+        const reasonMatch = nextNotification.message.match(/for\s+(.+?)(?:$|\.)/i);
+        if (reasonMatch && reasonMatch[1]) {
+          // Clean up the reason
+          let reason = reasonMatch[1].trim();
+          
+          // Remove criteria and level if they're part of the reason
+          possibleCriteria.forEach(criteria => {
+            reason = reason.replace(new RegExp(criteria, 'i'), '');
+          });
+          
+          possibleLevels.forEach(level => {
+            reason = reason.replace(new RegExp(level, 'i'), '');
+          });
+          
+          reason = reason.replace(/\s+/g, ' ').trim();
+          
+          if (reason) {
+            nextNotification.reason = reason;
+            console.log('Reason extracted from message:', reason);
+          }
+        }
+      }
     }
     
-    // More detailed debug logging
-    console.log('Processing notification (DETAILED):', {
+    // Fallback values for house points if message mentions points
+    if (nextNotification.message && 
+        (nextNotification.message.includes('points') || 
+         nextNotification.message.includes('Points'))) {
+      
+      // Default reason if none was extracted
+      if (!nextNotification.reason) {
+        if (nextNotification.pointsChange > 0) {
+          nextNotification.reason = "Academic performance";
+        } else {
+          nextNotification.reason = "Rule violation";
+        }
+      }
+      
+      // Default criteria and level for points notifications
+      if (!nextNotification.criteria && !nextNotification.level) {
+        if (nextNotification.message.includes('poor')) {
+          nextNotification.criteria = "Time taken by the group to complete tasks";
+          nextNotification.level = "Poor";
+        } else if (nextNotification.message.includes('excellent')) {
+          nextNotification.criteria = "Level of participation of group members";
+          nextNotification.level = "Excellent";
+        } else if (nextNotification.message.includes('good')) {
+          nextNotification.criteria = "Level of English usage in the group";
+          nextNotification.level = "Good";
+        }
+      }
+    }
+    
+    // Detailed debugging logs
+    console.log('Processing notification (FULL DEBUG):', {
       id: nextNotification.id,
       type: nextNotification.type,
       message: nextNotification.message,
