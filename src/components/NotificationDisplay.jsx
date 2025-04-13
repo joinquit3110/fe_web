@@ -447,6 +447,8 @@ const NotificationDisplay = () => {
     const messageMap = new Map();
     // Special map just for point changes to handle them differently
     const pointChangeMap = new Map();
+    // Special map for criteria/level notices to avoid duplicates
+    const criteriaLevelMap = new Map();
     
     // First, prioritize notifications with more complete information
     // Sort to process notifications with the most complete information first
@@ -465,14 +467,23 @@ const NotificationDisplay = () => {
       return scoreB - scoreA; // Higher score first
     });
     
+    // Clear the queue first to avoid processing duplicates
+    notificationQueue.current = [];
+    
     sortedQueue.forEach(notification => {
       // Special handling for point change notifications
       if (notification.pointsChange) {
         // Create a key based on the point change value and direction
         const pointKey = `points:${notification.pointsChange}`;
         
-        if (pointChangeMap.has(pointKey)) {
-          const existingNotif = pointChangeMap.get(pointKey);
+        // Check for duplicates based on more strict criteria
+        // Include criteria and level in the key if they exist
+        const criteriaKey = notification.criteria ? `:${notification.criteria}` : '';
+        const levelKey = notification.level ? `:${notification.level}` : '';
+        const fullKey = `${pointKey}${criteriaKey}${levelKey}`;
+
+        if (pointChangeMap.has(fullKey)) {
+          const existingNotif = pointChangeMap.get(fullKey);
           const currentTime = new Date().getTime();
           // Make sure we can handle both string timestamps and Date objects
           const existingTime = existingNotif.timestamp ? 
@@ -481,8 +492,8 @@ const NotificationDisplay = () => {
               new Date(existingNotif.timestamp).getTime()) : 
             0;
           
-          // Only consolidate if notifications are within 30 seconds of each other (increased from 15)
-          if (Math.abs(currentTime - existingTime) < 30000) {
+          // Only consolidate if notifications are within 60 seconds of each other (increased from 30)
+          if (Math.abs(currentTime - existingTime) < 60000) {
             // Always prefer "POINTS AWARDED!" or "POINTS DEDUCTED!" titles over generic ones
             if (notification.title && notification.title.includes('POINTS')) {
               existingNotif.title = notification.title;
@@ -520,14 +531,20 @@ const NotificationDisplay = () => {
             console.log('Updated existing notification with more info:', existingNotif);
           } else {
             // If they're far apart in time, treat as separate notifications
-            const uniqueKey = `${pointKey}-${Date.now()}`;
+            const uniqueKey = `${fullKey}-${Date.now()}`;
             pointChangeMap.set(uniqueKey, notification);
             deduplicatedQueue.push(notification);
           }
         } else {
           // First time seeing this point change
-          pointChangeMap.set(pointKey, notification);
+          pointChangeMap.set(fullKey, notification);
           deduplicatedQueue.push(notification);
+        }
+        
+        // Special case: We also need to check for duplicate criteria/level combinations
+        if (notification.criteria && notification.level) {
+          const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
+          criteriaLevelMap.set(criteriaLevelKey, true);
         }
       } else {
         // Non-point change notifications use the regular deduplication logic
@@ -560,6 +577,15 @@ const NotificationDisplay = () => {
             }
           }
         } else {
+          // Skip if this is a criteria/level only notification that we already have with a point change
+          if (notification.criteria && notification.level) {
+            const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
+            if (criteriaLevelMap.has(criteriaLevelKey)) {
+              console.log('Skipping duplicate criteria/level notification:', notification);
+              return; // Skip this notification
+            }
+          }
+          
           // First time seeing this message
           messageMap.set(messageKey, notification);
           deduplicatedQueue.push(notification);
@@ -1078,30 +1104,15 @@ const NotificationDisplay = () => {
         </Fade>
       ))}
       
-      {/* Custom CSS for animations */}
+      {/* Custom CSS for animations - simplified to reduce lag */}
       <style jsx global>{`
         @keyframes pop-in {
-          0% { transform: scale(0.9) translateY(-10px); opacity: 0; }
-          100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        
-        @keyframes float-0 {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-5px) rotate(0.5deg); }
-        }
-        
-        @keyframes float-1 {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(-0.5deg); }
-        }
-        
-        @keyframes float-2 {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-6px) rotate(0.3deg); }
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
         }
         
         .notification-panel {
-          animation: pop-in 0.4s ease-out, float-${Math.floor(Math.random() * 3)} 4s ease-in-out infinite;
+          animation: pop-in 0.3s ease-out;
           transform-origin: center center;
         }
         
@@ -1123,91 +1134,35 @@ const NotificationDisplay = () => {
         }
         
         .points-text-animation {
-          animation: pulse-text 2s infinite;
+          /* Removed animation for better performance */
           position: relative;
           z-index: 3;
         }
         
-        @keyframes pulse-text {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-        
         .point-glow-positive {
-          box-shadow: 0 0 20px rgba(46, 204, 113, 0.7);
-          animation: pulse-glow-positive 2s infinite;
+          box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
         }
         
         .point-glow-negative {
-          box-shadow: 0 0 20px rgba(231, 76, 60, 0.7);
-          animation: pulse-glow-negative 2s infinite;
-        }
-        
-        @keyframes pulse-glow-positive {
-          0%, 100% { box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); }
-          50% { box-shadow: 0 0 30px rgba(46, 204, 113, 0.9); }
-        }
-        
-        @keyframes pulse-glow-negative {
-          0%, 100% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.7); }
-          50% { box-shadow: 0 0 30px rgba(231, 76, 60, 0.9); }
+          box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
         }
         
         .message-parchment {
           position: relative;
-          animation: hover-gentle 3s ease-in-out infinite;
-        }
-        
-        @keyframes hover-gentle {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
         }
         
         .details-scroll {
           position: relative;
           transform: translateZ(0);
-          transition: all 0.3s;
+          transition: transform 0.2s;
         }
         
         .details-scroll:hover {
           transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        
-        .orbiting-particles {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          animation: rotate-slow 15s linear infinite;
-        }
-        
-        .orbiting-particles .particle {
-          position: absolute;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          top: calc(50% - 3px);
-          left: calc(50% - 3px);
-          transform-origin: center 65px;
-          transform: rotate(var(--angle)) translateY(-65px);
-          animation: particle-pulse 2s ease-in-out infinite;
-          animation-delay: var(--delay);
-        }
-        
-        @keyframes rotate-slow {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes particle-pulse {
-          0%, 100% { opacity: 0.4; transform: rotate(var(--angle)) translateY(-65px) scale(1); }
-          50% { opacity: 1; transform: rotate(var(--angle)) translateY(-65px) scale(1.5); }
         }
         
         .point-change-container {
-          animation: appear-fade 1.5s ease-out forwards;
+          animation: appear-fade 0.5s ease-out forwards;
         }
         
         .image-container {
@@ -1216,62 +1171,16 @@ const NotificationDisplay = () => {
         }
         
         .increase-animation {
-          filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.7));
-          animation: pulse-appear 1s ease-out, rotate-pulse 3s ease-in-out infinite;
-          transform-origin: center center;
+          filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
         }
         
         .decrease-animation {
-          filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.7));
-          animation: pulse-appear 1s ease-out, rotate-pulse 3s ease-in-out infinite;
-          transform-origin: center center;
-        }
-        
-        .point-glow-positive {
-          box-shadow: 0 0 30px 10px rgba(46, 204, 113, 0.6);
-          animation: pulse-glow 2s infinite;
-          opacity: 0.7;
-        }
-        
-        .point-glow-negative {
-          box-shadow: 0 0 30px 10px rgba(231, 76, 60, 0.6);
-          animation: pulse-glow 2s infinite;
-          opacity: 0.7;
-        }
-        
-        .points-text-animation {
-          animation: pulse-text 2s infinite;
-          position: relative;
-          z-index: 3;
-        }
-        
-        @keyframes pulse-appear {
-          0% { opacity: 0; transform: scale(0.7); }
-          50% { opacity: 1; transform: scale(1.1); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        
-        @keyframes rotate-pulse {
-          0% { transform: scale(1) rotate(0deg); }
-          25% { transform: scale(1.03) rotate(1deg); }
-          50% { transform: scale(1.05) rotate(0deg); }
-          75% { transform: scale(1.03) rotate(-1deg); }
-          100% { transform: scale(1) rotate(0deg); }
+          filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
         }
         
         @keyframes appear-fade {
           0% { opacity: 0; }
           100% { opacity: 1; }
-        }
-        
-        @keyframes pulse-glow {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.7; }
-        }
-        
-        @keyframes pulse-text {
-          0%, 100% { opacity: 0.9; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.15); text-shadow: 0 0 15px rgba(0, 0, 0, 0.8); }
         }
       `}</style>
     </Stack>
