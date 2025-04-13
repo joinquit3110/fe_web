@@ -550,7 +550,7 @@ export const AdminProvider = ({ children }) => {
     veryPoor: -10,
   };
 
-  // Define criteria types and performance levels to fix undefined variables
+  // Define criteria types and performance levels with standardized options
   const criteriaTypes = [
     { value: 'participation', label: 'Level of participation of group members' },
     { value: 'english', label: 'Level of English usage in the group' },
