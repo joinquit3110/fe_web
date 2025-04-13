@@ -6,7 +6,11 @@ import {
   Box, Table, Thead, Tbody, Tr, Th, Td, Checkbox, 
   Select, Button, Heading, VStack, HStack, Badge, 
   Text, useToast, Divider, Flex, Spinner,
-  Menu, MenuButton, MenuList, MenuItem, IconButton
+  Menu, MenuButton, MenuList, MenuItem, IconButton,
+  useBreakpointValue, Card, CardBody, Grid, 
+  Stack, SimpleGrid, useDisclosure, Modal,
+  ModalOverlay, ModalContent, ModalHeader,
+  ModalBody, ModalCloseButton
 } from '@chakra-ui/react';
 import '../styles/Admin.css'; // Import admin styles
 
@@ -39,6 +43,11 @@ const AdminUserManagement = () => {
     { value: 'muggle', label: 'Muggle', color: 'gray.500', bgColor: '#6B6B6B', textColor: '#FFFFFF' },
     { value: 'admin', label: 'Admin', color: 'purple.500', bgColor: '#4B0082', textColor: '#FFFFFF' }
   ];
+
+  // Check if mobile view should be used
+  const isMobile = useBreakpointValue({ base: true, md: false });
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   // Fetch users once on component mount instead of auto-refresh
   useEffect(() => {
@@ -167,24 +176,90 @@ const AdminUserManagement = () => {
     navigate('/admin/house-points');
   };
 
+  // Function to open user actions modal
+  const handleUserAction = (userId) => {
+    setSelectedUserId(userId);
+    onOpen();
+  };
+
+  // Helper function to render house badge/selector
+  const renderHouseBadge = (user) => {
+    const house = houses.find(h => h.value === user.house) || 
+      { value: 'unknown', label: 'Unknown', bgColor: 'gray.700', textColor: 'white', color: 'gray.500' };
+    
+    return (
+      <Menu>
+        <MenuButton 
+          as={Button}
+          bg={house.bgColor}
+          color={house.textColor}
+          fontWeight="bold"
+          borderWidth="2px"
+          borderColor={house.color}
+          _hover={{ borderColor: 'white' }}
+          width={{ base: "130px", md: "160px" }}
+          size={isMobile ? "sm" : "md"}
+          fontSize={{ base: "xs", md: "sm" }}
+        >
+          {house.label}
+        </MenuButton>
+        <MenuList>
+          {houses.map(house => (
+            <MenuItem 
+              key={house.value}
+              value={house.value}
+              onClick={() => handleHouseChange(user.id || user._id, house.value)}
+              bg={house.bgColor}
+              color={house.textColor}
+              _hover={{ bg: 'gray.600' }}
+            >
+              {house.label}
+            </MenuItem>
+          ))}
+        </MenuList>
+      </Menu>
+    );
+  };
+
   return (
-    <Box className="admin-user-management">
+    <Box className="admin-user-management" p={{ base: 2, md: 4 }}>
       <VStack spacing={4} align="stretch">
-        <HStack justify="space-between">
-          <Heading size="lg" className="highlight admin-title">Hogwarts Student Registry</Heading>
-          <HStack>
-            <Badge colorScheme="purple" fontSize="md" p={2}>Admin Console</Badge>
+        {/* Header section, always visible but responsive */}
+        <Stack 
+          direction={{ base: "column", md: "row" }} 
+          justify="space-between"
+          spacing={{ base: 3, md: 0 }}
+        >
+          <Heading 
+            size={{ base: "md", md: "lg" }} 
+            className="highlight admin-title"
+            textAlign={{ base: "center", md: "left" }}
+          >
+            Hogwarts Student Registry
+          </Heading>
+          <Stack 
+            direction={{ base: "row", md: "row" }} 
+            justify={{ base: "center", md: "flex-end" }}
+            spacing={2}
+            wrap="wrap"
+          >
+            <Badge colorScheme="purple" fontSize={{ base: "xs", md: "md" }} p={2}>Admin Console</Badge>
             <Button 
               colorScheme="purple" 
-              size="sm" 
+              size={{ base: "xs", md: "sm" }} 
               onClick={goToHousePoints}
-              mr={2}
             >
               House Points
             </Button>
-            <Button colorScheme="red" size="sm" onClick={logout}>Logout</Button>
-          </HStack>
-        </HStack>
+            <Button 
+              colorScheme="red" 
+              size={{ base: "xs", md: "sm" }} 
+              onClick={logout}
+            >
+              Logout
+            </Button>
+          </Stack>
+        </Stack>
         
         <Divider />
         
@@ -194,12 +269,24 @@ const AdminUserManagement = () => {
           </Box>
         )}
         
-        <HStack justify="space-between" className="admin-control-bar">
-          <Text>{selectedUsers.length} students selected</Text>
-          <HStack className="admin-actions">
+        {/* Control bar, responsive layout */}
+        <Stack 
+          direction={{ base: "column", md: "row" }} 
+          justify="space-between" 
+          align={{ base: "center", md: "center" }}
+          spacing={3}
+          className="admin-control-bar"
+        >
+          <Text fontSize={{ base: "sm", md: "md" }}>{selectedUsers.length} students selected</Text>
+          <Flex 
+            className="admin-actions" 
+            wrap="wrap" 
+            justify={{ base: "center", md: "flex-end" }}
+            gap={2}
+          >
             <Button 
               colorScheme="blue" 
-              size="sm" 
+              size={{ base: "xs", md: "sm" }} 
               onClick={handleResetPoints}
               isDisabled={selectedUsers.length === 0}
             >
@@ -207,7 +294,7 @@ const AdminUserManagement = () => {
             </Button>
             <Button 
               colorScheme="green" 
-              size="sm" 
+              size={{ base: "xs", md: "sm" }} 
               onClick={handleResetAttempts}
               isDisabled={selectedUsers.length === 0}
             >
@@ -215,7 +302,7 @@ const AdminUserManagement = () => {
             </Button>
             <Button 
               colorScheme="purple" 
-              size="sm" 
+              size={{ base: "xs", md: "sm" }} 
               onClick={handleForceSync}
               isDisabled={selectedUsers.length === 0}
             >
@@ -223,125 +310,195 @@ const AdminUserManagement = () => {
             </Button>
             <Button 
               colorScheme="gray" 
-              size="sm" 
+              size={{ base: "xs", md: "sm" }} 
               onClick={fetchUsers}
             >
-              Refresh Data
+              Refresh
             </Button>
-          </HStack>
-        </HStack>
+          </Flex>
+        </Stack>
         
-        <Box className="wizard-panel" p={4} borderRadius="md">
-          <Box overflowX="auto" width="100%">
-            <Table variant="simple" className="admin-table">
-              <Thead>
-                <Tr>
-                  <Th width="50px">
-                    <Checkbox 
-                      isChecked={selectedUsers.length > 0 && selectedUsers.length === users.length} 
-                      isIndeterminate={selectedUsers.length > 0 && selectedUsers.length < users.length}
-                      onChange={selectAllUsers}
-                    />
-                  </Th>
-                  <Th>Wizard Name</Th>
-                  <Th>ID</Th>
-                  <Th>House</Th>
-                  <Th isNumeric>Magic Points</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {loading ? (
+        <Box className="wizard-panel" p={{ base: 2, md: 4 }} borderRadius="md">
+          {/* Desktop view: Table layout */}
+          {!isMobile && (
+            <Box overflowX="auto" width="100%">
+              <Table variant="simple" className="admin-table">
+                <Thead>
                   <Tr>
-                    <Td colSpan={6} textAlign="center" className="admin-loading">
-                      <Spinner size="lg" color="blue.500" />
-                    </Td>
+                    <Th width="50px">
+                      <Checkbox 
+                        isChecked={selectedUsers.length > 0 && selectedUsers.length === users.length} 
+                        isIndeterminate={selectedUsers.length > 0 && selectedUsers.length < users.length}
+                        onChange={selectAllUsers}
+                      />
+                    </Th>
+                    <Th>Wizard Name</Th>
+                    <Th>House</Th>
+                    <Th isNumeric>Points</Th>
+                    <Th>Actions</Th>
                   </Tr>
-                ) : users.length === 0 ? (
-                  <Tr>
-                    <Td colSpan={6} textAlign="center">No students found</Td>
-                  </Tr>
-                ) : (
-                  users.map(user => (
-                    <Tr key={user.id || user._id}>
-                      <Td>
-                        <Checkbox 
-                          isChecked={selectedUsers.includes(user.id || user._id)}
-                          onChange={() => toggleUserSelection(user.id || user._id)}
-                        />
-                      </Td>
-                      <Td>{user.username}</Td>
-                      <Td><Text fontSize="xs" color="gray.400">{user.id || user._id}</Text></Td>
-                      <Td>
-                        <Menu>
-                          <MenuButton 
-                            as={Button}
-                            bg={houses.find(h => h.value === user.house)?.bgColor || 'gray.700'}
-                            color={houses.find(h => h.value === user.house)?.textColor || 'white'}
-                            fontWeight="bold"
-                            borderWidth="2px"
-                            borderColor={houses.find(h => h.value === user.house)?.color || 'gray.500'}
-                            _hover={{ borderColor: 'white' }}
-                            width="160px"
-                          >
-                            {user.house ? houses.find(h => h.value === user.house)?.label : 'Select House'}
-                          </MenuButton>
-                          <MenuList>
-                            {houses.map(house => (
-                              <MenuItem 
-                                key={house.value}
-                                value={house.value}
-                                onClick={() => handleHouseChange(user.id || user._id, house.value)}
-                                bg={house.bgColor}
-                                color={house.textColor}
-                                _hover={{ bg: 'gray.600' }}
-                              >
-                                {house.label}
-                              </MenuItem>
-                            ))}
-                          </MenuList>
-                        </Menu>
-                      </Td>
-                      <Td isNumeric>
-                        <Badge 
-                          colorScheme={user.magicPoints >= 100 ? 'green' : user.magicPoints >= 50 ? 'yellow' : 'red'}
-                          fontSize="md"
-                          p={2}
-                          className="admin-badge"
-                        >
-                          {user.magicPoints}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <HStack className="admin-actions">
-                          <Button 
-                            size="sm" 
-                            colorScheme="green"
-                            onClick={() => resetPointsForUsers([user.id || user._id])}
-                            fontSize={{base: "10px", md: "12px"}}
-                            p={{base: "4px 6px", md: "6px 10px"}}
-                          >
-                            Reset Points
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            colorScheme="blue"
-                            onClick={() => resetAttemptsForUsers([user.id || user._id])}
-                            fontSize={{base: "10px", md: "12px"}}
-                            p={{base: "4px 6px", md: "6px 10px"}}
-                          >
-                            Reset Attempts
-                          </Button>
-                        </HStack>
+                </Thead>
+                <Tbody>
+                  {loading ? (
+                    <Tr>
+                      <Td colSpan={5} textAlign="center" className="admin-loading">
+                        <Spinner size="lg" color="blue.500" />
                       </Td>
                     </Tr>
-                  ))
-                )}
-              </Tbody>
-            </Table>
-          </Box>
+                  ) : users.length === 0 ? (
+                    <Tr>
+                      <Td colSpan={5} textAlign="center">No students found</Td>
+                    </Tr>
+                  ) : (
+                    users.map(user => (
+                      <Tr key={user.id || user._id}>
+                        <Td>
+                          <Checkbox 
+                            isChecked={selectedUsers.includes(user.id || user._id)}
+                            onChange={() => toggleUserSelection(user.id || user._id)}
+                          />
+                        </Td>
+                        <Td>{user.username}</Td>
+                        <Td>{renderHouseBadge(user)}</Td>
+                        <Td isNumeric>
+                          <Badge 
+                            colorScheme={user.magicPoints >= 100 ? 'green' : user.magicPoints >= 50 ? 'yellow' : 'red'}
+                            fontSize="md"
+                            p={2}
+                            className="admin-badge"
+                          >
+                            {user.magicPoints}
+                          </Badge>
+                        </Td>
+                        <Td>
+                          <HStack className="admin-actions">
+                            <Button 
+                              size="sm" 
+                              colorScheme="green"
+                              onClick={() => resetPointsForUsers([user.id || user._id])}
+                            >
+                              Reset Points
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              colorScheme="blue"
+                              onClick={() => resetAttemptsForUsers([user.id || user._id])}
+                            >
+                              Reset Attempts
+                            </Button>
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    ))
+                  )}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+          
+          {/* Mobile view: Card layout */}
+          {isMobile && (
+            <Box width="100%">
+              {loading ? (
+                <Flex justify="center" align="center" minH="200px">
+                  <Spinner size="xl" color="blue.500" />
+                </Flex>
+              ) : users.length === 0 ? (
+                <Text textAlign="center" p={4}>No students found</Text>
+              ) : (
+                <SimpleGrid columns={1} spacing={4}>
+                  {users.map(user => (
+                    <Card key={user.id || user._id} variant="outline" className="wizard-panel">
+                      <CardBody>
+                        <Stack spacing={3}>
+                          <Flex justify="space-between" align="center">
+                            <Checkbox 
+                              isChecked={selectedUsers.includes(user.id || user._id)}
+                              onChange={() => toggleUserSelection(user.id || user._id)}
+                              mr={2}
+                            />
+                            <Text fontWeight="bold" fontSize="lg">{user.username}</Text>
+                            <Badge 
+                              colorScheme={user.magicPoints >= 100 ? 'green' : user.magicPoints >= 50 ? 'yellow' : 'red'}
+                              fontSize="md"
+                              p={2}
+                            >
+                              {user.magicPoints} pts
+                            </Badge>
+                          </Flex>
+                          
+                          <Flex justify="space-between" align="center">
+                            {renderHouseBadge(user)}
+                            <Button 
+                              size="sm" 
+                              colorScheme="purple"
+                              onClick={() => handleUserAction(user.id || user._id)}
+                            >
+                              Actions
+                            </Button>
+                          </Flex>
+                        </Stack>
+                      </CardBody>
+                    </Card>
+                  ))}
+                </SimpleGrid>
+              )}
+            </Box>
+          )}
         </Box>
       </VStack>
+      
+      {/* Mobile User Actions Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} isCentered>
+        <ModalOverlay backdropFilter="blur(10px)" />
+        <ModalContent className="wizard-panel">
+          <ModalHeader>Student Actions</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack spacing={4}>
+              <Button 
+                colorScheme="green" 
+                size="md" 
+                width="100%"
+                onClick={() => {
+                  if (selectedUserId) {
+                    resetPointsForUsers([selectedUserId]);
+                    onClose();
+                  }
+                }}
+              >
+                Reset Points
+              </Button>
+              <Button 
+                colorScheme="blue" 
+                size="md" 
+                width="100%"
+                onClick={() => {
+                  if (selectedUserId) {
+                    resetAttemptsForUsers([selectedUserId]);
+                    onClose();
+                  }
+                }}
+              >
+                Reset Attempts
+              </Button>
+              <Button 
+                colorScheme="purple" 
+                size="md" 
+                width="100%"
+                onClick={() => {
+                  if (selectedUserId) {
+                    forceSyncForUsers([selectedUserId]);
+                    onClose();
+                  }
+                }}
+              >
+                Force Sync
+              </Button>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

@@ -266,161 +266,182 @@ const AppContent = () => {
                     <Activity1 />
                   ) : (
                     <>
-                      {/* 1. Control Panel - Cast Spell at top */}
-                      <div className="control-panel wizard-panel">
-                        <div className="control-panel-content">
-                          <h2 className="activity-title" style={{ 
+                      {/* Kiểm tra nếu người dùng là admin thì không hiển thị nội dung */}
+                      {user && user.isAdmin ? (
+                        <div className="admin-message wizard-panel" style={{
+                          padding: "30px",
+                          textAlign: "center",
+                          borderRadius: "8px"
+                        }}>
+                          <h3 style={{ 
                             fontFamily: "'Cinzel', serif",
-                            position: "relative",
-                            textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
-                            letterSpacing: "1px",
-                            textAlign: "center"
+                            fontSize: "24px",
+                            color: "var(--secondary-color)",
+                            marginBottom: "15px"
                           }}>
-                            <span style={{
-                              display: "inline-block",
-                              padding: "0 30px",
-                              position: "relative"
-                            }}>
-                              Grand Arcanum of<br />Inequality
-                              <span style={{
-                                position: "absolute",
-                                bottom: "-5px",
-                                left: "0",
-                                right: "0",
-                                height: "2px",
-                                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-                                animation: "shimmer 2s infinite"
-                              }}></span>
-                            </span>
-                          </h2>
-                          <InequalityInput 
-                            addInequality={handleAddInequality}
-                            setQuizMessage={setQuizMessage}
-                            resetAll={resetAll}
-                          />
+                            Admin Console
+                          </h3>
+                          <p>Activity 2 content is disabled for admin users. Please use the Admin Console for management tasks.</p>
                         </div>
-                      </div>
-
-                      {/* 2. Message Box - Always show a message */}
-                      <div className={`message-box ${message.type}`}>
-                        <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
-                      </div>
-
-                      {/* 3. Coordinate Plane */}
-                      <div className="coordinate-container wizard-panel">
-                        <h2 className="activity-title" style={{ 
-                            fontFamily: "'Cinzel', serif",
-                            position: "relative",
-                            textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
-                            letterSpacing: "1px",
-                            textAlign: "center"
-                          }}>
-                            <span style={{
-                              display: "inline-block",
-                              padding: "0 30px",
-                              position: "relative"
-                            }}>
-                              Magical Coordinate Plane
-                              <span style={{
-                                position: "absolute",
-                                bottom: "-5px",
-                                left: "0",
-                                right: "0",
-                                height: "2px",
-                                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-                                animation: "shimmer 2s infinite"
-                              }}></span>
-                            </span>
-                          </h2>
-                        <div className="coordinate-plane">
-                          <CoordinatePlane
-                            ref={coordinatePlaneRef}
-                            inequalities={inequalities}
-                            setInequalities={setInequalities}
-                            setQuizMessage={setQuizMessage}
-                            hoveredEq={hoveredEq}
-                            setHoveredEq={setHoveredEq}
-                            onInequalityClick={scrollToInequality}
-                            setRelatedToIntersection={setRelatedToIntersection}
-                          />
-                        </div>
-                      </div>
-
-                      {/* 4. Inequalities List at bottom */}
-                      <div className="inequalities-list wizard-panel">
-                        <h2 className="activity-title" style={{ 
-                            fontFamily: "'Cinzel', serif",
-                            position: "relative",
-                            textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
-                            letterSpacing: "1px",
-                            textAlign: "center"
-                          }}>
-                            <span style={{
-                              display: "inline-block",
-                              padding: "0 30px",
-                              position: "relative"
-                            }}>
-                              Spells Collection
-                              <span style={{
-                                position: "absolute",
-                                bottom: "-5px",
-                                left: "0",
-                                right: "0",
-                                height: "2px",
-                                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-                                animation: "shimmer 2s infinite"
-                              }}></span>
-                            </span>
-                          </h2>
-                        <div className="scroll-container" ref={inequalityListRef}>
-                          {inequalities.length > 0 ? (
-                            inequalities.map((ineq, index) => (
-                              <div
-                                key={index}
-                                className={`inequality-item ${relatedToIntersection.some(eq => eq.label === ineq.label) 
-                                  ? 'related-intersection' 
-                                  : (hoveredEq?.label === ineq.label ? 'highlighted' : '')}`}
-                                style={{ 
-                                  borderLeftColor: ineq.color,
-                                  background: relatedToIntersection.some(eq => eq.label === ineq.label)
-                                    ? 'rgba(46, 125, 50, 0.3)' // Green background for related to intersection
-                                    : (hoveredEq?.label === ineq.label 
-                                      ? 'rgba(211, 166, 37, 0.4)'
-                                      : 'rgba(14, 26, 64, 0.7)'),
-                                  boxShadow: relatedToIntersection.some(eq => eq.label === ineq.label)
-                                    ? '0 0 10px rgba(46, 125, 50, 0.5)' // Green glow for related to intersection
-                                    : (hoveredEq?.label === ineq.label 
-                                      ? '0 0 10px rgba(211, 166, 37, 0.5)'
-                                      : 'none'),
-                                  transform: (relatedToIntersection.some(eq => eq.label === ineq.label) || hoveredEq?.label === ineq.label)
-                                    ? 'translateX(8px)'
-                                    : 'none',
-                                  transition: 'all 0.3s ease',
-                                  '--index': index
-                                }}
-                                onMouseEnter={() => handleListItemHover(ineq)}
-                                onMouseLeave={() => handleListItemHover(null)}
-                                onClick={() => handleListItemClick(ineq)}
-                              >
-                                <span 
-                                  className="latex-content"
-                                  dangerouslySetInnerHTML={{ 
-                                    __html: renderLatex(`${getSequentialLabel(index)}:\\; ${ineq.latex}`) 
-                                  }}
-                                />
-                                <span 
-                                  className="delete-icon material-icons"
-                                  onClick={(e) => handleDelete(e, ineq)}
-                                >
-                                  delete
+                      ) : (
+                        <>
+                          {/* 1. Control Panel - Cast Spell at top */}
+                          <div className="control-panel wizard-panel">
+                            <div className="control-panel-content">
+                              <h2 className="activity-title" style={{ 
+                                fontFamily: "'Cinzel', serif",
+                                position: "relative",
+                                textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
+                                letterSpacing: "1px",
+                                textAlign: "center"
+                              }}>
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "0 30px",
+                                  position: "relative"
+                                }}>
+                                  Grand Arcanum of<br />Inequality
+                                  <span style={{
+                                    position: "absolute",
+                                    bottom: "-5px",
+                                    left: "0",
+                                    right: "0",
+                                    height: "2px",
+                                    background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                                    animation: "shimmer 2s infinite"
+                                  }}></span>
                                 </span>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="empty-spells">Cast your first inequality spell!</div>
-                          )}
-                        </div>
-                      </div>
+                              </h2>
+                              <InequalityInput 
+                                addInequality={handleAddInequality}
+                                setQuizMessage={setQuizMessage}
+                                resetAll={resetAll}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 2. Message Box - Always show a message */}
+                          <div className={`message-box ${message.type}`}>
+                            <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
+                          </div>
+
+                          {/* 3. Coordinate Plane */}
+                          <div className="coordinate-container wizard-panel">
+                            <h2 className="activity-title" style={{ 
+                                fontFamily: "'Cinzel', serif",
+                                position: "relative",
+                                textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
+                                letterSpacing: "1px",
+                                textAlign: "center"
+                              }}>
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "0 30px",
+                                  position: "relative"
+                                }}>
+                                  Magical Coordinate Plane
+                                  <span style={{
+                                    position: "absolute",
+                                    bottom: "-5px",
+                                    left: "0",
+                                    right: "0",
+                                    height: "2px",
+                                    background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                                    animation: "shimmer 2s infinite"
+                                  }}></span>
+                                </span>
+                              </h2>
+                            <div className="coordinate-plane">
+                              <CoordinatePlane
+                                ref={coordinatePlaneRef}
+                                inequalities={inequalities}
+                                setInequalities={setInequalities}
+                                setQuizMessage={setQuizMessage}
+                                hoveredEq={hoveredEq}
+                                setHoveredEq={setHoveredEq}
+                                onInequalityClick={scrollToInequality}
+                                setRelatedToIntersection={setRelatedToIntersection}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 4. Inequalities List at bottom */}
+                          <div className="inequalities-list wizard-panel">
+                            <h2 className="activity-title" style={{ 
+                                fontFamily: "'Cinzel', serif",
+                                position: "relative",
+                                textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
+                                letterSpacing: "1px",
+                                textAlign: "center"
+                              }}>
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "0 30px",
+                                  position: "relative"
+                                }}>
+                                  Spells Collection
+                                  <span style={{
+                                    position: "absolute",
+                                    bottom: "-5px",
+                                    left: "0",
+                                    right: "0",
+                                    height: "2px",
+                                    background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                                    animation: "shimmer 2s infinite"
+                                  }}></span>
+                                </span>
+                              </h2>
+                            <div className="scroll-container" ref={inequalityListRef}>
+                              {inequalities.length > 0 ? (
+                                inequalities.map((ineq, index) => (
+                                  <div
+                                    key={index}
+                                    className={`inequality-item ${relatedToIntersection.some(eq => eq.label === ineq.label) 
+                                      ? 'related-intersection' 
+                                      : (hoveredEq?.label === ineq.label ? 'highlighted' : '')}`}
+                                    style={{ 
+                                      borderLeftColor: ineq.color,
+                                      background: relatedToIntersection.some(eq => eq.label === ineq.label)
+                                        ? 'rgba(46, 125, 50, 0.3)' // Green background for related to intersection
+                                        : (hoveredEq?.label === ineq.label 
+                                          ? 'rgba(211, 166, 37, 0.4)'
+                                          : 'rgba(14, 26, 64, 0.7)'),
+                                      boxShadow: relatedToIntersection.some(eq => eq.label === ineq.label)
+                                        ? '0 0 10px rgba(46, 125, 50, 0.5)' // Green glow for related to intersection
+                                        : (hoveredEq?.label === ineq.label 
+                                          ? '0 0 10px rgba(211, 166, 37, 0.5)'
+                                          : 'none'),
+                                      transform: (relatedToIntersection.some(eq => eq.label === ineq.label) || hoveredEq?.label === ineq.label)
+                                        ? 'translateX(8px)'
+                                        : 'none',
+                                      transition: 'all 0.3s ease',
+                                      '--index': index
+                                    }}
+                                    onMouseEnter={() => handleListItemHover(ineq)}
+                                    onMouseLeave={() => handleListItemHover(null)}
+                                    onClick={() => handleListItemClick(ineq)}
+                                  >
+                                    <span 
+                                      className="latex-content"
+                                      dangerouslySetInnerHTML={{ 
+                                        __html: renderLatex(`${getSequentialLabel(index)}:\\; ${ineq.latex}`) 
+                                      }}
+                                    />
+                                    <span 
+                                      className="delete-icon material-icons"
+                                      onClick={(e) => handleDelete(e, ineq)}
+                                    >
+                                      delete
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="empty-spells">Cast your first inequality spell!</div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
                 </div>

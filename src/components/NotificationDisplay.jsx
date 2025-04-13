@@ -41,43 +41,97 @@ const NotificationDisplay = () => {
         let criteria = null;
         let level = null;
         
-        // Check if it's a point change notification
+        // Check for direct properties first (these would come from AdminContext)
+        if (notification.pointsChange !== undefined) {
+          pointsChange = notification.pointsChange;
+        }
+        
+        if (notification.reason) {
+          reason = notification.reason;
+        }
+        
+        if (notification.criteria) {
+          criteria = notification.criteria;
+        }
+        
+        if (notification.level) {
+          level = notification.level;
+        }
+        
+        // If direct properties aren't available, try to extract from message
         if (notification.message) {
           // Remove "by admin" from message if present
           let message = notification.message.replace(' by admin', '');
           
-          // Extract points change information
-          if (message.includes('increased by') || message.includes('decreased by')) {
-            const match = message.match(/(increased|decreased) by (\d+)/);
-            if (match) {
-              const changeType = match[1];
-              const amount = parseInt(match[2], 10);
-              pointsChange = changeType === 'increased' ? amount : -amount;
-              // Update message without "by admin"
-              notification.message = message;
+          // Extract points change information if not already set
+          if (pointsChange === null) {
+            if (message.includes('increased by') || message.includes('decreased by')) {
+              const match = message.match(/(increased|decreased) by (\d+)/);
+              if (match) {
+                const changeType = match[1];
+                const amount = parseInt(match[2], 10);
+                pointsChange = changeType === 'increased' ? amount : -amount;
+              }
+            }
+            
+            // Alternative formats: "+10 points" or "-10 points"
+            if (pointsChange === null) {
+              const plusMatch = message.match(/\+(\d+) points/);
+              const minusMatch = message.match(/\-(\d+) points/);
+              if (plusMatch) {
+                pointsChange = parseInt(plusMatch[1], 10);
+              } else if (minusMatch) {
+                pointsChange = -parseInt(minusMatch[1], 10);
+              }
+            }
+            
+            // Another pattern: "awarded to" or "deducted from"
+            if (pointsChange === null) {
+              const awardedMatch = message.match(/(\d+) points awarded to/);
+              const deductedMatch = message.match(/(\d+) points deducted from/);
+              if (awardedMatch) {
+                pointsChange = parseInt(awardedMatch[1], 10);
+              } else if (deductedMatch) {
+                pointsChange = -parseInt(deductedMatch[1], 10);
+              }
             }
           }
           
-          // Check for reasons in house point notifications
-          if (message.includes('House') && (message.includes('gained') || message.includes('lost'))) {
-            const reasonMatch = message.match(/Reason: (.+)/i);
+          // Check for reasons in message if not already set
+          if (!reason) {
+            const reasonMatch = message.match(/[Rr]eason:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Level:)/);
             if (reasonMatch) {
-              reason = reasonMatch[1];
-            }
-            
-            // Try to extract criteria and level for house points
-            const criteriaMatch = message.match(/Criteria: (.+?),/i);
-            const levelMatch = message.match(/Level: (.+?)($|\s)/i);
-            
-            if (criteriaMatch) {
-              criteria = criteriaMatch[1];
-            }
-            
-            if (levelMatch) {
-              level = levelMatch[1];
+              reason = reasonMatch[1].trim();
             }
           }
+          
+          // Try to extract criteria and level from message if not already set
+          if (!criteria) {
+            const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
+            if (criteriaMatch) {
+              criteria = criteriaMatch[1].trim();
+            }
+          }
+          
+          if (!level) {
+            const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
+            if (levelMatch) {
+              level = levelMatch[1].trim();
+            }
+          }
+          
+          // Update message without "by admin"
+          notification.message = message;
         }
+        
+        console.log('Socket notification processed:', {
+          id: notification.id,
+          message: notification.message,
+          pointsChange,
+          reason,
+          criteria,
+          level
+        });
         
         const notificationItem = {
           id: notification.id,
@@ -141,32 +195,93 @@ const NotificationDisplay = () => {
               let criteria = null;
               let level = null;
               
-              // Check if it's a point change notification
+              // Check for direct properties first
+              if (notification.pointsChange !== undefined) {
+                pointsChange = notification.pointsChange;
+              }
+              
+              if (notification.criteria) {
+                criteria = notification.criteria;
+              }
+              
+              if (notification.level) {
+                level = notification.level;
+              }
+              
+              // If direct properties aren't available, try to extract from message
               if (notification.message) {
                 // Remove "by admin" from message if present
                 let message = notification.message.replace(' by admin', '');
                 
-                // Extract points change information
-                if (message.includes('increased by') || message.includes('decreased by')) {
-                  const match = message.match(/(increased|decreased) by (\d+)/);
-                  if (match) {
-                    const changeType = match[1];
-                    const amount = parseInt(match[2], 10);
-                    pointsChange = changeType === 'increased' ? amount : -amount;
-                    // Update message without "by admin"
-                    notification.message = message;
+                // Extract points change information if not already set
+                if (pointsChange === null) {
+                  if (message.includes('increased by') || message.includes('decreased by')) {
+                    const match = message.match(/(increased|decreased) by (\d+)/);
+                    if (match) {
+                      const changeType = match[1];
+                      const amount = parseInt(match[2], 10);
+                      pointsChange = changeType === 'increased' ? amount : -amount;
+                    }
+                  }
+                  
+                  // Alternative formats: "+10 points" or "-10 points"
+                  if (pointsChange === null) {
+                    const plusMatch = message.match(/\+(\d+) points/);
+                    const minusMatch = message.match(/\-(\d+) points/);
+                    if (plusMatch) {
+                      pointsChange = parseInt(plusMatch[1], 10);
+                    } else if (minusMatch) {
+                      pointsChange = -parseInt(minusMatch[1], 10);
+                    }
+                  }
+                  
+                  // Another pattern: "awarded to" or "deducted from"
+                  if (pointsChange === null) {
+                    const awardedMatch = message.match(/(\d+) points awarded to/);
+                    const deductedMatch = message.match(/(\d+) points deducted from/);
+                    if (awardedMatch) {
+                      pointsChange = parseInt(awardedMatch[1], 10);
+                    } else if (deductedMatch) {
+                      pointsChange = -parseInt(deductedMatch[1], 10);
+                    }
                   }
                 }
                 
-                // Try to extract criteria and level
-                if (notification.criteria) {
-                  criteria = notification.criteria;
+                // Check for reasons if not already set
+                if (!reason) {
+                  const reasonMatch = message.match(/[Rr]eason:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Level:)/);
+                  if (reasonMatch) {
+                    reason = reasonMatch[1].trim();
+                  }
                 }
                 
-                if (notification.level) {
-                  level = notification.level;
+                // Try to extract criteria and level if not already set
+                if (!criteria) {
+                  const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
+                  if (criteriaMatch) {
+                    criteria = criteriaMatch[1].trim();
+                  }
                 }
+                
+                if (!level) {
+                  const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
+                  if (levelMatch) {
+                    level = levelMatch[1].trim();
+                  }
+                }
+                
+                // Update message without "by admin"
+                notification.message = message;
               }
+              
+              console.log('Server notification processed:', {
+                id: notification._id,
+                message: notification.message,
+                pointsChange,
+                reason,
+                criteria, 
+                level
+              });
               
               const notificationItem = {
                 id: notification._id,
@@ -373,51 +488,65 @@ const NotificationDisplay = () => {
             <Box position="relative" zIndex={2} p={4}>
               {/* Point change visualization - more compact and magical */}
               {notification.pointsChange && (
-                <Flex 
-                  justifyContent="center" 
-                  alignItems="center"
-                  mb={3}
+                <Box 
                   position="relative"
-                  className="point-change-wrapper"
+                  className="point-change-container"
+                  width="100%"
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  mb={4}
+                  mt={1}
                 >
                   <Box
                     position="relative"
-                    width="130px"
-                    height="130px"
-                    borderRadius="50%"
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    className={notification.pointsChange > 0 ? "point-glow-positive" : "point-glow-negative"}
-                    background="rgba(0,0,0,0.2)"
-                    border="2px solid rgba(255,255,255,0.3)"
+                    width="200px"
+                    height="200px"
+                    className="image-container"
                   >
-                    <Text
-                      fontSize="3xl"
-                      fontWeight="bold"
-                      color="white"
-                      textShadow="0 0 10px rgba(0,0,0,0.5)"
-                      className="points-text-animation"
-                    >
-                      {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
-                    </Text>
+                    <Image 
+                      src={notification.pointsChange > 0 ? increasePointImg : decreasePointImg}
+                      alt={notification.pointsChange > 0 ? 'Points increased' : 'Points decreased'}
+                      className={notification.pointsChange > 0 ? 'increase-animation' : 'decrease-animation'}
+                      width="100%"
+                      height="100%"
+                      objectFit="contain"
+                    />
                     
-                    {/* Orbiting particles */}
-                    <Box className="orbiting-particles">
-                      {[...Array(12)].map((_, i) => (
-                        <Box 
-                          key={i} 
-                          className="particle" 
-                          style={{
-                            '--angle': `${i * 30}deg`,
-                            '--delay': `${i * 0.1}s`,
-                            backgroundColor: notification.pointsChange > 0 ? '#2ecc71' : '#e74c3c'
-                          }}
-                        />
-                      ))}
+                    <Box
+                      position="absolute"
+                      bottom="25%"
+                      left="0"
+                      right="0"
+                      textAlign="center"
+                      zIndex={3}
+                    >
+                      <Text
+                        fontSize="30px"
+                        fontWeight="bold"
+                        color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
+                        className="points-text-animation"
+                        textShadow="0 0 10px rgba(0,0,0,0.6)"
+                        fontFamily="'Cinzel', serif"
+                      >
+                        {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
+                      </Text>
                     </Box>
+                    
+                    {/* Point change glowing effect */}
+                    <Box
+                      position="absolute"
+                      top="0"
+                      left="0"
+                      right="0"
+                      bottom="0"
+                      borderRadius="50%"
+                      className={notification.pointsChange > 0 ? "point-glow-positive" : "point-glow-negative"}
+                      zIndex={1}
+                      pointerEvents="none"
+                    />
                   </Box>
-                </Flex>
+                </Box>
               )}
               
               {/* Message with parchment-like styling */}
@@ -425,10 +554,17 @@ const NotificationDisplay = () => {
                 bg="rgba(255,255,255,0.15)" 
                 p={4} 
                 borderRadius="md" 
-                backdropFilter="blur(10px)"
+                backdropFilter="blur(5px)"
                 boxShadow="0 4px 8px rgba(0,0,0,0.1)"
                 mb={3}
                 className="message-parchment"
+                borderLeft="4px solid"
+                borderColor={
+                  notification.type === 'success' ? 'rgba(46, 204, 113, 0.8)' :
+                  notification.type === 'warning' || notification.type === 'error' ? 'rgba(231, 76, 60, 0.8)' :
+                  notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.8)' :
+                  'rgba(52, 152, 219, 0.8)'
+                }
               >
                 <Text 
                   fontSize="md" 
@@ -437,6 +573,7 @@ const NotificationDisplay = () => {
                   letterSpacing="0.5px"
                   color="white"
                   textShadow="0 1px 2px rgba(0,0,0,0.5)"
+                  lineHeight="1.5"
                 >
                   {notification.message}
                 </Text>
@@ -448,31 +585,39 @@ const NotificationDisplay = () => {
                   borderRadius="md"
                   overflow="hidden"
                   className="details-scroll"
-                  border="1px solid rgba(255,255,255,0.2)"
+                  border="1px solid rgba(255,255,255,0.3)"
+                  boxShadow="0 5px 15px rgba(0,0,0,0.2)"
+                  mb={3}
                 >
                   {/* Reason section with icon */}
                   {notification.reason && (
                     <Box 
-                      p={3}
-                      borderBottom={notification.criteria || notification.level ? "1px solid rgba(255,255,255,0.1)" : "none"}
-                      bg="rgba(0,0,0,0.15)"
+                      p={4}
+                      borderBottom={notification.criteria || notification.level ? "1px solid rgba(255,255,255,0.2)" : "none"}
+                      bg="rgba(0,0,0,0.2)"
+                      position="relative"
+                      _hover={{bg: "rgba(0,0,0,0.25)"}}
+                      transition="all 0.2s"
                     >
-                      <Flex alignItems="center">
+                      <Flex alignItems="flex-start">
                         <Box 
-                          width="24px" 
-                          height="24px" 
+                          width="32px" 
+                          height="32px" 
                           borderRadius="50%" 
-                          bg="rgba(255,255,255,0.2)" 
+                          bg={notification.type === 'success' ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"} 
+                          border="2px solid rgba(255,255,255,0.4)"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
                           mr={3}
+                          mt="2px"
+                          boxShadow="0 2px 5px rgba(0,0,0,0.2)"
                         >
-                          <Text fontSize="xs" fontWeight="bold">R</Text>
+                          <Text fontSize="sm" fontWeight="bold">R</Text>
                         </Box>
                         <Box flex="1">
-                          <Text fontSize="xs" opacity="0.8" mb="2px">REASON</Text>
-                          <Text fontSize="sm" fontWeight="medium">{notification.reason}</Text>
+                          <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Reason</Text>
+                          <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{notification.reason}</Text>
                         </Box>
                       </Flex>
                     </Box>
@@ -481,26 +626,32 @@ const NotificationDisplay = () => {
                   {/* Criteria section with icon */}
                   {notification.criteria && (
                     <Box 
-                      p={3}
-                      borderBottom={notification.level ? "1px solid rgba(255,255,255,0.1)" : "none"}
-                      bg="rgba(0,0,0,0.1)"
+                      p={4}
+                      borderBottom={notification.level ? "1px solid rgba(255,255,255,0.2)" : "none"}
+                      bg="rgba(0,0,0,0.15)"
+                      position="relative"
+                      _hover={{bg: "rgba(0,0,0,0.2)"}}
+                      transition="all 0.2s"
                     >
-                      <Flex alignItems="center">
+                      <Flex alignItems="flex-start">
                         <Box 
-                          width="24px" 
-                          height="24px" 
+                          width="32px" 
+                          height="32px" 
                           borderRadius="50%" 
-                          bg="rgba(255,255,255,0.2)" 
+                          bg={notification.type === 'success' ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"} 
+                          border="2px solid rgba(255,255,255,0.4)"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
                           mr={3}
+                          mt="2px"
+                          boxShadow="0 2px 5px rgba(0,0,0,0.2)"
                         >
-                          <Text fontSize="xs" fontWeight="bold">C</Text>
+                          <Text fontSize="sm" fontWeight="bold">C</Text>
                         </Box>
                         <Box flex="1">
-                          <Text fontSize="xs" opacity="0.8" mb="2px">CRITERIA</Text>
-                          <Text fontSize="sm" fontWeight="medium">{notification.criteria}</Text>
+                          <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Criteria</Text>
+                          <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{notification.criteria}</Text>
                         </Box>
                       </Flex>
                     </Box>
@@ -509,25 +660,47 @@ const NotificationDisplay = () => {
                   {/* Level section with icon */}
                   {notification.level && (
                     <Box 
-                      p={3}
-                      bg="rgba(0,0,0,0.15)"
+                      p={4}
+                      bg="rgba(0,0,0,0.2)"
+                      position="relative"
+                      _hover={{bg: "rgba(0,0,0,0.25)"}}
+                      transition="all 0.2s"
                     >
-                      <Flex alignItems="center">
+                      <Flex alignItems="flex-start">
                         <Box 
-                          width="24px" 
-                          height="24px" 
+                          width="32px" 
+                          height="32px" 
                           borderRadius="50%" 
-                          bg="rgba(255,255,255,0.2)" 
+                          bg={notification.type === 'success' ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"} 
+                          border="2px solid rgba(255,255,255,0.4)"
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
                           mr={3}
+                          mt="2px"
+                          boxShadow="0 2px 5px rgba(0,0,0,0.2)"
                         >
-                          <Text fontSize="xs" fontWeight="bold">L</Text>
+                          <Text fontSize="sm" fontWeight="bold">L</Text>
                         </Box>
                         <Box flex="1">
-                          <Text fontSize="xs" opacity="0.8" mb="2px">LEVEL</Text>
-                          <Text fontSize="sm" fontWeight="medium">{notification.level}</Text>
+                          <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Level</Text>
+                          <Text 
+                            fontSize="md" 
+                            fontWeight="medium" 
+                            lineHeight="1.4"
+                            p={2}
+                            bg={
+                              notification.level.toLowerCase().includes('excellent') ? 'rgba(46, 204, 113, 0.2)' :
+                              notification.level.toLowerCase().includes('good') ? 'rgba(52, 152, 219, 0.2)' :
+                              notification.level.toLowerCase().includes('satisfactory') ? 'rgba(241, 196, 15, 0.2)' :
+                              notification.level.toLowerCase().includes('poor') ? 'rgba(231, 76, 60, 0.2)' :
+                              'rgba(0,0,0,0.1)'
+                            }
+                            borderRadius="md"
+                            display="inline-block"
+                          >
+                            {notification.level}
+                          </Text>
                         </Box>
                       </Flex>
                     </Box>
@@ -676,6 +849,74 @@ const NotificationDisplay = () => {
         @keyframes particle-pulse {
           0%, 100% { opacity: 0.4; transform: rotate(var(--angle)) translateY(-65px) scale(1); }
           50% { opacity: 1; transform: rotate(var(--angle)) translateY(-65px) scale(1.5); }
+        }
+        
+        .point-change-container {
+          animation: appear-fade 1.5s ease-out forwards;
+        }
+        
+        .image-container {
+          position: relative;
+          transform-origin: center center;
+        }
+        
+        .increase-animation {
+          filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.7));
+          animation: pulse-appear 1s ease-out, rotate-pulse 3s ease-in-out infinite;
+          transform-origin: center center;
+        }
+        
+        .decrease-animation {
+          filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.7));
+          animation: pulse-appear 1s ease-out, rotate-pulse 3s ease-in-out infinite;
+          transform-origin: center center;
+        }
+        
+        .point-glow-positive {
+          box-shadow: 0 0 30px 10px rgba(46, 204, 113, 0.6);
+          animation: pulse-glow 2s infinite;
+          opacity: 0.7;
+        }
+        
+        .point-glow-negative {
+          box-shadow: 0 0 30px 10px rgba(231, 76, 60, 0.6);
+          animation: pulse-glow 2s infinite;
+          opacity: 0.7;
+        }
+        
+        .points-text-animation {
+          animation: pulse-text 2s infinite;
+          position: relative;
+          z-index: 3;
+        }
+        
+        @keyframes pulse-appear {
+          0% { opacity: 0; transform: scale(0.7); }
+          50% { opacity: 1; transform: scale(1.1); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes rotate-pulse {
+          0% { transform: scale(1) rotate(0deg); }
+          25% { transform: scale(1.03) rotate(1deg); }
+          50% { transform: scale(1.05) rotate(0deg); }
+          75% { transform: scale(1.03) rotate(-1deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+        
+        @keyframes appear-fade {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.7; }
+        }
+        
+        @keyframes pulse-text {
+          0%, 100% { opacity: 0.9; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.15); text-shadow: 0 0 15px rgba(0, 0, 0, 0.8); }
         }
       `}</style>
     </Stack>
