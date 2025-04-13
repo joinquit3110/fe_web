@@ -280,241 +280,283 @@ const UserProfile = ({ user: propUser }) => {
   };
 
   return (
-    <div className="profile-container">
-      <div className={`profile-icon ${userHouse}`} onClick={isAdmin ? null : toggleMenu} title={`${user.username}'s profile`}>
+    <div className="profile-container" style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000 }}>
+      <div 
+        className={`profile-icon ${userHouse}`} 
+        onClick={toggleMenu}
+      >
         {avatar ? (
-          <img src={avatar} alt={user.username} className="avatar-img" />
+          <img 
+            src={avatar} 
+            alt={user.username} 
+            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+          />
         ) : (
           getInitials(user.fullName || user.username)
         )}
-        
-        {/* Add card to display info on hover */}
-        <div className="profile-hover-card">
-          <div className="profile-card-header">
-            <span className={`house-badge mini ${userHouse}`}>{userHouse.toUpperCase()}</span>
-            <h3>{user.fullName || user.username}</h3>
-          </div>
-          <div className="profile-card-details">
-            <p><i className="material-icons">account_circle</i> {user.username}</p>
-            {user.school && <p><i className="material-icons">school</i> {user.school}</p>}
-            {user.grade && <p><i className="material-icons">class</i> {user.grade}</p>}
-            {!(user.school || user.grade) && 
-              <p className="no-details">Click to update your personal information</p>
-            }
-          </div>
+      </div>
+      
+      {/* Hover card with basic user info */}
+      <div className="profile-hover-card">
+        <div className="profile-card-header">
+          <h3>{user.username}</h3>
+          <span className={`house-badge ${userHouse} mini`}>
+            {userHouse.toUpperCase()}
+          </span>
+        </div>
+        <div className="profile-card-details">
+          {user.fullName ? (
+            <p><i className="material-icons">person</i> {user.fullName}</p>
+          ) : null}
+          {user.school ? (
+            <p><i className="material-icons">school</i> {user.school}</p>
+          ) : null}
+          {user.grade ? (
+            <p><i className="material-icons">grade</i> {user.grade}</p>
+          ) : null}
+          {!user.fullName && !user.school && !user.grade && (
+            <p className="no-details">Click to update profile</p>
+          )}
         </div>
       </div>
       
-      {showMenu && !isAdmin && (
+      {/* Profile menu */}
+      {showMenu && (
         <div className="profile-menu">
-          <div className="menu-header">
-            <div className="avatar-section">
-              <div 
-                className={`avatar-wrapper ${userHouse}`} 
-                onClick={handleAvatarClick}
-                title="Change avatar"
-              >
-                {avatar ? (
-                  <img src={avatar} alt={user.username} className="avatar-img" />
-                ) : (
-                  getInitials(user.fullName || user.username)
-                )}
-                <div className="avatar-edit">
-                  <i className="material-icons">photo_camera</i>
-                </div>
-              </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleAvatarChange} 
-                accept="image/*" 
-                style={{ display: 'none' }} 
-              />
-            </div>
-            
-            <div className="menu-user-info">
-              <span className="menu-username">{user.fullName || user.username}</span>
-              <span className="menu-user-details">@{user.username}</span>
-              <div className="menu-user-additional">
-                {user.school && <span className="menu-school"><i className="material-icons">school</i> {user.school}</span>}
-                {user.grade && <span className="menu-grade"><i className="material-icons">class</i> Grade: {user.grade}</span>}
-                {!(user.school || user.grade) && 
-                  <span className="no-details">Complete your profile information</span>
-                }
-              </div>
-            </div>
-          </div>
+          {/* File input for avatar (hidden) */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleAvatarChange}
+            accept="image/*"
+          />
           
+          {/* Avatar cropping UI */}
           {showCrop && (
-            <div className="crop-container">
-              {imagePreview && (
-                <ReactCrop
-                  src={imagePreview}
-                  crop={crop}
+            <div className="crop-tool">
+              <h3>Crop Your Avatar</h3>
+              <div className="crop-container">
+                <ReactCrop 
+                  src={imagePreview} 
+                  crop={crop} 
                   onChange={newCrop => setCrop(newCrop)}
                   onComplete={onCropComplete}
                   circularCrop
-                  className="crop-tool"
                 >
-                  <img ref={imageRef} src={imagePreview} alt="Upload preview" />
+                  <img ref={imageRef} src={imagePreview} alt="Avatar preview" />
                 </ReactCrop>
-              )}
+              </div>
               <div className="crop-actions">
-                <button 
-                  className="crop-button save"
-                  onClick={uploadCroppedAvatar} 
-                  disabled={!croppedImageUrl}
-                >
-                  Save
+                <button onClick={uploadCroppedAvatar} className="crop-save">
+                  <i className="material-icons">save</i> Save Avatar
                 </button>
-                <button 
-                  className="crop-button cancel"
-                  onClick={cancelCrop}
-                >
-                  Cancel
+                <button onClick={cancelCrop} className="crop-cancel">
+                  <i className="material-icons">cancel</i> Cancel
                 </button>
               </div>
             </div>
           )}
           
-          <div className="profile-house">
-            <span className="house-label">HOUSE OF</span> 
-            {isAdmin ? (
-              <select 
-                className="house-dropdown" 
-                value={userHouse}
-                onChange={(e) => {
-                  // Save house preference in localStorage for persistence
-                  localStorage.setItem('userHouse', e.target.value);
-                  // Use a different event name to avoid confusion
-                  const changeEvent = new CustomEvent('houseChange', {
-                    detail: { house: e.target.value }
-                  });
-                  document.dispatchEvent(changeEvent);
+          {!showCrop && (
+            <>
+              {/* User avatar section */}
+              <div 
+                className="user-avatar"
+                onClick={handleAvatarClick}
+                style={{ 
+                  cursor: 'pointer',
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: avatar ? 'transparent' : `var(--${userHouse}-primary)`,
+                  color: avatar ? 'transparent' : `var(--${userHouse}-text)`,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  fontSize: '32px',
+                  margin: '0 auto 15px',
+                  border: '2px solid var(--secondary-color)',
+                  boxShadow: '0 0 15px rgba(211, 166, 37, 0.3)',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
               >
-                <option value="gryffindor">GRYFFINDOR</option>
-                <option value="slytherin">SLYTHERIN</option>
-                <option value="ravenclaw">RAVENCLAW</option>
-                <option value="hufflepuff">HUFFLEPUFF</option>
-                <option value="muggle">MUGGLE</option>
-              </select>
-            ) : (
-              <span className={`house-badge ${userHouse}`}>
-                {userHouse.toUpperCase()}
-              </span>
-            )}
-          </div>
-          
-          <div className="menu-tabs">
-            <button 
-              className={activeTab === 'profile' ? 'active' : ''} 
-              onClick={() => setActiveTab('profile')}
-            >
-              PROFILE
-            </button>
-            <button 
-              className={activeTab === 'password' ? 'active' : ''} 
-              onClick={() => setActiveTab('password')}
-            >
-              PASSWORD
-            </button>
-          </div>
-          
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
-          
-          {activeTab === 'profile' && (
-            <form onSubmit={handleProfileUpdate} className="profile-form">
-              <div className="form-group">
-                <label htmlFor="fullName">Full Name</label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  value={form.fullName}
-                  onChange={handleInputChange}
-                  placeholder="Your wizard name"
-                />
+                {avatar ? (
+                  <img 
+                    src={avatar} 
+                    alt={user.username} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  getInitials(user.fullName || user.username)
+                )}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '0',
+                  left: '0',
+                  right: '0',
+                  background: 'rgba(0,0,0,0.5)',
+                  color: '#fff',
+                  fontSize: '10px',
+                  padding: '2px 0',
+                  textAlign: 'center'
+                }}>
+                  CHANGE
+                </div>
               </div>
               
-              <div className="form-group">
-                <label htmlFor="school">School</label>
-                <input
-                  type="text"
-                  id="school"
-                  name="school"
-                  value={form.school}
-                  onChange={handleInputChange}
-                  placeholder="Your magical school"
-                />
+              {/* User info section */}
+              <div className="menu-user-info">
+                <h3 style={{ 
+                  margin: '0 0 5px', 
+                  fontSize: '18px', 
+                  textAlign: 'center',
+                  color: 'var(--text-primary)',
+                  fontFamily: "'Cinzel', serif"
+                }}>
+                  {user.username}
+                </h3>
+                <p className="profile-email">{user.email}</p>
               </div>
               
-              <div className="form-group">
-                <label htmlFor="grade">Class/Grade</label>
-                <input
-                  type="text"
-                  id="grade"
-                  name="grade"
-                  value={form.grade}
-                  onChange={handleInputChange}
-                  placeholder="Your class"
-                />
+              {/* House assignment */}
+              <div className="profile-house">
+                <span>HOUSE:</span>
+                {isAdmin ? (
+                  <select 
+                    className="house-dropdown"
+                    value={user.house || 'unassigned'}
+                    onChange={e => {
+                      const newHouse = e.target.value;
+                      updateProfile({ house: newHouse });
+                    }}
+                  >
+                    <option value="unassigned">UNASSIGNED</option>
+                    <option value="gryffindor">GRYFFINDOR</option>
+                    <option value="hufflepuff">HUFFLEPUFF</option>
+                    <option value="ravenclaw">RAVENCLAW</option>
+                    <option value="slytherin">SLYTHERIN</option>
+                    <option value="muggle">MUGGLE</option>
+                  </select>
+                ) : (
+                  <span className={`house-badge ${userHouse}`}>
+                    {userHouse.toUpperCase()}
+                  </span>
+                )}
               </div>
               
-              <button type="submit" className="update-profile-btn">
-                UPDATE PROFILE
+              <div className="menu-tabs">
+                <button 
+                  className={activeTab === 'profile' ? 'active' : ''} 
+                  onClick={() => setActiveTab('profile')}
+                >
+                  PROFILE
+                </button>
+                <button 
+                  className={activeTab === 'password' ? 'active' : ''} 
+                  onClick={() => setActiveTab('password')}
+                >
+                  PASSWORD
+                </button>
+              </div>
+              
+              {error && <div className="error-message">{error}</div>}
+              {success && <div className="success-message">{success}</div>}
+              
+              {activeTab === 'profile' && (
+                <form onSubmit={handleProfileUpdate} className="profile-form">
+                  <div className="form-group">
+                    <label htmlFor="fullName">Full Name</label>
+                    <input
+                      type="text"
+                      id="fullName"
+                      name="fullName"
+                      value={form.fullName}
+                      onChange={handleInputChange}
+                      placeholder="Your wizard name"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="school">School</label>
+                    <input
+                      type="text"
+                      id="school"
+                      name="school"
+                      value={form.school}
+                      onChange={handleInputChange}
+                      placeholder="Your magical school"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="grade">Class/Grade</label>
+                    <input
+                      type="text"
+                      id="grade"
+                      name="grade"
+                      value={form.grade}
+                      onChange={handleInputChange}
+                      placeholder="Your class"
+                    />
+                  </div>
+                  
+                  <button type="submit" className="update-profile-btn">
+                    UPDATE PROFILE
+                  </button>
+                </form>
+              )}
+              
+              {activeTab === 'password' && (
+                <form onSubmit={handlePasswordChange} className="password-form">
+                  <div className="form-group">
+                    <label htmlFor="currentPassword">Current Password</label>
+                    <input
+                      type="password"
+                      id="currentPassword"
+                      name="currentPassword"
+                      value={form.currentPassword}
+                      onChange={handleInputChange}
+                      placeholder="Enter current password"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="newPassword">New Password</label>
+                    <input
+                      type="password"
+                      id="newPassword"
+                      name="newPassword"
+                      value={form.newPassword}
+                      onChange={handleInputChange}
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm Password</label>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={form.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+                  
+                  <button type="submit" className="change-password-btn">
+                    CHANGE PASSWORD
+                  </button>
+                </form>
+              )}
+              
+              <button className="logout-button" onClick={handleLogout}>
+                <i className="material-icons">exit_to_app</i> LEAVE HOGWARTS
               </button>
-            </form>
+            </>
           )}
-          
-          {activeTab === 'password' && (
-            <form onSubmit={handlePasswordChange} className="password-form">
-              <div className="form-group">
-                <label htmlFor="currentPassword">Current Password</label>
-                <input
-                  type="password"
-                  id="currentPassword"
-                  name="currentPassword"
-                  value={form.currentPassword}
-                  onChange={handleInputChange}
-                  placeholder="Enter current password"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="newPassword">New Password</label>
-                <input
-                  type="password"
-                  id="newPassword"
-                  name="newPassword"
-                  value={form.newPassword}
-                  onChange={handleInputChange}
-                  placeholder="Enter new password"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Confirm Password</label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={form.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="Confirm new password"
-                />
-              </div>
-              
-              <button type="submit" className="change-password-btn">
-                CHANGE PASSWORD
-              </button>
-            </form>
-          )}
-          
-          <button className="logout-button" onClick={handleLogout}>
-            <i className="material-icons">exit_to_app</i> LEAVE HOGWARTS
-          </button>
         </div>
       )}
     </div>

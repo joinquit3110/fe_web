@@ -138,7 +138,6 @@ export const SocketProvider = ({ children }) => {
       if (socket.connected) {
         socket.emit('heartbeat');
         setLastHeartbeat(new Date());
-        // console.log('[SOCKET] Heartbeat sent'); // Uncomment for debugging
       }
     }, 30000); // Send heartbeat every 30 seconds
     
@@ -153,11 +152,11 @@ export const SocketProvider = ({ children }) => {
       // When house changes, update socket room
       socket.emit('change_house', {
         userId: user.id || user._id,
-        oldHouse: userHouse !== user.house ? userHouse : null,
+        oldHouse: user.previousHouse !== user.house ? user.previousHouse : null,
         newHouse: user.house
       });
     }
-  }, [socket, isConnected, user?.house, userHouse]);
+  }, [socket, isConnected, user?.house]);
 
   // Enhanced socket event handling - now with user state updating capability
   useEffect(() => {
@@ -168,8 +167,8 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
       
-      // Dispatch a custom event to allow MagicPointsContext to react IMMEDIATELY
-      const event = new CustomEvent('magicPointsSocketUpdate', {
+      // Dispatch a custom event to allow components to react IMMEDIATELY
+      const event = new CustomEvent('serverSyncUpdate', {
         detail: { type: 'sync_update', data }
       });
       window.dispatchEvent(event);
@@ -189,6 +188,7 @@ export const SocketProvider = ({ children }) => {
             // Create a new user object with updated house
             const updatedUser = {
               ...prevUser,
+              previousHouse: prevUser.house,
               house: updatedFields.house
             };
             
@@ -249,207 +249,172 @@ export const SocketProvider = ({ children }) => {
             });
             window.dispatchEvent(pointsEvent);
             
-            // Show a more prominent notification
-            try {
-              // Create a floating notification element if it doesn't exist
-              let notificationElement = document.getElementById('admin-points-notification');
-              if (!notificationElement) {
-                notificationElement = document.createElement('div');
-                notificationElement.id = 'admin-points-notification';
-                notificationElement.style.position = 'fixed';
-                notificationElement.style.top = '70px';
-                notificationElement.style.right = '20px';
-                notificationElement.style.background = diff >= 0 ? '#4caf50' : '#ff9800';
-                notificationElement.style.color = 'white';
-                notificationElement.style.padding = '15px 20px';
-                notificationElement.style.borderRadius = '8px';
-                notificationElement.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-                notificationElement.style.zIndex = '10000';
-                notificationElement.style.transition = 'all 0.3s ease';
-                notificationElement.style.opacity = '0';
-                notificationElement.style.transform = 'translateY(-20px)';
-                document.body.appendChild(notificationElement);
-              }
+            // Update user object with new points
+            setUser(prevUser => {
+              if (!prevUser) return prevUser;
               
-              // Update content and show notification
-              notificationElement.innerHTML = `
-                <strong>${diff >= 0 ? 'Points Added!' : 'Points Removed!'}</strong>
-                <p>${diff !== 0 
-                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)} by admin.`
-                  : `Your magic points have been updated to ${newPoints}`}</p>
-                <p>New total: ${newPoints}</p>
-              `;
+              const updatedUser = {
+                ...prevUser,
+                magicPoints: newPoints
+              };
               
-              // Show with animation
-              setTimeout(() => {
-                notificationElement.style.opacity = '1';
-                notificationElement.style.transform = 'translateY(0)';
-              }, 100);
-              
-              // Hide after 5 seconds
-              setTimeout(() => {
-                notificationElement.style.opacity = '0';
-                notificationElement.style.transform = 'translateY(-20px)';
-                // Remove from DOM after animation completes
-                setTimeout(() => {
-                  if (notificationElement.parentNode) {
-                    notificationElement.parentNode.removeChild(notificationElement);
-                  }
-                }, 300);
-              }, 5000);
-            } catch (error) {
-              console.error('[SOCKET] Error showing notification:', error);
-            }
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              return updatedUser;
+            });
           }
         }
       }
-      
-      // Handle special reset_attempts notification
-      if (data.type === 'reset_attempts') {
-        setNotifications(prev => [
-          {
-            id: Date.now(),
-            type: 'warning',
-            message: data.message || 'Your attempts have been reset by admin',
-            timestamp: new Date()
-          },
-          ...prev.slice(0, 9)
-        ]);
-      }
-      
-      // Handle force_sync notification
-      if (data.type === 'force_sync') {
-        setNotifications(prev => [
-          {
-            id: Date.now(),
-            type: 'info',
-            message: 'Admin requested sync - updating your data...',
-            timestamp: new Date()
-          },
-          ...prev.slice(0, 9)
-        ]);
-      }
     });
-
-    // Listen for house_update - events in the user's house room
-    socket.on('house_update', (data) => {
-      console.log('[SOCKET] Received house update:', data);
-      setLastMessage({ type: 'house_update', data, timestamp: new Date() });
+    
+    // Listen for house_points_update - broadcasts to all in a house
+    socket.on('house_points_update', (data) => {
+      console.log('[SOCKET] Received house points update:', data);
+      setLastMessage({ type: 'house_points_update', data, timestamp: new Date() });
       
-      // Dispatch custom event for MagicPointsContext with immediate flag
-      const event = new CustomEvent('magicPointsSocketUpdate', {
-        detail: { type: 'house_update', data, immediate: true }
-      });
-      window.dispatchEvent(event);
-      
-      // Add notification for points changes
-      if (data.type === 'house_points_changed' || data.type === 'member_points_changed') {
-        const message = data.message || 
-          `${data.username || 'Someone'} in ${data.house} ${data.pointsChange > 0 ? 'earned' : 'lost'} ${Math.abs(data.pointsChange || 0)} points`;
+      // Add notification about house points change
+      if (data.house === user?.house) {
+        const pointsChange = data.points;
+        const isPositive = pointsChange > 0;
         
         setNotifications(prev => [
           {
             id: Date.now(),
-            type: data.pointsChange > 0 ? 'success' : 'warning',
-            message,
+            type: isPositive ? 'success' : 'warning',
+            message: `House ${data.house} has ${isPositive ? 'gained' : 'lost'} ${Math.abs(pointsChange)} points! New total: ${data.newTotal}`,
             timestamp: new Date()
           },
           ...prev.slice(0, 9)
         ]);
         
-        // Force an immediate check for updated points if this affects the user's house
-        if (user?.house === data.house) {
-          // Immediate update without delay
-          const pointsEvent = new CustomEvent('checkHousePointsUpdate', {
-            detail: { house: data.house, immediate: true }
-          });
-          window.dispatchEvent(pointsEvent);
-        }
+        // Dispatch event for house points update
+        const housePointsEvent = new CustomEvent('housePointsUpdated', {
+          detail: {
+            house: data.house,
+            points: pointsChange,
+            newTotal: data.newTotal,
+            reason: data.reason || 'Admin action'
+          }
+        });
+        window.dispatchEvent(housePointsEvent);
       }
     });
-
-    // Listen for global_update - system-wide events
-    socket.on('global_update', (data) => {
-      console.log('[SOCKET] Received global update:', data);
-      setLastMessage({ type: 'global_update', data, timestamp: new Date() });
+    
+    // Listen for admin_notification - sent by admin to specific users or houses
+    socket.on('admin_notification', (data) => {
+      console.log('[SOCKET] Received admin notification:', data);
+      setLastMessage({ type: 'admin_notification', data, timestamp: new Date() });
       
-      // Dispatch custom event for MagicPointsContext
-      const event = new CustomEvent('magicPointsSocketUpdate', {
-        detail: { type: 'global_update', data }
-      });
-      window.dispatchEvent(event);
-      
-      // Add notification
+      // Add to notifications
       setNotifications(prev => [
         {
           id: Date.now(),
-          type: 'info',
-          message: data.message || 'System update received',
+          type: data.notificationType || 'info',
+          message: data.message,
           timestamp: new Date()
         },
         ...prev.slice(0, 9)
       ]);
-    });
-
-    // Listen for connection_status updates
-    socket.on('connection_status', (data) => {
-      console.log('[SOCKET] Connection status update:', data);
-      setConnectionQuality(data.quality || 'good');
       
-      if (data.message) {
-        setNotifications(prev => [
-          {
-            id: Date.now(), 
-            type: data.quality === 'poor' ? 'warning' : 'info',
-            message: data.message,
-            timestamp: new Date()
-          },
-          ...prev.slice(0, 9)
-        ]);
+      // Play notification sound if enabled
+      const notificationSound = document.getElementById('notification-sound');
+      if (notificationSound) {
+        notificationSound.play().catch(e => console.log('Could not play notification sound'));
+      }
+      
+      // Dispatch a custom event for the notification
+      const notificationEvent = new CustomEvent('adminNotification', {
+        detail: data
+      });
+      window.dispatchEvent(notificationEvent);
+    });
+    
+    // Listen for global_announcement - sent to all connected users
+    socket.on('global_announcement', (data) => {
+      console.log('[SOCKET] Received global announcement:', data);
+      setLastMessage({ type: 'global_announcement', data, timestamp: new Date() });
+      
+      // Add to notifications with special styling
+      setNotifications(prev => [
+        {
+          id: Date.now(),
+          type: 'announcement',
+          message: `ANNOUNCEMENT: ${data.message}`,
+          timestamp: new Date()
+        },
+        ...prev.slice(0, 9)
+      ]);
+      
+      // Play announcement sound if enabled
+      const announcementSound = document.getElementById('announcement-sound');
+      if (announcementSound) {
+        announcementSound.play().catch(e => console.log('Could not play announcement sound'));
       }
     });
 
     return () => {
+      // Clean up all listeners
       socket.off('sync_update');
-      socket.off('house_update');
-      socket.off('global_update');
-      socket.off('connection_status');
+      socket.off('house_points_update');
+      socket.off('admin_notification');
+      socket.off('global_announcement');
     };
   }, [socket, user, setUser]);
 
-  // Extract user ID and house from user object
-  const userId = user?.id || user?._id;
-  const userHouse = user?.house;
-  
-  // Add a manual sync function for the user to trigger
+  // Method to send a message to the server
+  const sendMessage = useCallback((eventName, data) => {
+    if (socket && isConnected) {
+      socket.emit(eventName, data);
+      return true;
+    }
+    return false;
+  }, [socket, isConnected]);
+
+  // Method to request an immediate sync from server
   const requestSync = useCallback(() => {
     if (socket && isConnected) {
-      console.log('[SOCKET] Manually requesting sync');
+      console.log('[SOCKET] Manually requesting data sync');
       socket.emit('request_sync');
       return true;
     }
+    
     console.log('[SOCKET] Cannot request sync - not connected');
     return false;
   }, [socket, isConnected]);
 
-  // Context value
-  const value = {
-    socket,
-    isConnected,
-    connectionQuality,
-    lastMessage,
-    notifications,
-    clearNotifications: () => setNotifications([]),
-    removeNotification: (id) => setNotifications(prev => prev.filter(notif => notif.id !== id)),
-    userId,
-    userHouse,
-    requestSync,
-    lastHeartbeat
-  };
+  // Method to clear notifications
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  // Method to remove a specific notification
+  const removeNotification = useCallback((notificationId) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+  }, []);
 
   return (
-    <SocketContext.Provider value={value}>
+    <SocketContext.Provider
+      value={{
+        socket,
+        isConnected,
+        connectionQuality,
+        lastMessage,
+        notifications,
+        lastHeartbeat,
+        sendMessage,
+        requestSync,
+        clearNotifications,
+        removeNotification
+      }}
+    >
       {children}
+      
+      {/* Add hidden audio elements for notification sounds */}
+      <audio id="notification-sound" preload="auto" style={{ display: 'none' }}>
+        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3?filename=notification-sound-7062.mp3" type="audio/mpeg" />
+      </audio>
+      <audio id="announcement-sound" preload="auto" style={{ display: 'none' }}>
+        <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=interface-notification-sound-140735.mp3" type="audio/mpeg" />
+      </audio>
     </SocketContext.Provider>
   );
 };
