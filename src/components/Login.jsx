@@ -279,6 +279,10 @@ const Login = () => {
         width="180px"
         height="auto"
         className="hogwarts-logo-container"
+        textAlign="center"
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
       >
         <Image
           src={hogwartsLogoImg}
@@ -289,6 +293,7 @@ const Login = () => {
             maxWidth: '700px',
             maxHeight: '700px',
             objectFit: 'contain',
+            margin: '0 auto'
           }}
         />
       </Box>

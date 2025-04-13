@@ -324,8 +324,8 @@ const NotificationDisplay = () => {
                 <Box
                   position="relative"
                   className={notification.pointsChange > 0 ? 'increase-point-container' : 'decrease-point-container'}
-                  width="180px"
-                  height="180px"
+                  width="300px"
+                  height="300px"
                   display="flex"
                   justifyContent="center"
                   alignItems="center"
@@ -344,12 +344,12 @@ const NotificationDisplay = () => {
                     }}
                   />
                   <Text
-                    fontSize="32px"
+                    fontSize="40px"
                     fontWeight="bold"
                     color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
                     textShadow="0 0 10px rgba(0,0,0,0.7)"
                     position="absolute"
-                    bottom="30px"
+                    bottom="40px"
                     className="points-text-animation"
                   >
                     {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
@@ -407,7 +407,7 @@ const NotificationDisplay = () => {
                   fontStyle="italic"
                   color="rgba(255,255,255,0.85)"
                 >
-                  Lý do: {notification.reason}
+                  <strong>Reason:</strong> {notification.reason}
                 </Text>
               )}
               
@@ -418,7 +418,7 @@ const NotificationDisplay = () => {
                   mt={1}
                   color="rgba(255,255,255,0.85)"
                 >
-                  Tiêu chí: {notification.criteria}
+                  <strong>Criteria:</strong> {notification.criteria}
                 </Text>
               )}
               
@@ -428,7 +428,7 @@ const NotificationDisplay = () => {
                   mt={0.5}
                   color="rgba(255,255,255,0.85)"
                 >
-                  Mức độ: {notification.level}
+                  <strong>Level:</strong> {notification.level}
                 </Text>
               )}
             </Flex>
@@ -479,23 +479,25 @@ const NotificationDisplay = () => {
         .increase-point-container {
           position: relative;
           animation: appear-fade 3s ease-out forwards;
-          filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.8));
+          filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.8));
         }
         
         .decrease-point-container {
           position: relative;
           animation: appear-fade 3s ease-out forwards;
-          filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.8));
+          filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.8));
         }
         
         .increase-animation {
           animation: rotate-pulse 2s ease-in-out infinite;
-          filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
+          filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.7));
+          transform-origin: center center;
         }
         
         .decrease-animation {
           animation: rotate-pulse 2s ease-in-out infinite;
-          filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
+          filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.7));
+          transform-origin: center center;
         }
         
         .points-text-animation {
@@ -509,7 +511,7 @@ const NotificationDisplay = () => {
           20% { opacity: 1; transform: scale(1.1); }
           40% { opacity: 1; transform: scale(1); }
           80% { opacity: 1; }
-          100% { opacity: 0; }
+          100% { opacity: 0.2; }
         }
         
         @keyframes rotate-pulse {
