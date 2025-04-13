@@ -574,44 +574,47 @@ export const AdminProvider = ({ children }) => {
         criteriaName = 'Group work';
     }
     
-    // Thay vì chỉ gọi updateHousePoints với reason, chúng ta sẽ thêm các trường bổ sung
+    // Format reason with criteria and performance level
     const reason = `${criteriaName}: ${performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)}${details ? ` - ${details}` : ''}`;
     
-    // Chuẩn bị dữ liệu thông báo
+    // Get authentication token
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     if (!token) {
       throw new Error('Authentication token not found');
     }
     
-    // Gọi updateHousePoints đầu tiên để cập nhật điểm
+    // Update house points first
     const result = await updateHousePoints(house, pointsChange, reason);
     
-    // Create notification object outside the try block so it's accessible in the catch block
-    const notification = {
-      type: pointsChange > 0 ? 'success' : 'warning',
-      title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
-      message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
-      targetUsers: [], // Gửi cho tất cả người dùng
-      housesAffected: [house], // Chỉ định nhà bị ảnh hưởng
-      // Thêm các trường bổ sung cho frontend
-      house: house,
-      pointsChange: pointsChange,
-      reason: reason,
-      criteria: criteriaName, // Thêm thông tin criteria
-      level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1) // Thêm thông tin level
-    };
-    
-    // Nếu updateHousePoints thành công, gửi thêm thông báo với criteria và level
+    // Only proceed with notification if points update was successful
     if (result) {
       try {
-        // Gửi thông báo đến backend
-        await axios.post(`${API_URL}/notifications`, notification, {
+        // Create notification with properly formatted fields
+        // IMPORTANT: These fields must be at the top level for the API to process them correctly
+        const notificationPayload = {
+          message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
+          type: pointsChange > 0 ? 'success' : 'warning',
+          title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
+          targetUsers: [], // Empty array to send to all users
+          housesAffected: [house],
+          // These are the fields that need to be properly formatted at the top level
+          house: house,
+          pointsChange: pointsChange,
+          reason: reason,
+          criteria: criteriaName,
+          level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
+        };
+        
+        console.log('Sending group criteria notification payload:', notificationPayload);
+        
+        // Send notification to backend
+        await axios.post(`${API_URL}/notifications`, notificationPayload, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
-        console.log('Group criteria notification sent successfully with criteria and level information');
+        console.log('Group criteria notification sent successfully');
       } catch (notifError) {
         console.error('Failed to send criteria notification (non-critical):', notifError);
         
@@ -619,10 +622,20 @@ export const AdminProvider = ({ children }) => {
         try {
           const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
           const fallbackNotification = {
-            ...notification, // Now this reference works properly
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
-            clientFallback: true
+            clientFallback: true,
+            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
+            type: pointsChange > 0 ? 'success' : 'warning',
+            title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
+            targetUsers: [],
+            housesAffected: [house],
+            // Include these fields at the top level for frontend compatibility
+            house: house,
+            pointsChange: pointsChange,
+            reason: reason,
+            criteria: criteriaName,
+            level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
           };
           localNotifications.push(fallbackNotification);
           localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
