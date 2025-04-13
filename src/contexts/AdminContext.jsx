@@ -620,9 +620,12 @@ export const AdminProvider = ({ children }) => {
       // Format reason with criteria and level clearly marked for parsing
       const { criteriaLabel, levelLabel } = getCriteriaAndLevelLabels(criteriaType, performanceLevel);
       
-      // Use a standardized format with specific delimiters that can be easily parsed
-      let formattedReason = details ? `${details}.` : `House evaluation.`;
-      formattedReason += ` Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
+      // Only include details in the reason, without adding criteria and level info
+      // since that's shown in the separate sections
+      let formattedReason = details ? `${details}` : `House evaluation`;
+      
+      // Keep the full reason with criteria and level in the backend data for record purposes
+      let backendReason = `${formattedReason}. Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
 
       // Get authentication token
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -631,7 +634,7 @@ export const AdminProvider = ({ children }) => {
         throw new Error('Authentication token not found');
       }
 
-      console.log('Sending house points update with formatted reason:', formattedReason);
+      console.log('Sending house points update with formatted reason:', backendReason);
 
       // Filter users by house
       const houseUsers = users.filter(user => user.house === house);
@@ -664,7 +667,7 @@ export const AdminProvider = ({ children }) => {
             { 
               magicPoints: newPoints,
               lastPointsUpdate: new Date().toISOString(),
-              lastUpdateReason: formattedReason
+              lastUpdateReason: backendReason // Use the full reason for database records
             },
             {
               headers: {
@@ -685,7 +688,7 @@ export const AdminProvider = ({ children }) => {
       // Only try to send notification if points were updated successfully
       if (updatedUserIds.length > 0) {
         try {
-          // Create a notification for users
+          // Create a notification for users with simplified message (no redundant criteria/level info)
           const notification = {
             type: pointsChange > 0 ? 'success' : 'warning',
             title: pointsChange > 0 ? 'Group Criteria: Points Awarded!' : 'Group Criteria: Points Deducted!',
@@ -697,7 +700,7 @@ export const AdminProvider = ({ children }) => {
             pointsChange: pointsChange,
             criteria: criteriaLabel,
             level: levelLabel,
-            reason: formattedReason
+            reason: formattedReason // Use the simplified reason without criteria/level for display
           };
           
           // Send notification to the backend for real-time delivery

@@ -98,6 +98,55 @@ const NotificationDisplay = () => {
     return levelText;
   };
   
+  // Process message to extract the correct criteria and level values
+  const extractCriteriaAndLevel = (notification) => {
+    let { message, criteria, level } = notification;
+    
+    // If both criteria and level are already correctly set, just standardize them
+    if (criteria && level) {
+      return {
+        criteria: standardizeCriteria(criteria),
+        level: standardizeLevel(level)
+      };
+    }
+    
+    // Otherwise try to extract from message
+    if (message) {
+      // Extract criteria from message
+      if (!criteria) {
+        const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
+        if (criteriaMatch) {
+          criteria = criteriaMatch[1].trim();
+        }
+      }
+      
+      // Extract level from message
+      if (!level) {
+        const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
+        if (levelMatch) {
+          level = levelMatch[1].trim();
+        }
+      }
+    }
+    
+    // Check if level actually contains criteria information (the bug)
+    if (level && (
+        level.toLowerCase().includes('participation') || 
+        level.toLowerCase().includes('english') ||
+        level.toLowerCase().includes('complete tasks')
+      )) {
+      // Level contains criteria information - it's swapped
+      const tempCriteria = level;
+      level = criteria;
+      criteria = tempCriteria;
+    }
+    
+    return {
+      criteria: criteria ? standardizeCriteria(criteria) : '',
+      level: level ? standardizeLevel(level) : ''
+    };
+  };
+  
   // Global dedupe registry with 2-minute lifetime for entries
   const globalDedupeRegistry = useRef(new Map());
   
@@ -238,18 +287,10 @@ const NotificationDisplay = () => {
           }
           
           // Try to extract criteria and level from message if not already set
-          if (!criteria) {
-            const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
-            if (criteriaMatch) {
-              criteria = criteriaMatch[1].trim();
-            }
-          }
-          
-          if (!level) {
-            const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
-            if (levelMatch) {
-              level = levelMatch[1].trim();
-            }
+          if (!criteria || !level) {
+            const extracted = extractCriteriaAndLevel({ message, criteria, level });
+            criteria = extracted.criteria;
+            level = extracted.level;
           }
           
           // Update message without "by admin"
@@ -403,18 +444,10 @@ const NotificationDisplay = () => {
                 }
                 
                 // Try to extract criteria and level if not already set
-                if (!criteria) {
-                  const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
-                  if (criteriaMatch) {
-                    criteria = criteriaMatch[1].trim();
-                  }
-                }
-                
-                if (!level) {
-                  const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
-                  if (levelMatch) {
-                    level = levelMatch[1].trim();
-                  }
+                if (!criteria || !level) {
+                  const extracted = extractCriteriaAndLevel({ message, criteria, level });
+                  criteria = extracted.criteria;
+                  level = extracted.level;
                 }
                 
                 // Update message without "by admin"
@@ -585,11 +618,22 @@ const NotificationDisplay = () => {
 
     // Standardize criteria and levels in all notifications
     notificationQueue.current.forEach(notification => {
-      if (notification.criteria) {
-        notification.criteria = standardizeCriteria(notification.criteria);
+      if (notification.criteria || notification.level) {
+        const extracted = extractCriteriaAndLevel(notification);
+        notification.criteria = extracted.criteria;
+        notification.level = extracted.level;
       }
-      if (notification.level) {
-        notification.level = standardizeLevel(notification.level);
+      
+      // Mark fresh notifications (less than 10 seconds old) to bypass deduplication
+      const timestamp = notification.timestamp instanceof Date ? 
+        notification.timestamp.getTime() : 
+        notification.timestamp ? new Date(notification.timestamp).getTime() : Date.now();
+      
+      const isFresh = Date.now() - timestamp < 10000; // 10 seconds
+      notification.isFresh = isFresh;
+      
+      if (isFresh) {
+        console.log('[NOTIFICATION] Fresh notification detected:', notification.message);
       }
     });
 
@@ -618,33 +662,60 @@ const NotificationDisplay = () => {
       // Create a hash for this notification
       const hash = getNotificationHash(notification);
       
-      // Check if this hash is already in the global registry
-      if (globalDedupeRegistry.current.has(hash)) {
+      // Check if this hash is already in the global registry, but bypass for fresh notifications
+      if (!notification.isFresh && globalDedupeRegistry.current.has(hash)) {
         console.log(`[NOTIFICATION] Skipping recently seen notification hash: ${hash}`);
         return; // Skip this notification
       }
       
-      // Special handling for point change notifications
-      if (notification.pointsChange) {
-        // Create a key that combines important attributes
-        const pointChangeKey = `pointChange:${notification.house || 'all'}:${notification.criteria || ''}`;
-        
-        if (!dedupeGroups.has(pointChangeKey)) {
-          dedupeGroups.set(pointChangeKey, []);
+      // If it's fresh, always show it regardless of the registry
+      if (notification.isFresh) {
+        // Special handling for point change notifications
+        if (notification.pointsChange) {
+          // Create a key that combines important attributes + "fresh" to ensure it's unique
+          const pointChangeKey = `pointChange:${notification.house || 'all'}:${notification.criteria || ''}:fresh:${Date.now()}`;
+          
+          if (!dedupeGroups.has(pointChangeKey)) {
+            dedupeGroups.set(pointChangeKey, []);
+          }
+          
+          // Add to the group
+          dedupeGroups.get(pointChangeKey).push(notification);
+        } else {
+          // For non-point change notifications
+          const key = `${notification.type}:${notification.message?.substring(0, 20)}:fresh:${Date.now()}`;
+          
+          if (!dedupeGroups.has(key)) {
+            dedupeGroups.set(key, []);
+          }
+          
+          // Add to the group
+          dedupeGroups.get(key).push(notification);
         }
-        
-        // Add to the group
-        dedupeGroups.get(pointChangeKey).push(notification);
       } else {
-        // For non-point change notifications, use a standard key
-        const key = `${notification.type}:${notification.message?.substring(0, 20)}`;
-        
-        if (!dedupeGroups.has(key)) {
-          dedupeGroups.set(key, []);
+        // Standard handling for non-fresh notifications
+        // Special handling for point change notifications
+        if (notification.pointsChange) {
+          // Create a key that combines important attributes
+          const pointChangeKey = `pointChange:${notification.house || 'all'}:${notification.criteria || ''}`;
+          
+          if (!dedupeGroups.has(pointChangeKey)) {
+            dedupeGroups.set(pointChangeKey, []);
+          }
+          
+          // Add to the group
+          dedupeGroups.get(pointChangeKey).push(notification);
+        } else {
+          // For non-point change notifications, use a standard key
+          const key = `${notification.type}:${notification.message?.substring(0, 20)}`;
+          
+          if (!dedupeGroups.has(key)) {
+            dedupeGroups.set(key, []);
+          }
+          
+          // Add to the group
+          dedupeGroups.get(key).push(notification);
         }
-        
-        // Add to the group
-        dedupeGroups.get(key).push(notification);
       }
     });
     
@@ -672,8 +743,11 @@ const NotificationDisplay = () => {
     const notification = notificationQueue.current.shift();
     if (notification) {
       // Add this notification hash to the global registry to prevent duplicates
+      // BUT only if it's not a fresh notification (to prevent immediate duplicates)
       const hash = getNotificationHash(notification);
-      globalDedupeRegistry.current.set(hash, Date.now());
+      if (!notification.isFresh) {
+        globalDedupeRegistry.current.set(hash, Date.now());
+      }
       
       // Ensure point changes have appropriate titles
       if (notification.pointsChange) {
@@ -707,6 +781,7 @@ const NotificationDisplay = () => {
       // Log the notification being displayed
       console.log('[NOTIFICATION] Displaying notification:', notification);
       
+      // For fresh notifications, always display them
       setActiveNotifications(prev => {
         // Create unique ID if not present
         const notifWithId = {
