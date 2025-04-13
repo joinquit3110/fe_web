@@ -405,6 +405,9 @@ const NotificationDisplay = () => {
     }
   };
   
+  // Helper to create a random ID
+  const createId = () => Math.random().toString(36).substring(2, 15);
+  
   // Process notification queue with deduplication logic
   const processNotificationQueue = () => {
     if (notificationQueue.current.length === 0 || processingQueue.current) {
