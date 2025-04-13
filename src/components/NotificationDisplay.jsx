@@ -31,6 +31,37 @@ const NotificationDisplay = () => {
   const processingQueue = useRef(false);
   const activeTimeouts = useRef([]); // Track all active timeouts
   
+  // Enhanced robust hash function for better deduplication
+  const getNotificationHash = (notification) => {
+    // Create a stable, consistent identifier based on content
+    const type = notification.type || 'info';
+    const pointsChange = notification.pointsChange ? `pc:${notification.pointsChange}` : '';
+    const criteria = notification.criteria ? `cr:${notification.criteria}` : '';
+    const level = notification.level ? `lv:${notification.level}` : '';
+    const msgStart = notification.message ? notification.message.substring(0, 30) : '';
+    
+    // Return a consistent hash for deduplication
+    return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}`;
+  };
+  
+  // Global dedupe registry with 2-minute lifetime for entries
+  const globalDedupeRegistry = useRef(new Map());
+  
+  // Cleanup stale dedupe entries
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      // Remove entries older than 2 minutes
+      globalDedupeRegistry.current.forEach((timestamp, key) => {
+        if (now - timestamp > 120000) { // 2 minutes
+          globalDedupeRegistry.current.delete(key);
+        }
+      });
+    }, 60000); // Run cleanup every minute
+    
+    return () => clearInterval(cleanupInterval);
+  }, []);
+  
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -475,103 +506,37 @@ const NotificationDisplay = () => {
     // Clear the queue first to avoid processing duplicates
     notificationQueue.current = [];
     
+    // Use our new hash function for consistent deduplication across components
     sortedQueue.forEach(notification => {
-      // Generate a unique composite key for each notification for better deduplication
-      const pointChangeKey = notification.pointsChange ? `:${notification.pointsChange}` : '';
-      const criteriaKey = notification.criteria ? `:${notification.criteria}` : '';
-      const levelKey = notification.level ? `:${notification.level}` : '';
-      const compositeKey = `${notification.type}${pointChangeKey}${criteriaKey}${levelKey}`;
+      // Generate a consistent hash for this notification
+      const notifHash = getNotificationHash(notification);
       
-      // Skip if we've already processed a notification with this composite key
-      if (processedKeys.has(compositeKey)) {
-        console.log(`[NOTIFICATION] Skipping duplicate with composite key: ${compositeKey}`);
-        return;
+      // Check global registry first - if we've seen this notification recently across components, skip it
+      if (globalDedupeRegistry.current.has(notifHash)) {
+        const timestamp = globalDedupeRegistry.current.get(notifHash);
+        // Only skip if it's been less than 30 seconds
+        if (Date.now() - timestamp < 30000) {
+          console.log(`[NOTIFICATION] Skipping notification with hash ${notifHash} - already processed recently`);
+          return;
+        }
       }
       
-      // Mark this composite key as processed
-      processedKeys.add(compositeKey);
+      // Add to global registry with current timestamp
+      globalDedupeRegistry.current.set(notifHash, Date.now());
       
       // Special handling for point change notifications
       if (notification.pointsChange) {
-        // Create a key based on the point change value and direction
+        // Create a more specific key that includes criteria and level
         const pointKey = `points:${notification.pointsChange}`;
-        
-        // Check for duplicates based on more strict criteria
-        // Include criteria and level in the key if they exist
+        const criteriaKey = notification.criteria ? `:${notification.criteria}` : '';
+        const levelKey = notification.level ? `:${notification.level}` : '';
         const fullKey = `${pointKey}${criteriaKey}${levelKey}`;
 
         if (pointChangeMap.has(fullKey)) {
+          // Update existing notification with better data
           const existingNotif = pointChangeMap.get(fullKey);
-          const currentTime = new Date().getTime();
-          // Make sure we can handle both string timestamps and Date objects
-          const existingTime = existingNotif.timestamp ? 
-            (existingNotif.timestamp instanceof Date ? 
-              existingNotif.timestamp.getTime() : 
-              new Date(existingNotif.timestamp).getTime()) : 
-            0;
           
-          // Only consolidate if notifications are within 60 seconds of each other
-          if (Math.abs(currentTime - existingTime) < 60000) {
-            // Always prefer "POINTS AWARDED!" or "POINTS DEDUCTED!" titles over generic ones
-            if (notification.title && notification.title.includes('POINTS')) {
-              existingNotif.title = notification.title;
-            }
-            
-            // Update the existing notification with data from this one
-            if (!existingNotif.reason && notification.reason) {
-              existingNotif.reason = notification.reason;
-            }
-            if (!existingNotif.criteria && notification.criteria) {
-              existingNotif.criteria = notification.criteria;
-            }
-            if (!existingNotif.level && notification.level) {
-              existingNotif.level = notification.level;
-            }
-            
-            // Always keep the timestamp if it exists and ensure it's a valid Date
-            if (!existingNotif.timestamp && notification.timestamp) {
-              existingNotif.timestamp = new Date(notification.timestamp);
-            }
-            
-            // If we have all details, update the message to be more comprehensive
-            if (existingNotif.criteria && existingNotif.level) {
-              const direction = notification.pointsChange > 0 ? 'awarded to' : 'deducted from';
-              const house = user?.house || 'your house';
-              existingNotif.message = `${Math.abs(notification.pointsChange)} points ${direction} ${house}. Criteria: ${existingNotif.criteria}. Level: ${existingNotif.level}`;
-              
-              // Add reason to message if available
-              if (existingNotif.reason) {
-                existingNotif.message += `. Reason: ${existingNotif.reason}`;
-              }
-            }
-            
-            // Log the updated notification
-            console.log('[NOTIFICATION] Updated existing notification with more info:', existingNotif);
-          } else {
-            // If they're far apart in time, treat as separate notifications
-            const uniqueKey = `${fullKey}-${Date.now()}`;
-            pointChangeMap.set(uniqueKey, notification);
-            deduplicatedQueue.push(notification);
-          }
-        } else {
-          // First time seeing this point change
-          pointChangeMap.set(fullKey, notification);
-          deduplicatedQueue.push(notification);
-        }
-        
-        // Special case: We also need to check for duplicate criteria/level combinations
-        if (notification.criteria && notification.level) {
-          const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
-          criteriaLevelMap.set(criteriaLevelKey, true);
-        }
-      } else {
-        // Non-point change notifications use the regular deduplication logic
-        const messageKey = `${notification.type}:${notification.message?.substring(0, 30) || ''}`;
-        
-        if (messageMap.has(messageKey)) {
-          const existingNotif = messageMap.get(messageKey);
-          
-          // Update with better data if available
+          // Logic to combine/improve the notification
           if (!existingNotif.reason && notification.reason) {
             existingNotif.reason = notification.reason;
           }
@@ -582,28 +547,61 @@ const NotificationDisplay = () => {
             existingNotif.level = notification.level;
           }
           
-          // Use the most recent timestamp
-          if (notification.timestamp) {
-            try {
-              const notifTime = new Date(notification.timestamp);
-              if (!existingNotif.timestamp || notifTime > new Date(existingNotif.timestamp)) {
-                existingNotif.timestamp = notifTime;
-              }
-            } catch (e) {
-              console.warn('Invalid timestamp format:', e);
-              // Keep existing timestamp if the new one is invalid
-            }
+          // Always prefer "POINTS AWARDED!" or "POINTS DEDUCTED!" titles over generic ones
+          if (notification.title && notification.title.includes('POINTS')) {
+            existingNotif.title = notification.title;
           }
-        } else {
-          // Skip if this is a criteria/level only notification that we already have with a point change
-          if (notification.criteria && notification.level) {
-            const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
-            if (criteriaLevelMap.has(criteriaLevelKey)) {
-              console.log('[NOTIFICATION] Skipping duplicate criteria/level notification:', notification);
-              return; // Skip this notification
+          
+          // Update message with all details if we have them
+          if (existingNotif.criteria && existingNotif.level) {
+            const direction = notification.pointsChange > 0 ? 'awarded to' : 'deducted from';
+            const house = user?.house || 'your house';
+            existingNotif.message = `${Math.abs(notification.pointsChange)} points ${direction} ${house}. Criteria: ${existingNotif.criteria}. Level: ${existingNotif.level}`;
+            
+            // Add reason to message if available
+            if (existingNotif.reason) {
+              existingNotif.message += `. Reason: ${existingNotif.reason}`;
             }
           }
           
+          console.log('[NOTIFICATION] Updated existing notification with more info:', existingNotif);
+        } else {
+          // First time seeing this point change
+          pointChangeMap.set(fullKey, notification);
+          deduplicatedQueue.push(notification);
+          
+          // Mark this combination of criteria/level as "claimed" by this point change notification
+          if (notification.criteria && notification.level) {
+            const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
+            criteriaLevelMap.set(criteriaLevelKey, true);
+          }
+        }
+      } else {
+        // Regular notifications - use message content as key
+        const messageKey = `${notification.type}:${notification.message?.substring(0, 30) || ''}`;
+        
+        // Skip criteria/level only notifications that we already have with point changes
+        if (notification.criteria && notification.level) {
+          const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
+          if (criteriaLevelMap.has(criteriaLevelKey)) {
+            console.log('[NOTIFICATION] Skipping duplicate criteria/level notification');
+            return;
+          }
+        }
+        
+        if (messageMap.has(messageKey)) {
+          // Update existing notification with better data
+          const existingNotif = messageMap.get(messageKey);
+          if (!existingNotif.reason && notification.reason) {
+            existingNotif.reason = notification.reason;
+          }
+          if (!existingNotif.criteria && notification.criteria) {
+            existingNotif.criteria = notification.criteria;
+          }
+          if (!existingNotif.level && notification.level) {
+            existingNotif.level = notification.level;
+          }
+        } else {
           // First time seeing this message
           messageMap.set(messageKey, notification);
           deduplicatedQueue.push(notification);
@@ -611,131 +609,20 @@ const NotificationDisplay = () => {
       }
     });
     
-    // Get all values from pointChangeMap to ensure we use the updated versions
+    // Combine the maps to get the final queue with most complete notifications
     const pointChangeNotifications = Array.from(pointChangeMap.values());
+    const regularNotifications = Array.from(messageMap.values());
     
-    // Create the final queue from deduplicatedQueue but use updated point change notifications
-    const finalQueue = deduplicatedQueue.filter(n => !n.pointsChange)
-      .concat(pointChangeNotifications);
+    // Create the final queue - these are notifications that have passed all deduplication filters
+    const finalQueue = [...deduplicatedQueue.filter(n => !n.pointsChange && !messageMap.has(`${n.type}:${n.message?.substring(0, 30) || ''}`)), 
+                         ...regularNotifications,
+                         ...pointChangeNotifications];
     
     // Log the result of deduplication
-    console.log(`[NOTIFICATION] After deduplication: ${finalQueue.length} notifications remain`);
+    console.log(`[NOTIFICATION] After deduplication: ${finalQueue.length} notifications remain out of ${sortedQueue.length} original`);
     
     // Replace queue with deduplicated version
     notificationQueue.current = finalQueue;
-
-    // Continue with normal processing
-    const notification = notificationQueue.current.shift();
-    
-    // Add to active notifications
-    if (notification) {
-      // Ensure point changes have appropriate titles
-      if (notification.pointsChange) {
-        if (notification.pointsChange > 0 && (!notification.title || !notification.title.includes('POINTS'))) {
-          notification.title = 'POINTS AWARDED!';
-        } else if (notification.pointsChange < 0 && (!notification.title || !notification.title.includes('POINTS'))) {
-          notification.title = 'POINTS DEDUCTED!';
-        }
-      }
-      
-      // Make sure we have a valid timestamp
-      if (!notification.timestamp) {
-        notification.timestamp = new Date();
-      } else if (!(notification.timestamp instanceof Date)) {
-        try {
-          // Ensure the timestamp is a valid Date object
-          notification.timestamp = new Date(notification.timestamp);
-          // Check if it's a valid date
-          if (isNaN(notification.timestamp.getTime())) {
-            throw new Error('Invalid date');
-          }
-        } catch (e) {
-          console.warn('Invalid timestamp format, creating new timestamp');
-          notification.timestamp = new Date();
-        }
-      }
-      
-      // Generate a consistent ID for this notification if it doesn't have one
-      const notifId = notification.id || createId();
-      
-      setActiveNotifications(prev => {
-        // Create unique ID if not present
-        const notifWithId = {
-          ...notification,
-          id: notifId
-        };
-        
-        // Check if we already have similar notifications (avoid duplicates)
-        const similarExists = prev.some(n => {
-          // For point changes, look for matching point amount
-          if (notification.pointsChange && n.pointsChange === notification.pointsChange) {
-            const timeDiff = Math.abs(
-              (n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime()) - 
-              (notification.timestamp instanceof Date ? notification.timestamp.getTime() : new Date(notification.timestamp || 0).getTime())
-            );
-            return timeDiff < 30000; // Within 30 seconds
-          }
-          
-          // For other notifications, check similar message
-          if (n.message && notification.message && 
-              n.message.substring(0, 30) === notification.message.substring(0, 30)) {
-            return true;
-          }
-          
-          return false;
-        });
-        
-        if (similarExists) {
-          console.log('Skipping similar active notification');
-          return prev;
-        }
-        
-        // If there's a similar active notification about the same points, remove it first
-        const filteredPrev = notification.pointsChange 
-          ? prev.filter(n => !(n.pointsChange && n.pointsChange === notification.pointsChange)) 
-          : prev.filter(n => n.id !== notifWithId.id);
-        
-        return [notifWithId, ...filteredPrev].slice(0, 5); // Keep max 5 active notifications
-      });
-      
-      // Remove from original source to prevent reprocessing
-      if (notification.source === 'socket') {
-        try {
-          removeNotification(notification.id);
-        } catch (error) {
-          console.warn('Error removing notification:', error.message);
-        }
-      }
-      
-      // Auto-dismiss after notification duration
-      const duration = notification.duration || getDurationByType(notification.type) || 7000;
-      console.log(`Setting auto-dismiss for notification ${notifId} to disappear after ${duration}ms`);
-      
-      const timeoutId = setTimeout(() => {
-        console.log(`Auto-dismissing notification ${notifId}`);
-        setActiveNotifications(prev => {
-          return prev.filter(item => item.id !== notifId);
-        });
-        // Remove this timeout ID from the tracking array
-        activeTimeouts.current = activeTimeouts.current.filter(id => id !== timeoutId);
-      }, duration);
-      
-      // Store timeout ID for cleanup
-      activeTimeouts.current.push(timeoutId);
-      
-      // Process next notification after delay
-      const nextProcessTimeoutId = setTimeout(() => {
-        processingQueue.current = false;
-        processNotificationQueue();
-        // Remove this timeout ID from the tracking array
-        activeTimeouts.current = activeTimeouts.current.filter(id => id !== nextProcessTimeoutId);
-      }, 500); // Small delay between notifications
-      
-      // Store timeout ID for cleanup
-      activeTimeouts.current.push(nextProcessTimeoutId);
-    } else {
-      processingQueue.current = false;
-    }
   };
   
   // Add a self-test function to create test notifications with all fields

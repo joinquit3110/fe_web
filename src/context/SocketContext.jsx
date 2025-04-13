@@ -22,6 +22,26 @@ export const SocketProvider = ({ children }) => {
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
 
+  // Add admin checking functionality
+  const isAdminUser = useRef(false);
+
+  // Check if current user is admin when user changes
+  useEffect(() => {
+    if (user) {
+      // Admin can be determined by house, role or username
+      const ADMIN_USERS = ['hungpro', 'vipro'];
+      isAdminUser.current = 
+        user.house === 'admin' || 
+        user.role === 'admin' || 
+        user.isAdmin === true ||
+        ADMIN_USERS.includes(user.username);
+      
+      console.log(`[SOCKET] User ${user.username} is${isAdminUser.current ? '' : ' not'} an admin`);
+    } else {
+      isAdminUser.current = false;
+    }
+  }, [user]);
+
   // Cleanup old notification keys periodically
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
@@ -296,6 +316,14 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received house points update:', data);
       setLastMessage({ type: 'house_points_update', data, timestamp: new Date() });
       
+      // Skip this notification if it's meant to skip admins and the current user is an admin
+      if (data.skipAdmin === true || data.skipAdmin === "true") {
+        if (isAdminUser.current) {
+          console.log(`[SOCKET] Skipping house points notification for admin user: ${user?.username}`);
+          return;
+        }
+      }
+      
       // Add notification about house points change
       if (data.house === user?.house) {
         const pointsChange = data.points;
@@ -385,6 +413,14 @@ export const SocketProvider = ({ children }) => {
     socket.on('admin_notification', (data) => {
       console.log('[SOCKET] Received admin notification:', data);
       setLastMessage({ type: 'admin_notification', data, timestamp: new Date() });
+      
+      // Skip if this notification should skip admins and the current user is an admin
+      if (data.skipAdmin === true || data.skipAdmin === "true") {
+        if (isAdminUser.current) {
+          console.log(`[SOCKET] Skipping admin notification for admin user: ${user?.username}`);
+          return;
+        }
+      }
       
       // Add to notifications
       setNotifications(prev => [
