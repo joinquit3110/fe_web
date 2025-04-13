@@ -687,7 +687,7 @@ export const AdminProvider = ({ children }) => {
         level: typeDetails?.level || null,
         house: typeDetails?.house || null,
         // Make sure any boolean values are passed as strings
-        skipAdmin: typeDetails?.skipAdmin ? "true" : "false"
+        skipAdmin: "true"
       };
 
       console.log('Sending notification payload:', payload);
@@ -728,7 +728,7 @@ export const AdminProvider = ({ children }) => {
         level: typeDetails?.level || null,
         house: typeDetails?.house || null,
         pointsChange: typeDetails?.pointsChange ? typeDetails.pointsChange.toString() : null,
-        skipAdmin: typeDetails?.skipAdmin ? "true" : "false"
+        skipAdmin: "true"
       };
       
       pendingNotifications.push(fallbackNotification);
@@ -765,7 +765,7 @@ export const AdminProvider = ({ children }) => {
         housesAffected: [], // Empty array for no specific house affected
         targetHouse: null,
         // Make sure skipAdmin is a string
-        skipAdmin: "false",
+        skipAdmin: "true",
         // Include the typeDetails as simple objects with string values
         typeDetails: {
           criteria: criteria,
@@ -821,7 +821,7 @@ export const AdminProvider = ({ children }) => {
         level: level,
         targetUsers: user_id ? [user_id.toString()] : [],
         housesAffected: [],
-        skipAdmin: "false",
+        skipAdmin: "true",
         // Include the typeDetails with strings
         typeDetails: {
           criteria: criteria,
