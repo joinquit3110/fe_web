@@ -550,6 +550,43 @@ export const AdminProvider = ({ children }) => {
     veryPoor: -10,
   };
 
+  // Define criteria types and performance levels to fix undefined variables
+  const criteriaTypes = [
+    { value: 'participation', label: 'Level of participation of group members' },
+    { value: 'english', label: 'Level of English usage in the group' },
+    { value: 'completion', label: 'Time taken by the group to complete tasks' }
+  ];
+
+  const performanceLevels = [
+    { value: 'excellent', label: 'Excellent', points: 15 },
+    { value: 'good', label: 'Good', points: 10 },
+    { value: 'satisfactory', label: 'Satisfactory', points: 5 },
+    { value: 'poor', label: 'Poor', points: -5 },
+    { value: 'veryPoor', label: 'Very Poor', points: -10 }
+  ];
+
+  // Define fetchHouses function to fix undefined variable
+  const fetchHouses = async () => {
+    // Get token
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) return;
+    
+    try {
+      // Fetch updated house information if API available
+      const response = await axios.get(`${API_URL}/houses`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching houses:', err);
+      // Silently fail - non-critical operation
+      return null;
+    }
+  };
+
   // Find criteria & level from points rules based on criteria type and level
   const getCriteriaAndLevelLabels = (criteriaType, performanceLevel) => {
     const criteria = criteriaTypes.find(c => c.value === criteriaType);
