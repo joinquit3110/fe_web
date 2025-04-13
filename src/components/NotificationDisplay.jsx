@@ -44,6 +44,60 @@ const NotificationDisplay = () => {
     return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}`;
   };
   
+  // Helper function to standardize criteria text
+  const standardizeCriteria = (criteriaText) => {
+    if (!criteriaText) return '';
+    
+    // Match to one of the three standard criteria types
+    const lowerCriteria = criteriaText.toLowerCase();
+    
+    if (lowerCriteria.includes('participation') || lowerCriteria.includes('member')) {
+      return 'Level of participation of group members';
+    }
+    
+    if (lowerCriteria.includes('english') || lowerCriteria.includes('language')) {
+      return 'Level of English usage in the group';
+    }
+    
+    if (lowerCriteria.includes('time') || lowerCriteria.includes('complete') || lowerCriteria.includes('task')) {
+      return 'Time taken by the group to complete tasks';
+    }
+    
+    // Return original if no match
+    return criteriaText;
+  };
+  
+  // Helper function to standardize performance level text
+  const standardizeLevel = (levelText) => {
+    if (!levelText) return '';
+    
+    // Match to one of the five standard performance levels
+    const lowerLevel = levelText.toLowerCase();
+    
+    if (lowerLevel.includes('excellent')) {
+      return 'Excellent';
+    }
+    
+    if (lowerLevel.includes('good')) {
+      return 'Good';
+    }
+    
+    if (lowerLevel.includes('satisfactory')) {
+      return 'Satisfactory';
+    }
+    
+    if (lowerLevel.includes('poor') && lowerLevel.includes('very')) {
+      return 'Very Poor';
+    }
+    
+    if (lowerLevel.includes('poor')) {
+      return 'Poor';
+    }
+    
+    // Return original if no match
+    return levelText;
+  };
+  
   // Global dedupe registry with 2-minute lifetime for entries
   const globalDedupeRegistry = useRef(new Map());
   
@@ -490,11 +544,11 @@ const NotificationDisplay = () => {
   // Helper function to get duration by notification type
   const getDurationByType = (type) => {
     switch (type) {
-      case 'error': return 10000; // 10 seconds
-      case 'warning': return 8000; // 8 seconds
-      case 'success': return 6000; // 6 seconds
-      case 'announcement': return 15000; // 15 seconds
-      default: return 7000; // 7 seconds
+      case 'error': return 15000; // 15 seconds (increased from 10s)
+      case 'warning': return 12000; // 12 seconds (increased from 8s)
+      case 'success': return 10000; // 10 seconds (increased from 6s) 
+      case 'announcement': return 20000; // 20 seconds (increased from 15s)
+      default: return 10000; // 10 seconds (increased from 7s)
     }
   };
   
@@ -527,6 +581,16 @@ const NotificationDisplay = () => {
       
       // Keep other types of notifications
       return true;
+    });
+
+    // Standardize criteria and levels in all notifications
+    notificationQueue.current.forEach(notification => {
+      if (notification.criteria) {
+        notification.criteria = standardizeCriteria(notification.criteria);
+      }
+      if (notification.level) {
+        notification.level = standardizeLevel(notification.level);
+      }
     });
 
     // Log how many notifications are being processed after filtering
@@ -953,7 +1017,7 @@ const NotificationDisplay = () => {
                         </Box>
                         <Box flex="1">
                           <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Criteria</Text>
-                          <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{notification.criteria}</Text>
+                          <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{standardizeCriteria(notification.criteria)}</Text>
                         </Box>
                       </Flex>
                     </Box>
@@ -1001,7 +1065,7 @@ const NotificationDisplay = () => {
                             borderRadius="md"
                             display="inline-block"
                           >
-                            {notification.level}
+                            {standardizeLevel(notification.level)}
                           </Text>
                         </Box>
                       </Flex>
