@@ -29,6 +29,17 @@ const NotificationDisplay = () => {
   
   const notificationQueue = useRef([]);
   const processingQueue = useRef(false);
+  const activeTimeouts = useRef([]); // Track all active timeouts
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all notification timeouts on unmount
+      activeTimeouts.current.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+    };
+  }, []);
   
   // Merge server and socket notifications
   useEffect(() => {
@@ -416,39 +427,95 @@ const NotificationDisplay = () => {
     
     processingQueue.current = true;
     
-    // Deduplicate similar notifications
+    // Enhanced deduplication for point changes and other notifications
     const deduplicatedQueue = [];
     const messageMap = new Map();
+    // Special map just for point changes to handle them differently
+    const pointChangeMap = new Map();
     
     notificationQueue.current.forEach(notification => {
-      // Create a key based on message content and type
-      const messageKey = `${notification.type}:${notification.message.substring(0, 30)}`;
-      
-      if (messageMap.has(messageKey)) {
-        const existingNotif = messageMap.get(messageKey);
+      // Special handling for point change notifications
+      if (notification.pointsChange) {
+        // Create a key based on the point change value and direction
+        const pointKey = `points:${notification.pointsChange}`;
         
-        // Update the existing notification with better data if available
-        if (!existingNotif.reason && notification.reason) {
-          existingNotif.reason = notification.reason;
-        }
-        if (!existingNotif.criteria && notification.criteria) {
-          existingNotif.criteria = notification.criteria;
-        }
-        if (!existingNotif.level && notification.level) {
-          existingNotif.level = notification.level;
-        }
-        if (!existingNotif.pointsChange && notification.pointsChange) {
-          existingNotif.pointsChange = notification.pointsChange;
-        }
-        
-        // Use the most recent timestamp
-        if (notification.timestamp > existingNotif.timestamp) {
-          existingNotif.timestamp = notification.timestamp;
+        if (pointChangeMap.has(pointKey)) {
+          const existingNotif = pointChangeMap.get(pointKey);
+          const currentTime = new Date().getTime();
+          const existingTime = existingNotif.timestamp ? new Date(existingNotif.timestamp).getTime() : 0;
+          
+          // Only consolidate if notifications are within 15 seconds of each other
+          if (Math.abs(currentTime - existingTime) < 15000) {
+            // Always prefer "POINTS AWARDED!" or "POINTS DEDUCTED!" titles over generic ones
+            if (notification.title.includes('POINTS')) {
+              existingNotif.title = notification.title;
+            }
+            
+            // Update the existing notification with data from this one
+            if (!existingNotif.reason && notification.reason) {
+              existingNotif.reason = notification.reason;
+            }
+            if (!existingNotif.criteria && notification.criteria) {
+              existingNotif.criteria = notification.criteria;
+            }
+            if (!existingNotif.level && notification.level) {
+              existingNotif.level = notification.level;
+            }
+            
+            // Always keep the timestamp if it exists
+            if (!existingNotif.timestamp && notification.timestamp) {
+              existingNotif.timestamp = notification.timestamp;
+            }
+            
+            // If we have all details, update the message to be more comprehensive
+            if (existingNotif.criteria && existingNotif.level) {
+              const direction = notification.pointsChange > 0 ? 'awarded to' : 'deducted from';
+              const house = user?.house || 'your house';
+              existingNotif.message = `${Math.abs(notification.pointsChange)} points ${direction} ${house}. Criteria: ${existingNotif.criteria}. Level: ${existingNotif.level}`;
+              
+              // Add reason to message if available
+              if (existingNotif.reason) {
+                existingNotif.message += `. Reason: ${existingNotif.reason}`;
+              }
+            }
+          } else {
+            // If they're far apart in time, treat as separate notifications
+            pointChangeMap.set(`${pointKey}-${Date.now()}`, notification);
+            deduplicatedQueue.push(notification);
+          }
+        } else {
+          // First time seeing this point change
+          pointChangeMap.set(pointKey, notification);
+          deduplicatedQueue.push(notification);
         }
       } else {
-        // First time seeing this message
-        messageMap.set(messageKey, notification);
-        deduplicatedQueue.push(notification);
+        // Non-point change notifications use the regular deduplication logic
+        const messageKey = `${notification.type}:${notification.message.substring(0, 30)}`;
+        
+        if (messageMap.has(messageKey)) {
+          const existingNotif = messageMap.get(messageKey);
+          
+          // Update with better data if available
+          if (!existingNotif.reason && notification.reason) {
+            existingNotif.reason = notification.reason;
+          }
+          if (!existingNotif.criteria && notification.criteria) {
+            existingNotif.criteria = notification.criteria;
+          }
+          if (!existingNotif.level && notification.level) {
+            existingNotif.level = notification.level;
+          }
+          
+          // Use the most recent timestamp
+          if (notification.timestamp && (!existingNotif.timestamp || 
+              new Date(notification.timestamp) > new Date(existingNotif.timestamp))) {
+            existingNotif.timestamp = notification.timestamp;
+          }
+        } else {
+          // First time seeing this message
+          messageMap.set(messageKey, notification);
+          deduplicatedQueue.push(notification);
+        }
       }
     });
     
@@ -460,26 +527,73 @@ const NotificationDisplay = () => {
     
     // Add to active notifications
     if (notification) {
+      // Ensure point changes have appropriate titles
+      if (notification.pointsChange) {
+        if (notification.pointsChange > 0 && !notification.title.includes('POINTS')) {
+          notification.title = 'POINTS AWARDED!';
+        } else if (notification.pointsChange < 0 && !notification.title.includes('POINTS')) {
+          notification.title = 'POINTS DEDUCTED!';
+        }
+      }
+      
+      // Make sure we have a timestamp
+      if (!notification.timestamp) {
+        notification.timestamp = new Date();
+      }
+      
+      // Generate a consistent ID for this notification if it doesn't have one
+      const notifId = notification.id || createId();
+      
       setActiveNotifications(prev => {
         // Create unique ID if not present
         const notifWithId = {
           ...notification,
-          id: notification.id || createId()
+          id: notifId
         };
         
-        // Avoid duplicate active notifications
-        if (prev.some(n => n.id === notifWithId.id)) {
-          return prev;
-        }
+        // If there's a similar active notification about the same points, remove it first
+        const filteredPrev = notification.pointsChange 
+          ? prev.filter(n => !(n.pointsChange && n.pointsChange === notification.pointsChange)) 
+          : prev.filter(n => n.id !== notifWithId.id);
         
-        return [notifWithId, ...prev].slice(0, 5); // Keep max 5 active notifications
+        return [notifWithId, ...filteredPrev].slice(0, 5); // Keep max 5 active notifications
       });
       
+      // Remove from original source to prevent reprocessing
+      if (notification.source === 'socket') {
+        try {
+          removeNotification(notification.id);
+        } catch (error) {
+          console.warn('Error removing notification:', error.message);
+        }
+      }
+      
+      // Auto-dismiss after notification duration
+      const duration = notification.duration || getDurationByType(notification.type) || 7000;
+      console.log(`Setting auto-dismiss for notification ${notifId} to disappear after ${duration}ms`);
+      
+      const timeoutId = setTimeout(() => {
+        console.log(`Auto-dismissing notification ${notifId}`);
+        setActiveNotifications(prev => {
+          return prev.filter(item => item.id !== notifId);
+        });
+        // Remove this timeout ID from the tracking array
+        activeTimeouts.current = activeTimeouts.current.filter(id => id !== timeoutId);
+      }, duration);
+      
+      // Store timeout ID for cleanup
+      activeTimeouts.current.push(timeoutId);
+      
       // Process next notification after delay
-      setTimeout(() => {
+      const nextProcessTimeoutId = setTimeout(() => {
         processingQueue.current = false;
         processNotificationQueue();
+        // Remove this timeout ID from the tracking array
+        activeTimeouts.current = activeTimeouts.current.filter(id => id !== nextProcessTimeoutId);
       }, 500); // Small delay between notifications
+      
+      // Store timeout ID for cleanup
+      activeTimeouts.current.push(nextProcessTimeoutId);
     } else {
       processingQueue.current = false;
     }
