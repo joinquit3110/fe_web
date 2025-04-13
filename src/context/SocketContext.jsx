@@ -253,14 +253,6 @@ export const SocketProvider = ({ children }) => {
             });
             window.dispatchEvent(pointsEvent);
             
-            // Play a notification sound for important point changes
-            if (isReset || Math.abs(diff) >= 20) {
-              const notificationSound = document.getElementById('notification-sound');
-              if (notificationSound) {
-                notificationSound.play().catch(e => console.log('Could not play notification sound'));
-              }
-            }
-            
             // Update user object with new points immediately
             setUser(prevUser => {
               if (!prevUser) return prevUser;
@@ -331,12 +323,6 @@ export const SocketProvider = ({ children }) => {
         ...prev.slice(0, 9)
       ]);
       
-      // Play notification sound if enabled
-      const notificationSound = document.getElementById('notification-sound');
-      if (notificationSound) {
-        notificationSound.play().catch(e => console.log('Could not play notification sound'));
-      }
-      
       // Dispatch a custom event for the notification
       const notificationEvent = new CustomEvent('adminNotification', {
         detail: data
@@ -359,12 +345,6 @@ export const SocketProvider = ({ children }) => {
           },
           ...prev.slice(0, 9)
         ]);
-      
-      // Play announcement sound if enabled
-      const announcementSound = document.getElementById('announcement-sound');
-      if (announcementSound) {
-        announcementSound.play().catch(e => console.log('Could not play announcement sound'));
-      }
     });
 
     return () => {
@@ -423,14 +403,6 @@ export const SocketProvider = ({ children }) => {
       }}
     >
       {children}
-      
-      {/* Add hidden audio elements for notification sounds */}
-      <audio id="notification-sound" preload="auto" style={{ display: 'none' }}>
-        <source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3?filename=notification-sound-7062.mp3" type="audio/mpeg" />
-      </audio>
-      <audio id="announcement-sound" preload="auto" style={{ display: 'none' }}>
-        <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=interface-notification-sound-140735.mp3" type="audio/mpeg" />
-      </audio>
     </SocketContext.Provider>
   );
 };

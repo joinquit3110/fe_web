@@ -376,12 +376,12 @@ const Login = () => {
       <Box className="floating-element spellbook" position="absolute" bottom="15%" right="10%" />
       <Box className="floating-element potion" position="absolute" top="20%" right="15%" />
       
-      {/* Hogwarts logo animation */}
+      {/* Hogwarts logo animation - extremely small */}
       <Box
         position="absolute"
-        top="15px"
-        left="15px"
-        width="40px"
+        top="10px"
+        left="10px"
+        width="20px" 
         height="auto"
         className="hogwarts-logo-container"
         textAlign="center"
@@ -389,10 +389,10 @@ const Login = () => {
         justifyContent="center"
         alignItems="center"
         zIndex="10"
-        boxShadow="0px 0px 10px rgba(211, 166, 37, 0.7)" 
+        boxShadow="0px 0px 5px rgba(211, 166, 37, 0.5)" 
         borderRadius="50%"
         background="rgba(10, 14, 35, 0.7)"
-        padding="4px"
+        padding="2px"
       >
         <Image
           src={hogwartsLogoImg}
