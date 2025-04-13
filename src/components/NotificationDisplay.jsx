@@ -1016,7 +1016,25 @@ const NotificationDisplay = () => {
                   textShadow="0 1px 2px rgba(0,0,0,0.5)"
                   lineHeight="1.5"
                 >
-                  {notification.message}
+                  {notification.pointsChange && (
+                    <>
+                      <Text as="span">
+                        {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded to' : 'deducted from'} {notification.house || 'unknown'}
+                      </Text>
+                      
+                      {notification.reason && (
+                        <Text 
+                          as="span" 
+                          color={notification.pointsChange > 0 ? "yellow.300" : "orange.300"}
+                          fontWeight="bold"
+                        >
+                          : {notification.reason}
+                        </Text>
+                      )}
+                    </>
+                  )}
+                  
+                  {!notification.pointsChange && notification.message}
                 </Text>
               </Box>
               
