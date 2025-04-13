@@ -550,119 +550,76 @@ export const AdminProvider = ({ children }) => {
     veryPoor: -10,
   };
 
-  // Update points based on group work criteria
+  // Find criteria & level from points rules based on criteria type and level
+  const getCriteriaAndLevelLabels = (criteriaType, performanceLevel) => {
+    const criteria = criteriaTypes.find(c => c.value === criteriaType);
+    const level = performanceLevels.find(l => l.value === performanceLevel);
+    
+    return {
+      criteriaLabel: criteria ? criteria.label : '',
+      levelLabel: level ? level.label : ''
+    };
+  };
+
+  // Update points based on group criteria
   const updateGroupCriteriaPoints = async (house, criteriaType, performanceLevel, details) => {
-    if (!criteriaPoints[performanceLevel]) {
-      setError(`Invalid performance level: ${performanceLevel}`);
-      return false;
+    if (!house || !criteriaType || !performanceLevel) {
+      throw new Error('Missing required fields');
     }
-    
-    const pointsChange = criteriaPoints[performanceLevel];
-    let criteriaName;
-    
-    switch (criteriaType) {
-      case 'participation':
-        criteriaName = 'Level of participation of group members';
-        break;
-      case 'english':
-        criteriaName = 'Level of English usage in the group';
-        break;
-      case 'completion':
-        criteriaName = 'Time taken by the group to complete tasks';
-        break;
-      default:
-        criteriaName = 'Group work';
-    }
-    
-    // Format reason with criteria and performance level
-    const reason = `${criteriaName}: ${performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)}${details ? ` - ${details}` : ''}`;
-    
-    // Get authentication token
-    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
-    
-    // Update house points first
-    const result = await updateHousePoints(house, pointsChange, reason);
-    
-    // Only proceed with notification if points update was successful
-    if (result) {
-      try {
-        // Create notification with properly structured fields in format backend expects
-        const notificationPayload = {
-          type: pointsChange > 0 ? 'success' : 'warning',
-          title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
-          message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
-          // Include required parameters with correct types
-          targetHouse: house,
-          // Ensure targetUsers is always an empty array, not null
-          targetUsers: [], 
-          // Ensure housesAffected is a proper array of strings
-          housesAffected: [house],
-          // Set skipAdmin flag to string "true" instead of boolean
-          skipAdmin: "true",
-          // Simplified fields at root level - make everything strings to avoid type issues
-          house,
-          pointsChange: pointsChange.toString(),
-          reason,
-          criteria: criteriaName,
-          level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
-        };
-        
-        console.log('Sending group criteria notification to users:', notificationPayload);
-        
-        // Send notification to backend with proper error handling
-        try {
-          const response = await axios.post(`${API_URL}/notifications`, notificationPayload, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          console.log('Notification sent successfully to users:', response.data);
-        } catch (notifError) {
-          console.error('Failed to send criteria notification (non-critical):', notifError);
-          // Log detailed error information for debugging
-          if (notifError.response) {
-            console.error('Error status:', notifError.response.status);
-            console.error('Error data:', notifError.response.data);
-            console.error('Server message:', notifError.response.data?.message);
-          }
-          
-          // Client-side fallback: Add criteria notification to local storage
-          try {
-            const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-            const fallbackNotification = {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              clientFallback: true,
-              message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}. Reason: ${reason}`,
-              type: pointsChange > 0 ? 'success' : 'warning',
-              title: pointsChange > 0 ? 'Group Criteria Points Awarded!' : 'Group Criteria Points Deducted!',
-              targetUsers: [],
-              housesAffected: [house],
-              skipAdmin: "true", // Use string instead of boolean
-              house,
-              pointsChange: pointsChange.toString(), // Use string instead of number
-              reason,
-              criteria: criteriaName,
-              level: performanceLevel.charAt(0).toUpperCase() + performanceLevel.slice(1)
-            };
-            localNotifications.push(fallbackNotification);
-            localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
-            console.log('Added criteria notification to local fallback system');
-          } catch (fallbackError) {
-            console.error('Failed to store criteria notification in local fallback:', fallbackError);
-          }
-        }
-      } catch (outerError) {
-        console.error('Unexpected error in notification process:', outerError);
-        // This catch block handles any errors in the notification preparation
+
+    try {
+      // Find performance level information
+      const selectedPerformance = performanceLevels.find(p => p.value === performanceLevel);
+      if (!selectedPerformance) {
+        throw new Error('Invalid performance level');
       }
+
+      // Find criteria information
+      const selectedCriteria = criteriaTypes.find(c => c.value === criteriaType);
+      if (!selectedCriteria) {
+        throw new Error('Invalid criteria type');
+      }
+
+      // Format reason with criteria and level clearly marked for parsing
+      const { criteriaLabel, levelLabel } = getCriteriaAndLevelLabels(criteriaType, performanceLevel);
+      
+      // Use a standardized format with specific delimiters that can be easily parsed
+      let formattedReason = details ? `${details}.` : `House evaluation.`;
+      formattedReason += ` Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
+
+      // Get authentication token
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      console.log('Sending house points update with formatted reason:', formattedReason);
+
+      const response = await axios.post(`${API_URL}/house-points`, {
+        house,
+        points: selectedPerformance.points,
+        reason: formattedReason,
+        criteria: criteriaLabel,
+        level: levelLabel,
+        timestamp: new Date().toISOString() // Add explicit timestamp
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        fetchHouses();
+        return true;
+      } else {
+        throw new Error('Failed to update house points');
+      }
+    } catch (err) {
+      console.error('Error updating group criteria points:', err);
+      throw err;
     }
-    
-    return result;
   };
 
   const sendAppNotification = async (message, type = 'success', user_id = null, typeDetails = null) => {

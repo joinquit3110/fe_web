@@ -149,7 +149,7 @@ const NotificationDisplay = () => {
           type: notification.type,
           title: getNotificationTitle(notification.type),
           message: notification.message,
-          timestamp: notification.timestamp,
+          timestamp: notification.timestamp ? new Date(notification.timestamp) : new Date(),
           source: 'socket',
           duration: getDurationByType(notification.type),
           pointsChange,
@@ -158,15 +158,30 @@ const NotificationDisplay = () => {
           level
         };
         
+        // Create a composite key for this notification to help with deduplication
+        const notifKey = pointsChange ? 
+          `point-change:${pointsChange}:${Date.now()}` : 
+          `${notification.type}:${notification.message?.substring(0, 30)}:${Date.now()}`;
+          
+        notificationItem.compositeKey = notifKey;
+        
         // Add to queue if not already present
         if (!notificationQueue.current.some(item => item.id === notification.id)) {
           notificationQueue.current.push(notificationItem);
         }
       });
       
-      // Process the queue if not already processing
+      // Delay processing to allow potential follow-up notifications with more details
       if (!processingQueue.current) {
-        processNotificationQueue();
+        // Use a small delay (250ms) to allow closely-timed notifications to be grouped together
+        const delayTimeoutId = setTimeout(() => {
+          processNotificationQueue();
+          // Clean up timeout
+          activeTimeouts.current = activeTimeouts.current.filter(id => id !== delayTimeoutId);
+        }, 250);
+        
+        // Track timeout for cleanup
+        activeTimeouts.current.push(delayTimeoutId);
       }
     }
   }, [socketNotifications]);
@@ -433,7 +448,24 @@ const NotificationDisplay = () => {
     // Special map just for point changes to handle them differently
     const pointChangeMap = new Map();
     
-    notificationQueue.current.forEach(notification => {
+    // First, prioritize notifications with more complete information
+    // Sort to process notifications with the most complete information first
+    const sortedQueue = [...notificationQueue.current].sort((a, b) => {
+      // Calculate completeness score (presence of fields)
+      const scoreA = (a.reason ? 1 : 0) + (a.criteria ? 1 : 0) + (a.level ? 1 : 0);
+      const scoreB = (b.reason ? 1 : 0) + (b.criteria ? 1 : 0) + (b.level ? 1 : 0);
+      
+      // If scores are equal, prioritize newer notifications
+      if (scoreB === scoreA) {
+        const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp || 0).getTime();
+        const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp || 0).getTime();
+        return timeB - timeA; // Newer first
+      }
+      
+      return scoreB - scoreA; // Higher score first
+    });
+    
+    sortedQueue.forEach(notification => {
       // Special handling for point change notifications
       if (notification.pointsChange) {
         // Create a key based on the point change value and direction
@@ -442,12 +474,17 @@ const NotificationDisplay = () => {
         if (pointChangeMap.has(pointKey)) {
           const existingNotif = pointChangeMap.get(pointKey);
           const currentTime = new Date().getTime();
-          const existingTime = existingNotif.timestamp ? new Date(existingNotif.timestamp).getTime() : 0;
+          // Make sure we can handle both string timestamps and Date objects
+          const existingTime = existingNotif.timestamp ? 
+            (existingNotif.timestamp instanceof Date ? 
+              existingNotif.timestamp.getTime() : 
+              new Date(existingNotif.timestamp).getTime()) : 
+            0;
           
-          // Only consolidate if notifications are within 15 seconds of each other
-          if (Math.abs(currentTime - existingTime) < 15000) {
+          // Only consolidate if notifications are within 30 seconds of each other (increased from 15)
+          if (Math.abs(currentTime - existingTime) < 30000) {
             // Always prefer "POINTS AWARDED!" or "POINTS DEDUCTED!" titles over generic ones
-            if (notification.title.includes('POINTS')) {
+            if (notification.title && notification.title.includes('POINTS')) {
               existingNotif.title = notification.title;
             }
             
@@ -462,9 +499,9 @@ const NotificationDisplay = () => {
               existingNotif.level = notification.level;
             }
             
-            // Always keep the timestamp if it exists
+            // Always keep the timestamp if it exists and ensure it's a valid Date
             if (!existingNotif.timestamp && notification.timestamp) {
-              existingNotif.timestamp = notification.timestamp;
+              existingNotif.timestamp = new Date(notification.timestamp);
             }
             
             // If we have all details, update the message to be more comprehensive
@@ -478,9 +515,13 @@ const NotificationDisplay = () => {
                 existingNotif.message += `. Reason: ${existingNotif.reason}`;
               }
             }
+            
+            // Log the updated notification
+            console.log('Updated existing notification with more info:', existingNotif);
           } else {
             // If they're far apart in time, treat as separate notifications
-            pointChangeMap.set(`${pointKey}-${Date.now()}`, notification);
+            const uniqueKey = `${pointKey}-${Date.now()}`;
+            pointChangeMap.set(uniqueKey, notification);
             deduplicatedQueue.push(notification);
           }
         } else {
@@ -490,7 +531,7 @@ const NotificationDisplay = () => {
         }
       } else {
         // Non-point change notifications use the regular deduplication logic
-        const messageKey = `${notification.type}:${notification.message.substring(0, 30)}`;
+        const messageKey = `${notification.type}:${notification.message?.substring(0, 30) || ''}`;
         
         if (messageMap.has(messageKey)) {
           const existingNotif = messageMap.get(messageKey);
@@ -507,9 +548,16 @@ const NotificationDisplay = () => {
           }
           
           // Use the most recent timestamp
-          if (notification.timestamp && (!existingNotif.timestamp || 
-              new Date(notification.timestamp) > new Date(existingNotif.timestamp))) {
-            existingNotif.timestamp = notification.timestamp;
+          if (notification.timestamp) {
+            try {
+              const notifTime = new Date(notification.timestamp);
+              if (!existingNotif.timestamp || notifTime > new Date(existingNotif.timestamp)) {
+                existingNotif.timestamp = notifTime;
+              }
+            } catch (e) {
+              console.warn('Invalid timestamp format:', e);
+              // Keep existing timestamp if the new one is invalid
+            }
           }
         } else {
           // First time seeing this message
@@ -519,8 +567,15 @@ const NotificationDisplay = () => {
       }
     });
     
+    // Get all values from pointChangeMap to ensure we use the updated versions
+    const pointChangeNotifications = Array.from(pointChangeMap.values());
+    
+    // Create the final queue from deduplicatedQueue but use updated point change notifications
+    const finalQueue = deduplicatedQueue.filter(n => !n.pointsChange)
+      .concat(pointChangeNotifications);
+      
     // Replace queue with deduplicated version
-    notificationQueue.current = deduplicatedQueue;
+    notificationQueue.current = finalQueue;
     
     // Continue with normal processing
     const notification = notificationQueue.current.shift();
@@ -529,16 +584,28 @@ const NotificationDisplay = () => {
     if (notification) {
       // Ensure point changes have appropriate titles
       if (notification.pointsChange) {
-        if (notification.pointsChange > 0 && !notification.title.includes('POINTS')) {
+        if (notification.pointsChange > 0 && (!notification.title || !notification.title.includes('POINTS'))) {
           notification.title = 'POINTS AWARDED!';
-        } else if (notification.pointsChange < 0 && !notification.title.includes('POINTS')) {
+        } else if (notification.pointsChange < 0 && (!notification.title || !notification.title.includes('POINTS'))) {
           notification.title = 'POINTS DEDUCTED!';
         }
       }
       
-      // Make sure we have a timestamp
+      // Make sure we have a valid timestamp
       if (!notification.timestamp) {
         notification.timestamp = new Date();
+      } else if (!(notification.timestamp instanceof Date)) {
+        try {
+          // Ensure the timestamp is a valid Date object
+          notification.timestamp = new Date(notification.timestamp);
+          // Check if it's a valid date
+          if (isNaN(notification.timestamp.getTime())) {
+            throw new Error('Invalid date');
+          }
+        } catch (e) {
+          console.warn('Invalid timestamp format, creating new timestamp');
+          notification.timestamp = new Date();
+        }
       }
       
       // Generate a consistent ID for this notification if it doesn't have one
@@ -550,6 +617,31 @@ const NotificationDisplay = () => {
           ...notification,
           id: notifId
         };
+        
+        // Check if we already have similar notifications (avoid duplicates)
+        const similarExists = prev.some(n => {
+          // For point changes, look for matching point amount
+          if (notification.pointsChange && n.pointsChange === notification.pointsChange) {
+            const timeDiff = Math.abs(
+              (n.timestamp instanceof Date ? n.timestamp.getTime() : new Date(n.timestamp || 0).getTime()) - 
+              (notification.timestamp instanceof Date ? notification.timestamp.getTime() : new Date(notification.timestamp || 0).getTime())
+            );
+            return timeDiff < 30000; // Within 30 seconds
+          }
+          
+          // For other notifications, check similar message
+          if (n.message && notification.message && 
+              n.message.substring(0, 30) === notification.message.substring(0, 30)) {
+            return true;
+          }
+          
+          return false;
+        });
+        
+        if (similarExists) {
+          console.log('Skipping similar active notification');
+          return prev;
+        }
         
         // If there's a similar active notification about the same points, remove it first
         const filteredPrev = notification.pointsChange 
@@ -977,7 +1069,9 @@ const NotificationDisplay = () => {
                 mt={2}
                 fontStyle="italic"
               >
-                {new Date(notification.timestamp).toLocaleTimeString()}
+                {notification.timestamp instanceof Date && !isNaN(notification.timestamp.getTime()) 
+                  ? notification.timestamp.toLocaleTimeString()
+                  : new Date().toLocaleTimeString()}
               </Text>
             </Box>
           </Box>

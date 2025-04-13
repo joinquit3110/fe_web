@@ -285,15 +285,54 @@ export const SocketProvider = ({ children }) => {
         const pointsChange = data.points;
         const isPositive = pointsChange > 0;
         
-        setNotifications(prev => [
-          {
-            id: Date.now(),
-            type: isPositive ? 'success' : 'warning',
-            message: `House ${data.house} has ${isPositive ? 'gained' : 'lost'} ${Math.abs(pointsChange)} points! New total: ${data.newTotal}`,
-            timestamp: new Date()
-          },
-          ...prev.slice(0, 9)
-        ]);
+        // Create a uniqueId for this house points update to prevent duplicates
+        // Using timestamp from server or current time as a fallback
+        const uniqueId = `house_points_${data.house}_${data.timestamp ? new Date(data.timestamp).getTime() : Date.now()}`;
+        
+        // Make sure we have valid criteria and level data
+        const criteria = data.criteria || null;
+        const level = data.level || null;
+        const reason = data.reason || 'Admin action';
+        
+        // Create a full message that includes all the details
+        let fullMessage = `House ${data.house} has ${isPositive ? 'gained' : 'lost'} ${Math.abs(pointsChange)} points! New total: ${data.newTotal}`;
+        if (criteria) fullMessage += `. Criteria: ${criteria}`;
+        if (level) fullMessage += `. Level: ${level}`;
+        if (reason) fullMessage += `. Reason: ${reason}`;
+        
+        setNotifications(prev => {
+          // Check if we already have very similar notifications in the last few seconds
+          // This prevents duplicates coming from multiple house members
+          const similarExists = prev.some(n => 
+            n.message && n.message.includes(`House ${data.house}`) && 
+            n.message.includes(`${Math.abs(pointsChange)} points`) &&
+            (Date.now() - new Date(n.timestamp).getTime()) < 10000 // Within 10 seconds
+          );
+          
+          if (similarExists) {
+            console.log('[SOCKET] Skipping duplicate house points notification');
+            return prev; // Skip duplicate
+          }
+          
+          return [
+            {
+              id: uniqueId,
+              type: isPositive ? 'success' : 'warning',
+              title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+              message: fullMessage,
+              timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+              // Include additional data for the notification system
+              pointsChange,
+              reason,
+              criteria,
+              level,
+              // Add additional keys to help with debugging and duplicate detection
+              source: 'house_points_update',
+              eventTime: data.timestamp || new Date().toISOString()
+            },
+            ...prev.slice(0, 9)
+          ];
+        });
         
         // Dispatch event for house points update
         const housePointsEvent = new CustomEvent('housePointsUpdated', {
@@ -301,7 +340,10 @@ export const SocketProvider = ({ children }) => {
             house: data.house,
             points: pointsChange,
             newTotal: data.newTotal,
-            reason: data.reason || 'Admin action'
+            reason,
+            criteria,
+            level,
+            timestamp: data.timestamp || new Date().toISOString()
           }
         });
         window.dispatchEvent(housePointsEvent);
