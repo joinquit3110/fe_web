@@ -405,151 +405,81 @@ const NotificationDisplay = () => {
     }
   };
   
-  // Process notification queue
+  // Process notification queue with deduplication logic
   const processNotificationQueue = () => {
-    if (notificationQueue.current.length === 0) {
-      processingQueue.current = false;
+    if (notificationQueue.current.length === 0 || processingQueue.current) {
       return;
     }
     
     processingQueue.current = true;
     
-    // Get the next notification
-    const nextNotification = notificationQueue.current.shift();
+    // Deduplicate similar notifications
+    const deduplicatedQueue = [];
+    const messageMap = new Map();
     
-    // Initialize fields if they don't exist
-    nextNotification.reason = nextNotification.reason || null;
-    nextNotification.criteria = nextNotification.criteria || null;
-    nextNotification.level = nextNotification.level || null;
-    
-    // Special handling for criteria notifications - check for specific keys in message
-    if (nextNotification.message) {
-      console.log('Processing notification message:', nextNotification.message);
+    notificationQueue.current.forEach(notification => {
+      // Create a key based on message content and type
+      const messageKey = `${notification.type}:${notification.message.substring(0, 30)}`;
       
-      // Define possible criteria and levels
-      const possibleCriteria = [
-        'Level of participation of group members',
-        'Level of English usage in the group',
-        'Time taken by the group to complete tasks'
-      ];
-      
-      const possibleLevels = ['Excellent', 'Good', 'Satisfactory', 'Poor', 'Very Poor'];
-      
-      // Check for criteria in message if not already present
-      if (!nextNotification.criteria) {
-        for (const criteria of possibleCriteria) {
-          if (nextNotification.message.toLowerCase().includes(criteria.toLowerCase())) {
-            nextNotification.criteria = criteria;
-            console.log('Criteria extracted from message:', criteria);
-            break;
-          }
+      if (messageMap.has(messageKey)) {
+        const existingNotif = messageMap.get(messageKey);
+        
+        // Update the existing notification with better data if available
+        if (!existingNotif.reason && notification.reason) {
+          existingNotif.reason = notification.reason;
         }
-      }
-      
-      // Check for level in message if not already present
-      if (!nextNotification.level) {
-        for (const level of possibleLevels) {
-          if (nextNotification.message.toLowerCase().includes(level.toLowerCase())) {
-            nextNotification.level = level;
-            console.log('Level extracted from message:', level);
-            break;
-          }
+        if (!existingNotif.criteria && notification.criteria) {
+          existingNotif.criteria = notification.criteria;
         }
-      }
-      
-      // Extract reason from message if not already present
-      if (!nextNotification.reason && nextNotification.message.includes('for')) {
-        const reasonMatch = nextNotification.message.match(/for\s+(.+?)(?:$|\.)/i);
-        if (reasonMatch && reasonMatch[1]) {
-          // Clean up the reason
-          let reason = reasonMatch[1].trim();
-          
-          // Remove criteria and level if they're part of the reason
-          possibleCriteria.forEach(criteria => {
-            reason = reason.replace(new RegExp(criteria, 'i'), '');
-          });
-          
-          possibleLevels.forEach(level => {
-            reason = reason.replace(new RegExp(level, 'i'), '');
-          });
-          
-          reason = reason.replace(/\s+/g, ' ').trim();
-          
-          if (reason) {
-            nextNotification.reason = reason;
-            console.log('Reason extracted from message:', reason);
-          }
+        if (!existingNotif.level && notification.level) {
+          existingNotif.level = notification.level;
         }
-      }
-    }
-    
-    // Fallback values for house points if message mentions points
-    if (nextNotification.message && 
-        (nextNotification.message.includes('points') || 
-         nextNotification.message.includes('Points'))) {
-      
-      // Default reason if none was extracted
-      if (!nextNotification.reason) {
-        if (nextNotification.pointsChange > 0) {
-          nextNotification.reason = "Academic performance";
-        } else {
-          nextNotification.reason = "Rule violation";
+        if (!existingNotif.pointsChange && notification.pointsChange) {
+          existingNotif.pointsChange = notification.pointsChange;
         }
-      }
-      
-      // Default criteria and level for points notifications
-      if (!nextNotification.criteria && !nextNotification.level) {
-        if (nextNotification.message.includes('poor')) {
-          nextNotification.criteria = "Time taken by the group to complete tasks";
-          nextNotification.level = "Poor";
-        } else if (nextNotification.message.includes('excellent')) {
-          nextNotification.criteria = "Level of participation of group members";
-          nextNotification.level = "Excellent";
-        } else if (nextNotification.message.includes('good')) {
-          nextNotification.criteria = "Level of English usage in the group";
-          nextNotification.level = "Good";
+        
+        // Use the most recent timestamp
+        if (notification.timestamp > existingNotif.timestamp) {
+          existingNotif.timestamp = notification.timestamp;
         }
+      } else {
+        // First time seeing this message
+        messageMap.set(messageKey, notification);
+        deduplicatedQueue.push(notification);
       }
-    }
-    
-    // Detailed debugging logs
-    console.log('Processing notification (FULL DEBUG):', {
-      id: nextNotification.id,
-      type: nextNotification.type,
-      message: nextNotification.message,
-      reason: nextNotification.reason,
-      criteria: nextNotification.criteria,
-      level: nextNotification.level,
-      source: nextNotification.source,
-      pointsChange: nextNotification.pointsChange,
-      fullObject: nextNotification
     });
     
-    // Add to active notifications (limit to 3 at a time)
-    setActiveNotifications(prev => {
-      const updated = [...prev, nextNotification].slice(-3);
-      return updated;
-    });
+    // Replace queue with deduplicated version
+    notificationQueue.current = deduplicatedQueue;
     
-    // If it's a socket notification, remove it from the socket context
-    if (nextNotification.source === 'socket') {
-      try {
-        removeNotification(nextNotification.id);
-      } catch (error) {
-        console.warn('Error removing notification:', error.message);
-      }
-    }
+    // Continue with normal processing
+    const notification = notificationQueue.current.shift();
     
-    // Schedule next notification to be displayed after a delay
-    setTimeout(() => {
-      // Remove this notification after its duration
-      setActiveNotifications(prev => 
-        prev.filter(item => item.id !== nextNotification.id)
-      );
+    // Add to active notifications
+    if (notification) {
+      setActiveNotifications(prev => {
+        // Create unique ID if not present
+        const notifWithId = {
+          ...notification,
+          id: notification.id || createId()
+        };
+        
+        // Avoid duplicate active notifications
+        if (prev.some(n => n.id === notifWithId.id)) {
+          return prev;
+        }
+        
+        return [notifWithId, ...prev].slice(0, 5); // Keep max 5 active notifications
+      });
       
-      // Continue processing the queue after a short delay
-      setTimeout(processNotificationQueue, 500);
-    }, nextNotification.duration);
+      // Process next notification after delay
+      setTimeout(() => {
+        processingQueue.current = false;
+        processNotificationQueue();
+      }, 500); // Small delay between notifications
+    } else {
+      processingQueue.current = false;
+    }
   };
   
   // Add a self-test function to create test notifications with all fields
