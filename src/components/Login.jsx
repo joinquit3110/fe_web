@@ -268,24 +268,94 @@ const Login = () => {
             }}
           />
           
-          {/* House logo particles */}
-          <Box className="house-particles">
-            {[...Array(20)].map((_, i) => (
-              <Box
+          {/* House particles animation */}
+          <div className="house-particles-container">
+            {[...Array(30)].map((_, i) => (
+              <div 
                 key={i}
                 className="house-particle"
                 style={{
                   '--size': `${Math.random() * 8 + 3}px`,
-                  '--x': `${Math.random() * 400 - 200}px`,
-                  '--y': `${Math.random() * 400 - 200}px`,
+                  '--x': `${Math.random() * 300 - 150}%`,
+                  '--y': `${Math.random() * 300 - 150}%`,
                   '--delay': `${Math.random() * 2}s`,
-                  '--duration': `${Math.random() * 3 + 2}s`,
+                  '--duration': `${Math.random() * 2 + 2}s`,
+                  '--opacity': Math.random() * 0.7 + 0.3,
                   backgroundColor: getHouseColor(userHouse)
                 }}
               />
             ))}
-          </Box>
+          </div>
         </Box>
+
+        {/* CSS for house logo animations */}
+        <style jsx>{`
+          .house-logo-animation {
+            animation: appear 0.7s ease-out, pulse 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.8));
+          }
+          
+          @keyframes appear {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.2); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.7)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.9)); }
+          }
+          
+          .house-logo-container {
+            background: radial-gradient(circle, rgba(0,0,0,0.7) 0%, rgba(14,26,64,0.9) 100%);
+            animation: fade-in 0.5s ease-out;
+          }
+          
+          @keyframes fade-in {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+          }
+          
+          .house-particles-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+          }
+          
+          .house-particle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--size);
+            height: var(--size);
+            opacity: var(--opacity);
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px currentColor;
+            animation: particle-float var(--duration) ease-in-out infinite;
+            animation-delay: var(--delay);
+          }
+          
+          @keyframes particle-float {
+            0% {
+              transform: translate(0, 0);
+              opacity: 0;
+            }
+            25% {
+              opacity: var(--opacity);
+            }
+            75% {
+              opacity: var(--opacity);
+            }
+            100% {
+              transform: translate(var(--x), var(--y));
+              opacity: 0;
+            }
+          }
+        `}</style>
       </Box>
     );
   }
@@ -309,10 +379,9 @@ const Login = () => {
       {/* Hogwarts logo animation */}
       <Box
         position="absolute"
-        top="30px"
-        left="50%"
-        transform="translateX(-50%)"
-        width="140px"
+        top="15px"
+        left="15px"
+        width="40px"
         height="auto"
         className="hogwarts-logo-container"
         textAlign="center"
@@ -320,10 +389,10 @@ const Login = () => {
         justifyContent="center"
         alignItems="center"
         zIndex="10"
-        boxShadow="0px 0px 15px rgba(211, 166, 37, 0.7)" 
+        boxShadow="0px 0px 10px rgba(211, 166, 37, 0.7)" 
         borderRadius="50%"
-        background="rgba(10, 14, 35, 0.6)"
-        padding="5px"
+        background="rgba(10, 14, 35, 0.7)"
+        padding="4px"
       >
         <Image
           src={hogwartsLogoImg}
