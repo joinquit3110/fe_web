@@ -633,8 +633,8 @@ export const AdminProvider = ({ children }) => {
 
       console.log('Sending house points update with formatted reason:', formattedReason);
 
-      const response = await axios.post(`${API_URL}/house-points`, {
-        house,
+      // Fixed API endpoint - using houses/:house/points instead of house-points
+      const response = await axios.post(`${API_URL}/houses/${house}/points`, {
         points: selectedPerformance.points,
         reason: formattedReason,
         criteria: criteriaLabel,

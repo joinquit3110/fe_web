@@ -178,31 +178,35 @@ export const SocketProvider = ({ children }) => {
         const updatedFields = data.data.updatedFields;
         
         // If house was updated, update the user object directly
-        if (updatedFields.house && user) {
+        if (updatedFields.house && user && setUser) {
           console.log(`[SOCKET] House updated from server: ${updatedFields.house}`);
           
           // Update user object in AuthContext with high priority
-          setUser(prevUser => {
-            if (!prevUser) return prevUser;
-            
-            // Create a new user object with updated house
-            const updatedUser = {
-              ...prevUser,
-              previousHouse: prevUser.house,
-              house: updatedFields.house
-            };
-            
-            // Also update localStorage to persist the change
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-            
-            // Dispatch a custom event for other components that might need to react
-            const houseEvent = new CustomEvent('userHouseChanged', {
-              detail: { house: updatedFields.house, immediate: true }
+          try {
+            setUser(prevUser => {
+              if (!prevUser) return prevUser;
+              
+              // Create a new user object with updated house
+              const updatedUser = {
+                ...prevUser,
+                previousHouse: prevUser.house,
+                house: updatedFields.house
+              };
+              
+              // Also update localStorage to persist the change
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              
+              // Dispatch a custom event for other components that might need to react
+              const houseEvent = new CustomEvent('userHouseChanged', {
+                detail: { house: updatedFields.house, immediate: true }
+              });
+              window.dispatchEvent(houseEvent);
+              
+              return updatedUser;
             });
-            window.dispatchEvent(houseEvent);
-            
-            return updatedUser;
-          });
+          } catch (error) {
+            console.error('[SOCKET] Error updating user house:', error);
+          }
           
           // Add notification about house change
           setNotifications(prev => [
