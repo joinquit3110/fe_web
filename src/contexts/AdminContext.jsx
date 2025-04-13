@@ -633,26 +633,132 @@ export const AdminProvider = ({ children }) => {
 
       console.log('Sending house points update with formatted reason:', formattedReason);
 
-      // Fixed API endpoint - using houses/:house/points instead of house-points
-      const response = await axios.post(`${API_URL}/houses/${house}/points`, {
-        points: selectedPerformance.points,
-        reason: formattedReason,
-        criteria: criteriaLabel,
-        level: levelLabel,
-        timestamp: new Date().toISOString() // Add explicit timestamp
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        fetchHouses();
-        return true;
-      } else {
-        throw new Error('Failed to update house points');
+      // Filter users by house
+      const houseUsers = users.filter(user => user.house === house);
+      
+      if (houseUsers.length === 0) {
+        throw new Error(`No users found in house: ${house}`);
       }
+      
+      const userIds = houseUsers.map(user => user._id || user.id);
+      const pointsChange = selectedPerformance.points;
+      
+      // Update points in the database first - this is the critical operation
+      const updatedUserIds = []; // Keep track of successfully updated users
+      
+      for (const userId of userIds) {
+        try {
+          // Get current user's points
+          const userResponse = await axios.get(`${API_URL}/users/${userId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const user = userResponse.data;
+          const currentPoints = user.magicPoints || 0;
+          const newPoints = Math.max(0, currentPoints + pointsChange); // Ensure points don't go below 0
+          
+          // Update user's points
+          await axios.patch(`${API_URL}/users/${userId}`, 
+            { 
+              magicPoints: newPoints,
+              lastPointsUpdate: new Date().toISOString(),
+              lastUpdateReason: formattedReason
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          // Add to successful list
+          updatedUserIds.push(userId);
+        } catch (userError) {
+          console.error(`Error updating points for user ${userId}:`, userError);
+          // Continue with other users even if one fails
+        }
+      }
+      
+      // Only try to send notification if points were updated successfully
+      if (updatedUserIds.length > 0) {
+        try {
+          // Create a notification for users
+          const notification = {
+            type: pointsChange > 0 ? 'success' : 'warning',
+            title: pointsChange > 0 ? 'Group Criteria: Points Awarded!' : 'Group Criteria: Points Deducted!',
+            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${formattedReason}`,
+            targetUsers: [], // Empty to send to all users
+            housesAffected: [house], // Specify affected house
+            // Additional fields for frontend
+            house: house,
+            pointsChange: pointsChange,
+            criteria: criteriaLabel,
+            level: levelLabel,
+            reason: formattedReason
+          };
+          
+          // Send notification to the backend for real-time delivery
+          try {
+            await axios.post(`${API_URL}/notifications`, notification, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            console.log('Group criteria notification sent successfully');
+          } catch (notifError) {
+            console.error('Failed to send notification (non-critical):', notifError);
+            
+            // Client-side fallback: Add notification to local storage
+            try {
+              const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
+              localNotifications.push({
+                ...notification,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                clientFallback: true
+              });
+              localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
+              console.log('Added notification to local fallback system');
+            } catch (fallbackError) {
+              console.error('Failed to store notification in local fallback:', fallbackError);
+            }
+          }
+          
+          // Force sync for all affected users
+          try {
+            await axios.post(`${API_URL}/users/force-sync`, 
+              { userIds: updatedUserIds },
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log('Force sync initiated for updated users');
+          } catch (syncError) {
+            console.error('Error initiating sync (non-critical):', syncError);
+          }
+        } catch (postUpdateError) {
+          console.error('Error in post-update operations:', postUpdateError);
+          // Don't throw here - the points were already updated successfully
+        }
+      }
+      
+      // Update local state to reflect changes
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          userIds.includes(user._id || user.id) 
+            ? { ...user, magicPoints: Math.max(0, (user.magicPoints || 0) + pointsChange) } 
+            : user
+        )
+      );
+
+      return updatedUserIds.length > 0;
     } catch (err) {
       console.error('Error updating group criteria points:', err);
       throw err;
