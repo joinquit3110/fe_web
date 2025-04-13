@@ -199,6 +199,9 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
       
+      // Log the full data for debugging
+      console.log('[SOCKET] Full sync update data:', JSON.stringify(data));
+      
       // Dispatch a custom event to allow components to react IMMEDIATELY
       const event = new CustomEvent('serverSyncUpdate', {
         detail: { type: 'sync_update', data }
@@ -316,14 +319,13 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received house points update:', data);
       setLastMessage({ type: 'house_points_update', data, timestamp: new Date() });
       
-      // Skip this notification if it's meant to skip admins and the current user is an admin
-      if (data.skipAdmin === true || data.skipAdmin === "true") {
-        if (isAdminUser.current) {
-          console.log(`[SOCKET] Skipping house points notification for admin user: ${user?.username}`);
-          return;
-        }
+      // Only skip if both conditions are true: skipAdmin flag is set AND user is an admin
+      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
+        console.log(`[SOCKET] Skipping house points notification for admin user: ${user?.username}`);
+        return;
       }
       
+      // For regular users or admins that should see this notification, show it
       // Add notification about house points change
       if (data.house === user?.house) {
         const pointsChange = data.points;
