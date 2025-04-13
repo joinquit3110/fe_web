@@ -117,6 +117,10 @@ export const MagicPointsProvider = ({ children }) => {
   const checkServerPointsRef = useRef(null);
   const resetRevelioAttemptsRef = useRef(null);
 
+  // Add a debounce mechanism for sync operations to reduce redundant syncs
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState(0);
+  const syncDebounceTimeRef = useRef(3000); // 3 seconds minimum between syncs
+
   // Fetch current points from server
   const fetchCurrentPoints = useCallback(async () => {
     if (!isAuthenticated || !isOnline) {
@@ -370,6 +374,36 @@ export const MagicPointsProvider = ({ children }) => {
   useEffect(() => {
     syncToServerRef.current = syncToServer;
   }, [syncToServer]);
+
+  // Enhanced force sync function with checks for recent syncs
+  const forceSync = useCallback(async () => {
+    console.log('[POINTS] Force syncing points to server');
+    
+    // Check if we've synced recently
+    const now = Date.now();
+    if (now - lastSyncTimestamp < syncDebounceTimeRef.current) {
+      console.log(`[POINTS] Sync throttled - last sync was ${(now - lastSyncTimestamp)/1000}s ago, minimum delay is ${syncDebounceTimeRef.current/1000}s`);
+      return;
+    }
+    
+    // Mark sync time
+    setLastSyncTimestamp(now);
+    
+    if (!isAuthenticated) {
+      console.log('[POINTS] Cannot sync while not authenticated');
+      return;
+    }
+
+    if (pendingOperations.length === 0 && !pendingChanges) {
+      console.log('[POINTS] No changes to sync, skipping sync operation');
+      return;
+    }
+
+    // Continue with sync logic...
+    if (syncToServerRef.current) {
+      return syncToServerRef.current();
+    }
+  }, [isAuthenticated, pendingOperations, pendingChanges, lastSyncTimestamp, syncToServer]);
 
   // Force sync with debug information
   const forceSyncWithDebug = useCallback(async () => {
@@ -1132,44 +1166,6 @@ export const MagicPointsProvider = ({ children }) => {
     };
   }, [magicPoints, pendingOperations, lastSynced, isOnline, isSyncing]);
 
-  // Force a sync to the server (manual trigger)
-  const forceSync = useCallback(() => {
-    if (!isOnline) {
-      console.log('[POINTS] Cannot force sync - device is offline');
-      return;
-    }
-    
-    console.log('[POINTS] Force syncing points to server');
-    if (syncToServerRef.current) {
-      return syncToServerRef.current();
-    }
-  }, [isOnline]);
-
-  // Add debugging utility functions with silent option
-  const debugPointsState = useCallback((silent = false) => {
-    if (!silent) {
-      console.log('[POINTS DEBUG] Current state:');
-      console.log(`- Magic Points: ${magicPoints}`);
-      console.log(`- Online Status: ${isOnline ? 'Online' : 'Offline'}`);
-      console.log(`- Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
-      console.log(`- Syncing Status: ${isSyncing ? 'Syncing' : 'Idle'}`);
-      console.log(`- Pending Operations: ${pendingOperations.length}`);
-      console.log(`- Last Synced: ${lastSynced || 'Never'}`);
-    }
-    
-    // Return debug data for UI display
-    return {
-      magicPoints,
-      isOnline,
-      isAuthenticated,
-      isSyncing,
-      pendingOperations,
-      lastSynced,
-      revelioAttempts,
-      correctBlanks
-    };
-  }, [magicPoints, isOnline, isAuthenticated, isSyncing, pendingOperations, lastSynced, revelioAttempts, correctBlanks]);
-  
   // Reset points to DEFAULT_POINTS
   const resetPoints = useCallback(async () => {
     console.log(`[POINTS DEBUG] Resetting points to ${DEFAULT_POINTS}`);

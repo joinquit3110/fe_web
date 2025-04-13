@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,6 +19,18 @@ export const SocketProvider = ({ children }) => {
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
   const { user, isAuthenticated, setUser } = useAuth();
   
+  // Track recent notification keys to prevent duplicates
+  const recentNotifications = useRef(new Set());
+
+  // Cleanup old notification keys periodically
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      recentNotifications.current = new Set();
+    }, 60000); // Clear every minute
+    
+    return () => clearInterval(cleanupInterval);
+  }, []);
+
   // Initialize socket on authentication state change
   useEffect(() => {
     // Only initialize socket if user is authenticated
@@ -291,26 +303,40 @@ export const SocketProvider = ({ children }) => {
         
         // Create a uniqueId for this house points update to prevent duplicates
         // Using timestamp from server or current time as a fallback
-        const uniqueId = `house_points_${data.house}_${data.timestamp ? new Date(data.timestamp).getTime() : Date.now()}`;
+        const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
+        
+        // Check for exact duplicates using a more robust key
+        const dedupeKey = `${data.house}:${pointsChange}:${data.criteria || ''}:${data.level || ''}`;
         
         // Make sure we have valid criteria and level data
         const criteria = data.criteria || null;
         const level = data.level || null;
         const reason = data.reason || 'Admin action';
         
+        // If we've seen this exact notification recently, skip it
+        if (recentNotifications.current.has(dedupeKey)) {
+          console.log(`[SOCKET] Skipping duplicate notification with key: ${dedupeKey}`);
+          return;
+        }
+        
+        // Add to recent notifications to prevent duplicates
+        recentNotifications.current.add(dedupeKey);
+        
         // Create a full message that includes all the details
         let fullMessage = `House ${data.house} has ${isPositive ? 'gained' : 'lost'} ${Math.abs(pointsChange)} points! New total: ${data.newTotal}`;
         if (criteria) fullMessage += `. Criteria: ${criteria}`;
         if (level) fullMessage += `. Level: ${level}`;
-        if (reason) fullMessage += `. Reason: ${reason}`;
+        if (reason && reason !== 'Admin action') fullMessage += `. Reason: ${reason}`;
         
         setNotifications(prev => {
           // Check if we already have very similar notifications in the last few seconds
           // This prevents duplicates coming from multiple house members
           const similarExists = prev.some(n => 
-            n.message && n.message.includes(`House ${data.house}`) && 
-            n.message.includes(`${Math.abs(pointsChange)} points`) &&
-            (Date.now() - new Date(n.timestamp).getTime()) < 10000 // Within 10 seconds
+            n.source === 'house_points_update' &&
+            n.pointsChange === pointsChange &&
+            n.criteria === criteria &&
+            n.level === level &&
+            (Date.now() - new Date(n.timestamp).getTime()) < 30000 // Within 30 seconds
           );
           
           if (similarExists) {
@@ -347,7 +373,8 @@ export const SocketProvider = ({ children }) => {
             reason,
             criteria,
             level,
-            timestamp: data.timestamp || new Date().toISOString()
+            timestamp: data.timestamp || new Date().toISOString(),
+            uniqueKey: dedupeKey // Add the unique key to help other components deduplicate
           }
         });
         window.dispatchEvent(housePointsEvent);

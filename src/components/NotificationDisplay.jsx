@@ -442,6 +442,9 @@ const NotificationDisplay = () => {
     
     processingQueue.current = true;
     
+    // Log how many notifications are being processed before deduplication
+    console.log(`[NOTIFICATION] Processing ${notificationQueue.current.length} notifications`);
+
     // Enhanced deduplication for point changes and other notifications
     const deduplicatedQueue = [];
     const messageMap = new Map();
@@ -449,6 +452,8 @@ const NotificationDisplay = () => {
     const pointChangeMap = new Map();
     // Special map for criteria/level notices to avoid duplicates
     const criteriaLevelMap = new Map();
+    // Track processed notifications by their composite keys
+    const processedKeys = new Set();
     
     // First, prioritize notifications with more complete information
     // Sort to process notifications with the most complete information first
@@ -471,6 +476,21 @@ const NotificationDisplay = () => {
     notificationQueue.current = [];
     
     sortedQueue.forEach(notification => {
+      // Generate a unique composite key for each notification for better deduplication
+      const pointChangeKey = notification.pointsChange ? `:${notification.pointsChange}` : '';
+      const criteriaKey = notification.criteria ? `:${notification.criteria}` : '';
+      const levelKey = notification.level ? `:${notification.level}` : '';
+      const compositeKey = `${notification.type}${pointChangeKey}${criteriaKey}${levelKey}`;
+      
+      // Skip if we've already processed a notification with this composite key
+      if (processedKeys.has(compositeKey)) {
+        console.log(`[NOTIFICATION] Skipping duplicate with composite key: ${compositeKey}`);
+        return;
+      }
+      
+      // Mark this composite key as processed
+      processedKeys.add(compositeKey);
+      
       // Special handling for point change notifications
       if (notification.pointsChange) {
         // Create a key based on the point change value and direction
@@ -478,8 +498,6 @@ const NotificationDisplay = () => {
         
         // Check for duplicates based on more strict criteria
         // Include criteria and level in the key if they exist
-        const criteriaKey = notification.criteria ? `:${notification.criteria}` : '';
-        const levelKey = notification.level ? `:${notification.level}` : '';
         const fullKey = `${pointKey}${criteriaKey}${levelKey}`;
 
         if (pointChangeMap.has(fullKey)) {
@@ -492,7 +510,7 @@ const NotificationDisplay = () => {
               new Date(existingNotif.timestamp).getTime()) : 
             0;
           
-          // Only consolidate if notifications are within 60 seconds of each other (increased from 30)
+          // Only consolidate if notifications are within 60 seconds of each other
           if (Math.abs(currentTime - existingTime) < 60000) {
             // Always prefer "POINTS AWARDED!" or "POINTS DEDUCTED!" titles over generic ones
             if (notification.title && notification.title.includes('POINTS')) {
@@ -528,7 +546,7 @@ const NotificationDisplay = () => {
             }
             
             // Log the updated notification
-            console.log('Updated existing notification with more info:', existingNotif);
+            console.log('[NOTIFICATION] Updated existing notification with more info:', existingNotif);
           } else {
             // If they're far apart in time, treat as separate notifications
             const uniqueKey = `${fullKey}-${Date.now()}`;
@@ -581,7 +599,7 @@ const NotificationDisplay = () => {
           if (notification.criteria && notification.level) {
             const criteriaLevelKey = `${notification.criteria}:${notification.level}`;
             if (criteriaLevelMap.has(criteriaLevelKey)) {
-              console.log('Skipping duplicate criteria/level notification:', notification);
+              console.log('[NOTIFICATION] Skipping duplicate criteria/level notification:', notification);
               return; // Skip this notification
             }
           }
@@ -599,10 +617,13 @@ const NotificationDisplay = () => {
     // Create the final queue from deduplicatedQueue but use updated point change notifications
     const finalQueue = deduplicatedQueue.filter(n => !n.pointsChange)
       .concat(pointChangeNotifications);
-      
+    
+    // Log the result of deduplication
+    console.log(`[NOTIFICATION] After deduplication: ${finalQueue.length} notifications remain`);
+    
     // Replace queue with deduplicated version
     notificationQueue.current = finalQueue;
-    
+
     // Continue with normal processing
     const notification = notificationQueue.current.shift();
     
