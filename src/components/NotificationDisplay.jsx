@@ -509,8 +509,34 @@ const NotificationDisplay = () => {
     
     processingQueue.current = true;
     
-    // Log how many notifications are being processed before deduplication
-    console.log(`[NOTIFICATION] Processing ${notificationQueue.current.length} notifications`);
+    // First, filter out unwanted notifications - point changes and point totals
+    notificationQueue.current = notificationQueue.current.filter(notification => {
+      // Filter out notifications about "Your magic points have been updated to X"
+      if (notification.message && notification.message.includes('magic points have been updated to')) {
+        console.log('[NOTIFICATION] Filtering out point total notification:', notification.message);
+        return false;
+      }
+      
+      // Filter out notifications about "Your magic points have been increased/decreased by X"
+      if (notification.message && 
+         (notification.message.includes('magic points have been increased by') || 
+          notification.message.includes('magic points have been decreased by'))) {
+        console.log('[NOTIFICATION] Filtering out point change notification:', notification.message);
+        return false;
+      }
+      
+      // Keep other types of notifications
+      return true;
+    });
+
+    // Log how many notifications are being processed after filtering
+    console.log(`[NOTIFICATION] Processing ${notificationQueue.current.length} notifications after filtering point notifications`);
+    
+    // If no notifications left after filtering, exit the processing
+    if (notificationQueue.current.length === 0) {
+      processingQueue.current = false;
+      return;
+    }
 
     // ENHANCED DEDUPLICATION: Sort and deduplicate notifications
     // First, sort by timestamp (newest first)
@@ -575,20 +601,6 @@ const NotificationDisplay = () => {
     
     // Replace the queue with deduplicated notifications
     notificationQueue.current = uniqueNotifications;
-    
-    // Skip total point update notifications if we have criteria-specific ones
-    const hasCriteriaNotifications = notificationQueue.current.some(
-      n => n.criteria && n.level && n.pointsChange
-    );
-    
-    if (hasCriteriaNotifications) {
-      // Filter out generic points total notifications that don't have criteria
-      notificationQueue.current = notificationQueue.current.filter(
-        n => !(n.pointsChange && !n.criteria && !n.level && 
-             (n.message?.includes('updated to') || 
-              n.message?.includes('points have been')))
-      );
-    }
     
     console.log(`[NOTIFICATION] After deduplication: ${notificationQueue.current.length} notifications`);
 
@@ -1045,17 +1057,34 @@ const NotificationDisplay = () => {
         }
         
         .points-text-animation {
-          /* Removed animation for better performance */
+          animation: points-pulse 1.5s ease-in-out infinite;
           position: relative;
           z-index: 3;
         }
         
+        @keyframes points-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); text-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        }
+        
         .point-glow-positive {
           box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
+          animation: glow-positive 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow-positive {
+          0%, 100% { box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); }
+          50% { box-shadow: 0 0 25px rgba(46, 204, 113, 1); }
         }
         
         .point-glow-negative {
           box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+          animation: glow-negative 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow-negative {
+          0%, 100% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.7); }
+          50% { box-shadow: 0 0 25px rgba(231, 76, 60, 1); }
         }
         
         .message-parchment {
@@ -1079,19 +1108,118 @@ const NotificationDisplay = () => {
         .image-container {
           position: relative;
           transform-origin: center center;
+          animation: container-float 3s ease-in-out infinite;
+        }
+        
+        @keyframes container-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
         }
         
         .increase-animation {
           filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
+          animation: increase-image-animation 3s ease-in-out infinite;
+          transform-origin: center center;
+        }
+        
+        @keyframes increase-image-animation {
+          0% { 
+            filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
+            transform: rotate(-2deg) scale(1);
+          }
+          25% { 
+            filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.9)); 
+            transform: rotate(0deg) scale(1.05);
+          }
+          50% { 
+            filter: drop-shadow(0 0 25px rgba(46, 204, 113, 1));
+            transform: rotate(2deg) scale(1.1);
+          }
+          75% { 
+            filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.9)); 
+            transform: rotate(0deg) scale(1.05);
+          }
+          100% { 
+            filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
+            transform: rotate(-2deg) scale(1);
+          }
         }
         
         .decrease-animation {
           filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
+          animation: decrease-image-animation 3s ease-in-out infinite;
+          transform-origin: center center;
+        }
+        
+        @keyframes decrease-image-animation {
+          0% { 
+            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
+            transform: rotate(2deg) scale(1);
+          }
+          25% { 
+            filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.9)); 
+            transform: rotate(0deg) scale(1.05);
+          }
+          50% { 
+            filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1));
+            transform: rotate(-2deg) scale(1.1);
+          }
+          75% { 
+            filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.9)); 
+            transform: rotate(0deg) scale(1.05);
+          }
+          100% { 
+            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
+            transform: rotate(2deg) scale(1);
+          }
         }
         
         @keyframes appear-fade {
           0% { opacity: 0; }
           100% { opacity: 1; }
+        }
+        
+        /* Add sparkle effects around the images */
+        .image-container::before, 
+        .image-container::after {
+          content: '';
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          opacity: 0;
+          z-index: 2;
+        }
+        
+        .increase-animation + div + div::before,
+        .increase-animation + div + div::after {
+          background: rgba(46, 204, 113, 0.8);
+          box-shadow: 0 0 10px rgba(46, 204, 113, 1), 0 0 20px rgba(46, 204, 113, 0.8);
+          animation: sparkle 4s infinite;
+        }
+        
+        .decrease-animation + div + div::before,
+        .decrease-animation + div + div::after {
+          background: rgba(231, 76, 60, 0.8);
+          box-shadow: 0 0 10px rgba(231, 76, 60, 1), 0 0 20px rgba(231, 76, 60, 0.8);
+          animation: sparkle 4s infinite;
+        }
+        
+        .image-container::before {
+          top: 20%;
+          left: 15%;
+          animation-delay: 0.5s;
+        }
+        
+        .image-container::after {
+          bottom: 20%;
+          right: 15%;
+          animation-delay: 1.5s;
+        }
+        
+        @keyframes sparkle {
+          0%, 100% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </Stack>
