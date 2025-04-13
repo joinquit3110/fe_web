@@ -194,15 +194,15 @@ const Login = () => {
     const houseName = house.toLowerCase();
     switch (houseName) {
       case 'gryffindor':
-        return '/fe_web/asset/Gryffindor.png';
+        return '../asset/Gryffindor.png';
       case 'slytherin':
-        return '/fe_web/asset/Slytherin.png';
+        return '../asset/Slytherin.png';
       case 'ravenclaw':
-        return '/fe_web/asset/Ravenclaw.png';
+        return '../asset/Ravenclaw.png';
       case 'hufflepuff':
-        return '/fe_web/asset/Hufflepuff.png';
+        return '../asset/Hufflepuff.png';
       default:
-        return '/fe_web/asset/Hogwarts logo.png';
+        return '../asset/Hogwarts logo.png';
     }
   };
 
@@ -269,7 +269,7 @@ const Login = () => {
         className="hogwarts-logo-container"
       >
         <Image
-          src="/fe_web/asset/Hogwarts logo.png"
+          src="../asset/Hogwarts logo.png"
           alt="Hogwarts Logo"
           className="hogwarts-logo-animation"
         />

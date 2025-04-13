@@ -35,22 +35,44 @@ const NotificationDisplay = () => {
         // Process message to extract point change amount if it's a points notification
         let pointsChange = null;
         let reason = null;
+        let criteria = null;
+        let level = null;
         
         // Check if it's a point change notification
-        if (notification.message && (notification.message.includes('increased by') || notification.message.includes('decreased by'))) {
-          const match = notification.message.match(/(increased|decreased) by (\d+)/);
-          if (match) {
-            const changeType = match[1];
-            const amount = parseInt(match[2], 10);
-            pointsChange = changeType === 'increased' ? amount : -amount;
+        if (notification.message) {
+          // Remove "by admin" from message if present
+          let message = notification.message.replace(' by admin', '');
+          
+          // Extract points change information
+          if (message.includes('increased by') || message.includes('decreased by')) {
+            const match = message.match(/(increased|decreased) by (\d+)/);
+            if (match) {
+              const changeType = match[1];
+              const amount = parseInt(match[2], 10);
+              pointsChange = changeType === 'increased' ? amount : -amount;
+              // Update message without "by admin"
+              notification.message = message;
+            }
           }
-        }
-        
-        // Check for reasons in house point notifications
-        if (notification.message && notification.message.includes('House') && (notification.message.includes('gained') || notification.message.includes('lost'))) {
-          const reasonMatch = notification.message.match(/Reason: (.+)/i);
-          if (reasonMatch) {
-            reason = reasonMatch[1];
+          
+          // Check for reasons in house point notifications
+          if (message.includes('House') && (message.includes('gained') || message.includes('lost'))) {
+            const reasonMatch = message.match(/Reason: (.+)/i);
+            if (reasonMatch) {
+              reason = reasonMatch[1];
+            }
+            
+            // Try to extract criteria and level for house points
+            const criteriaMatch = message.match(/Criteria: (.+?),/i);
+            const levelMatch = message.match(/Level: (.+?)($|\s)/i);
+            
+            if (criteriaMatch) {
+              criteria = criteriaMatch[1];
+            }
+            
+            if (levelMatch) {
+              level = levelMatch[1];
+            }
           }
         }
         
@@ -63,7 +85,9 @@ const NotificationDisplay = () => {
           source: 'socket',
           duration: getDurationByType(notification.type),
           pointsChange,
-          reason
+          reason,
+          criteria,
+          level
         };
         
         // Add to queue if not already present
@@ -111,14 +135,33 @@ const NotificationDisplay = () => {
               // Process message to extract point change amount if it's a points notification
               let pointsChange = null;
               let reason = notification.reason || null;
+              let criteria = null;
+              let level = null;
               
               // Check if it's a point change notification
-              if (notification.message && (notification.message.includes('increased by') || notification.message.includes('decreased by'))) {
-                const match = notification.message.match(/(increased|decreased) by (\d+)/);
-                if (match) {
-                  const changeType = match[1];
-                  const amount = parseInt(match[2], 10);
-                  pointsChange = changeType === 'increased' ? amount : -amount;
+              if (notification.message) {
+                // Remove "by admin" from message if present
+                let message = notification.message.replace(' by admin', '');
+                
+                // Extract points change information
+                if (message.includes('increased by') || message.includes('decreased by')) {
+                  const match = message.match(/(increased|decreased) by (\d+)/);
+                  if (match) {
+                    const changeType = match[1];
+                    const amount = parseInt(match[2], 10);
+                    pointsChange = changeType === 'increased' ? amount : -amount;
+                    // Update message without "by admin"
+                    notification.message = message;
+                  }
+                }
+                
+                // Try to extract criteria and level
+                if (notification.criteria) {
+                  criteria = notification.criteria;
+                }
+                
+                if (notification.level) {
+                  level = notification.level;
                 }
               }
               
@@ -131,7 +174,9 @@ const NotificationDisplay = () => {
                 source: 'server',
                 duration: getDurationByType(notification.type || 'info'),
                 pointsChange,
-                reason
+                reason,
+                criteria,
+                level
               };
               notificationQueue.current.push(notificationItem);
             }
@@ -254,6 +299,7 @@ const NotificationDisplay = () => {
               right="8px" 
               top="8px" 
               onClick={() => handleClose(notification.id)} 
+              zIndex="3"
             />
             
             {/* Point change animations and images */}
@@ -267,30 +313,40 @@ const NotificationDisplay = () => {
                 bottom="0"
                 zIndex="0"
                 display="flex"
+                flexDirection="column"
                 justifyContent="center"
                 alignItems="center"
                 pointerEvents="none"
               >
-                <Image 
-                  src={notification.pointsChange > 0 ? '/fe_web/asset/IncreasePoint.png' : '/fe_web/asset/DecreasePoint.png'}
-                  alt={notification.pointsChange > 0 ? 'Points increased' : 'Points decreased'}
-                  className={notification.pointsChange > 0 ? 'increase-animation' : 'decrease-animation'}
-                  opacity="0.8"
-                  width="150px"
-                  height="auto"
-                  position="absolute"
-                />
-                <Text
-                  fontSize="28px"
-                  fontWeight="bold"
-                  color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
-                  textShadow="0 0 5px rgba(0,0,0,0.7)"
+                <Box
                   position="relative"
-                  bottom="-15px"
-                  className="points-text-animation"
+                  className={notification.pointsChange > 0 ? 'increase-point-container' : 'decrease-point-container'}
+                  width="180px"
+                  height="180px"
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
                 >
-                  {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
-                </Text>
+                  <Image 
+                    src={notification.pointsChange > 0 ? '../asset/IncreasePoint.png' : '../asset/DecreasePoint.png'}
+                    alt={notification.pointsChange > 0 ? 'Points increased' : 'Points decreased'}
+                    className={notification.pointsChange > 0 ? 'increase-animation' : 'decrease-animation'}
+                    width="100%"
+                    height="100%"
+                    objectFit="contain"
+                  />
+                  <Text
+                    fontSize="32px"
+                    fontWeight="bold"
+                    color={notification.pointsChange > 0 ? "#2ecc71" : "#e74c3c"}
+                    textShadow="0 0 10px rgba(0,0,0,0.7)"
+                    position="absolute"
+                    bottom="30px"
+                    className="points-text-animation"
+                  >
+                    {notification.pointsChange > 0 ? `+${notification.pointsChange}` : notification.pointsChange}
+                  </Text>
+                </Box>
               </Box>
             )}
             
@@ -343,7 +399,28 @@ const NotificationDisplay = () => {
                   fontStyle="italic"
                   color="rgba(255,255,255,0.85)"
                 >
-                  Reason: {notification.reason}
+                  Lý do: {notification.reason}
+                </Text>
+              )}
+              
+              {/* Show criteria and level for house points if available */}
+              {notification.criteria && (
+                <Text 
+                  fontSize="sm" 
+                  mt={1}
+                  color="rgba(255,255,255,0.85)"
+                >
+                  Tiêu chí: {notification.criteria}
+                </Text>
+              )}
+              
+              {notification.level && (
+                <Text 
+                  fontSize="sm" 
+                  mt={0.5}
+                  color="rgba(255,255,255,0.85)"
+                >
+                  Mức độ: {notification.level}
                 </Text>
               )}
             </Flex>
@@ -391,42 +468,51 @@ const NotificationDisplay = () => {
           100% { left: 0; right: 0; }
         }
         
+        .increase-point-container {
+          position: relative;
+          animation: appear-fade 3s ease-out forwards;
+          filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.8));
+        }
+        
+        .decrease-point-container {
+          position: relative;
+          animation: appear-fade 3s ease-out forwards;
+          filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.8));
+        }
+        
         .increase-animation {
-          animation: appear-grow 0.5s ease-out, pulse-green 2s infinite;
-          filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.7));
+          animation: rotate-pulse 2s ease-in-out infinite;
+          filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
         }
         
         .decrease-animation {
-          animation: appear-grow 0.5s ease-out, pulse-red 2s infinite;
-          filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.7));
+          animation: rotate-pulse 2s ease-in-out infinite;
+          filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
         }
         
         .points-text-animation {
-          animation: float-up 3s ease-out;
-          transform-origin: center;
+          animation: pulse-text 2s infinite;
+          text-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+          font-family: 'Cinzel', serif;
         }
         
-        @keyframes appear-grow {
-          0% { transform: scale(0); opacity: 0; }
-          70% { transform: scale(1.2); opacity: 0.9; }
-          100% { transform: scale(1); opacity: 0.8; }
+        @keyframes appear-fade {
+          0% { opacity: 0; transform: scale(0.5); }
+          20% { opacity: 1; transform: scale(1.1); }
+          40% { opacity: 1; transform: scale(1); }
+          80% { opacity: 1; }
+          100% { opacity: 0; }
         }
         
-        @keyframes pulse-green {
-          0%, 100% { filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.7)); }
-          50% { filter: drop-shadow(0 0 15px rgba(46, 204, 113, 0.9)); }
+        @keyframes rotate-pulse {
+          0% { transform: scale(1) rotate(0deg); }
+          50% { transform: scale(1.05) rotate(3deg); }
+          100% { transform: scale(1) rotate(0deg); }
         }
         
-        @keyframes pulse-red {
-          0%, 100% { filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.7)); }
-          50% { filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.9)); }
-        }
-        
-        @keyframes float-up {
-          0% { transform: translateY(10px); opacity: 0; }
-          10% { opacity: 1; }
-          70% { opacity: 1; }
-          100% { transform: translateY(-10px); opacity: 0; }
+        @keyframes pulse-text {
+          0%, 100% { opacity: 0.9; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.1); }
         }
       `}</style>
     </Stack>
