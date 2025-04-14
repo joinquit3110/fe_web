@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
-import { AuthProvider } from './contexts/AuthContext';
-import { AdminProvider } from './contexts/AdminContext';
-import { SocketProvider } from './contexts/SocketContext';
+import { AuthProvider } from './context/AuthContext';
+import { AdminProvider } from './context/AdminContext';
+import { SocketProvider } from './context/SocketContext';
 import { PRELOAD_IMAGES } from './assets';
 import imageLoader from './utils/imageLoader';
 
