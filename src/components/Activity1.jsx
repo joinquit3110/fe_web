@@ -5,65 +5,7 @@ import { useMagicPoints } from '../context/MagicPointsContext';
 import { useAdmin } from '../contexts/AdminContext';
 import AdminUserManagement from './AdminUserManagement';
 
-const MagicalBackground = () => {
-  return (
-    <div className="magical-background" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'var(--background-color)',
-      backgroundImage: 'url("/images/hogwarts-bg.jpg")',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundAttachment: 'fixed',
-      zIndex: -1,
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(10, 12, 23, 0.85)',
-      }
-    }} />
-  );
-};
-
-const FloatingStars = () => {
-  return (
-    <div className="floating-stars" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      pointerEvents: 'none',
-      zIndex: 0
-    }}>
-      {[...Array(50)].map((_, i) => (
-        <div
-          key={i}
-          className="star"
-          style={{
-            position: 'absolute',
-            width: Math.random() * 3 + 1 + 'px',
-            height: Math.random() * 3 + 1 + 'px',
-            background: 'var(--secondary-color)',
-            borderRadius: '50%',
-            top: Math.random() * 100 + '%',
-            left: Math.random() * 100 + '%',
-            animation: `twinkle ${Math.random() * 2 + 2}s ease-in-out infinite`,
-            opacity: Math.random() * 0.5 + 0.3
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
+// Create a wrapper component to access context
 const ActivityContent = () => {
   const { blankActivityState, updateBlankActivityState } = useActivityState();
   const [revelioResetDone, setRevelioResetDone] = useState(false);
@@ -75,85 +17,65 @@ const ActivityContent = () => {
     resetRevelioAttempts
   } = useMagicPoints();
   
+  // Get admin status
   const { isAdmin } = useAdmin();
 
+  // When component mounts, reset Revelio attempts only once
   useEffect(() => {
     if (!revelioResetDone) {
+      console.log('[ACTIVITY1] Resetting Revelio attempts on mount');
       resetRevelioAttempts();
       setRevelioResetDone(true);
     }
   }, [resetRevelioAttempts, revelioResetDone]);
 
+  // Handler for when answers are submitted in Charm the Blanks
   const handleCharmBlanksSubmission = (blanksResults) => {
+    console.log('[ACTIVITY1] Charm the Blanks submission:', blanksResults);
+    
+    // Use the new handleMultipleRevelioAttempts function
     handleMultipleRevelioAttempts(blanksResults);
   };
 
+  // Handler for inequality solution inputs
   const handleInequalitySolution = (systemHasSolution, selectedNoSolution, isSolutionCorrect) => {
+    console.log(`[ACTIVITY1] Inequality solution check: 
+      Has solution: ${systemHasSolution}, 
+      Selected no solution: ${selectedNoSolution}, 
+      Is correct: ${isSolutionCorrect}`);
+      
+    // Use the new handleInequalitySolutionCheck function
     handleInequalitySolutionCheck(systemHasSolution, selectedNoSolution, isSolutionCorrect);
   };
 
+  // Handler for inequality format check
   const handleFormatCheck = (isValid, index) => {
+    console.log(`[ACTIVITY1] Format check for inequality ${index}: ${isValid ? 'valid' : 'invalid'}`);
     handleInequalityFormatCheck(isValid, index);
   };
 
+  // If user is admin, show admin UI
+  if (isAdmin) {
+    return <AdminUserManagement />;
+  }
+
+  // For regular users, show the normal activity
   return (
-    <div className="magical-activity-wrapper">
-      <MagicalBackground />
-      <FloatingStars />
-      
-      <div className="activity-content">
-        {isAdmin ? (
-          <AdminUserManagement />
-        ) : (
     <LinearInequalitiesActivity 
       blankState={blankActivityState}
       updateBlankState={updateBlankActivityState}
       onSubmission={handleCharmBlanksSubmission}
       onInequalitySolution={handleInequalitySolution}
       onFormatCheck={handleFormatCheck}
+      disableHouseSelection={true} // Disable house selection for regular users
     />
-        )}
-      </div>
-    </div>
   );
 };
 
-const Activity1 = () => {
+export default function Activity1() {
   return (
     <ActivityStateProvider>
-      <div className="magical-activity">
-        <header className="magical-header">
-          <h1 className="magical-heading">
-            Transfiguration Class: Linear Inequalities
-          </h1>
-          <div className="magical-decoration-wrapper">
-            <img 
-              src="/images/wand-sparkle.gif" 
-              alt="Magical sparkle" 
-              className="magical-sparkle"
-              style={{
-                position: 'absolute',
-                width: '50px',
-                height: '50px',
-                animation: 'float 3s ease-in-out infinite'
-              }}
-            />
-          </div>
-        </header>
-        
       <ActivityContent />
-        
-        <footer className="magical-footer">
-          <div className="magical-border">
-            <p className="magical-text">
-              "Happiness can be found even in the darkest of times, 
-              if one only remembers to turn on the light." - Albus Dumbledore
-            </p>
-          </div>
-        </footer>
-      </div>
     </ActivityStateProvider>
   );
-};
-
-export default Activity1;
+}
