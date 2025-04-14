@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Box, Container } from '@chakra-ui/react';
 
-export const BackgroundWrapper = ({ children }) => {
+const BackgroundWrapper = memo(({ children }) => {
   return (
     <Box
       className="hogwarts-app"
@@ -14,31 +14,27 @@ export const BackgroundWrapper = ({ children }) => {
       backgroundSize="cover"
       backgroundPosition="center"
       backgroundAttachment="fixed"
+      sx={{
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bg: 'rgba(14, 26, 64, 0.92)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 0,
+          transition: 'all 0.3s ease',
+        }
+      }}
     >
-      {/* Improved overlay */}
-      <Box
-        position="absolute"
-        top="0"
-        left="0"
-        right="0"
-        bottom="0"
-        bg="rgba(14, 26, 64, 0.92)"
-        backdropFilter="blur(3px)"
-        zIndex={0}
-      />
-      
-      {/* Optimized magical elements */}
-      <Box className="floating-element wand" display={["none", "none", "block"]} />
-      <Box className="floating-element spellbook" display={["none", "none", "block"]} />
-      <Box className="floating-element potion" display={["none", "none", "block"]} />
-      
-      {/* Improved content container */}
       <Container
         maxW="container.xl"
         position="relative"
         zIndex={1}
-        px={[4, 6, 8]}
-        py={[6, 8, 10]}
+        px={{ base: 4, md: 6, lg: 8 }}
+        py={{ base: 6, md: 8, lg: 10 }}
         height="100%"
         display="flex"
         flexDirection="column"
@@ -47,4 +43,8 @@ export const BackgroundWrapper = ({ children }) => {
       </Container>
     </Box>
   );
-};
+});
+
+BackgroundWrapper.displayName = 'BackgroundWrapper';
+
+export default BackgroundWrapper;

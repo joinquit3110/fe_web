@@ -3,38 +3,18 @@
 
 :root {
   /* Enhanced Harry Potter Theme Colors */
-  --primary-color: #3a2a1a; /* Dark brown */
-  --secondary-color: #D3A625; /* Gryffindor Gold - richer */
-  --accent-color: #0E1A40; /* Ravenclaw Blue - more vibrant */
-  --background-color: #e0dcd1; /* Lighter parchment */
-  --text-color: #1a1a1a; /* Darker text for contrast */
-  --border-color: #5d4037; /* Darker brown border */
-  --highlight-color: #c0a062; /* Muted gold highlight */
-  --font-primary: 'MedievalSharp', cursive;
-  --font-secondary: 'Cinzel Decorative', cursive;
-  --transition-speed: 0.5s;
-  --light-accent: #ECB939;     /* Hufflepuff Yellow - brighter */
-  --text-primary: #F8F8F8;     /* Light text */
-  --text-secondary: #F0C75E;   /* Enhanced Gold text */
-  --panel-bg: rgba(14, 26, 64, 0.85);  /* Darker Ravenclaw Blue for better contrast */
-  --panel-border: rgba(211, 166, 37, 0.4);  /* More visible border */
-  --error-color: #CD2A2A;      /* Enhanced error color */
-  --success-color: #1E7D35;    /* Enhanced success color */
-  --warning-color: #F2A007;    /* Enhanced warning color */
-  --info-color: #0A8DDA;       /* Enhanced info color */
-
-  /* Enhanced sky and moon variables */
-  --sky-bg-color: #0A0C17;     /* Darker night sky */
-  --moon-color: #FFFAE1;       /* Warmer moon */
-  --moon-color-2: #F2F5EB;     /* Moon highlight */
-  --moonlight-1: rgba(240, 199, 94, 0.08);  /* Enhanced golden glow */
-  --moonlight-2: rgba(240, 199, 94, 0.12);
-  --moonlight-3: rgba(240, 199, 94, 0.18);
-  --moonlight-4: rgba(240, 199, 94, 0.25);
-  --star-color: #fff;
-  --star-glow: rgba(240, 199, 94, 0.8);
-
-  /* Redesigned school colors */
+  --primary-color: #740001; /* Gryffindor Red */
+  --secondary-color: #D3A625; /* Gryffindor Gold */
+  --accent-color: #0E1A40; /* Ravenclaw Blue */
+  --dark-accent: #1A472A; /* Slytherin Green */
+  --light-accent: #ECB939; /* Hufflepuff Yellow */
+  --background-color: #2A2D34;
+  --text-primary: #F8F8F8;
+  --text-secondary: #F0C75E;
+  --panel-bg: rgba(14, 26, 64, 0.95);
+  --panel-border: rgba(211, 166, 37, 0.4);
+  --magical-glow: 0 0 15px rgba(240, 199, 94, 0.5);
+  --spell-glow: 0 0 20px rgba(240, 199, 94, 0.7);
   --hogwarts-primary: #740001;
   --hogwarts-secondary: #F0C75E;
   --hogwarts-text: #ECDFBD;
@@ -43,10 +23,26 @@
   --shadow-color: rgba(0, 0, 0, 0.6);
   --glow-color: rgba(240, 199, 94, 0.7);
   --input-bg: rgba(20, 23, 46, 0.85);
+  --transition-speed: 0.5s;
+  --border-color: #5d4037; 
+  --highlight-color: #c0a062; 
+  --font-primary: 'MedievalSharp', cursive;
+  --font-secondary: 'Cinzel Decorative', cursive;
+  --sky-bg-color: #0A0C17;     
+  --moon-color: #FFFAE1;       
+  --moon-color-2: #F2F5EB;     
+  --moonlight-1: rgba(240, 199, 94, 0.08);  
+  --moonlight-2: rgba(240, 199, 94, 0.12);
+  --moonlight-3: rgba(240, 199, 94, 0.18);
+  --moonlight-4: rgba(240, 199, 94, 0.25);
+  --star-color: #fff;
+  --star-glow: rgba(240, 199, 94, 0.8);
+  --error-color: #CD2A2A;      
+  --success-color: #1E7D35;    
+  --warning-color: #F2A007;    
+  --info-color: #0A8DDA;       
+  --text-color: #1a1a1a;
 
-  /* Magical element effects */
-  --magical-glow: 0 0 8px rgba(240, 199, 94, 0.5), 0 0 15px rgba(240, 199, 94, 0.3);
-  --spell-glow: 0 0 10px rgba(240, 199, 94, 0.7), 0 0 20px rgba(240, 199, 94, 0.4);
 }
 
 /* Base styles with better Typography */
