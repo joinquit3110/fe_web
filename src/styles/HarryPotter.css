@@ -271,11 +271,37 @@ button, input, select, textarea {
 /* Content Layout - Mobile-first approach */
 .hogwarts-content {
   display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto auto auto;
-  gap: 5px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: clamp(10px, 2vw, 24px);
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   z-index: 2;
+  padding: clamp(10px, 2vw, 20px);
+}
+
+/* Improved responsive grid areas */
+@media (min-width: 1024px) {
+  .hogwarts-content {
+    grid-template-columns: 300px 1fr 300px;
+    grid-template-areas: "control coordinate inequalities";
+  }
+}
+
+/* Better panel layout */
+.wizard-panel {
+  background: rgba(14, 26, 64, 0.95);
+  backdrop-filter: blur(10px);
+  border: 2px solid var(--hogwarts-secondary);
+  border-radius: 12px;
+  padding: clamp(15px, 2vw, 25px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: fit-content;
+}
+
+.wizard-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(211, 166, 37, 0.3);
 }
 
 /* Wizard panel enhancement */

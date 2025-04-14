@@ -1,50 +1,50 @@
 
 import React from 'react';
-import { Box } from '@chakra-ui/react';
+import { Box, Container } from '@chakra-ui/react';
 
 export const BackgroundWrapper = ({ children }) => {
   return (
     <Box
       className="hogwarts-app"
-      width="100%"
       minHeight="100vh"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
+      width="100%"
       position="relative"
-      py={8}
+      overflow="hidden"
       backgroundImage="url('/assets/images/hogwarts-bg.jpg')"
       backgroundSize="cover"
       backgroundPosition="center"
-      backgroundRepeat="no-repeat"
+      backgroundAttachment="fixed"
     >
-      {/* Dark overlay with magical particles */}
+      {/* Improved overlay */}
       <Box
         position="absolute"
         top="0"
         left="0"
-        width="100%"
-        height="100%"
-        bg="rgba(14, 26, 64, 0.85)"
+        right="0"
+        bottom="0"
+        bg="rgba(14, 26, 64, 0.92)"
+        backdropFilter="blur(3px)"
         zIndex={0}
       />
       
-      {/* Floating magical elements */}
-      <Box className="floating-element wand" />
-      <Box className="floating-element spellbook" />
-      <Box className="floating-element potion" />
+      {/* Optimized magical elements */}
+      <Box className="floating-element wand" display={["none", "none", "block"]} />
+      <Box className="floating-element spellbook" display={["none", "none", "block"]} />
+      <Box className="floating-element potion" display={["none", "none", "block"]} />
       
-      {/* Content */}
-      <Box
+      {/* Improved content container */}
+      <Container
+        maxW="container.xl"
         position="relative"
         zIndex={1}
-        width="100%"
-        maxWidth="1400px"
-        margin="0 auto"
-        padding={["10px", "20px"]}
+        px={[4, 6, 8]}
+        py={[6, 8, 10]}
+        height="100%"
+        display="flex"
+        flexDirection="column"
       >
         {children}
-      </Box>
+      </Container>
     </Box>
   );
 };
