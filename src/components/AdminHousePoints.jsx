@@ -147,6 +147,68 @@ const AdminHousePoints = () => {
     }
   };
   
+  // Generic function to add points with custom amount
+  const handleAddCustomPoints = async (amount) => {
+    const pointReason = reason.trim() ? reason : "Points adjustment";
+    
+    try {
+      const success = await updateHousePoints(selectedHouse, amount, pointReason);
+      
+      if (success) {
+        toast({
+          title: 'Points Added',
+          description: `${amount} points awarded to ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
+          status: 'success',
+          duration: 2000,
+        });
+        setReason('');
+        
+        // Force sync affected users to ensure they get the update
+        setTimeout(() => {
+          forceSyncAllHouseUsers(selectedHouse);
+        }, 500);
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err.message || `Failed to add ${amount} points`,
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+  
+  // Generic function to deduct points with custom amount
+  const handleDeductCustomPoints = async (amount) => {
+    const pointReason = reason.trim() ? reason : "Points deduction";
+    
+    try {
+      const success = await updateHousePoints(selectedHouse, -amount, pointReason);
+      
+      if (success) {
+        toast({
+          title: 'Points Deducted',
+          description: `${amount} points deducted from ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
+          status: 'success',
+          duration: 2000,
+        });
+        setReason('');
+        
+        // Force sync affected users to ensure they get the update
+        setTimeout(() => {
+          forceSyncAllHouseUsers(selectedHouse);
+        }, 500);
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err.message || `Failed to deduct ${amount} points`,
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+  
   // Force sync for all users in a house
   const forceSyncAllHouseUsers = async (house) => {
     try {
@@ -310,6 +372,66 @@ const AdminHousePoints = () => {
                       className="spellcast-button"
                     >
                       Deduct Points
+                    </Button>
+                    <Button 
+                      colorScheme="green" 
+                      onClick={() => handleAddCustomPoints(20)}
+                      isLoading={loading}
+                      leftIcon={<span>+20</span>}
+                      isDisabled={false} 
+                      className="spellcast-button"
+                    >
+                      Award +20 Points
+                    </Button>
+                    <Button 
+                      colorScheme="red" 
+                      onClick={() => handleDeductCustomPoints(20)}
+                      isLoading={loading}
+                      leftIcon={<span>-20</span>}
+                      isDisabled={false}
+                      className="spellcast-button"
+                    >
+                      Deduct -20 Points
+                    </Button>
+                    <Button 
+                      colorScheme="green" 
+                      onClick={() => handleAddCustomPoints(30)}
+                      isLoading={loading}
+                      leftIcon={<span>+30</span>}
+                      isDisabled={false} 
+                      className="spellcast-button"
+                    >
+                      Award +30 Points
+                    </Button>
+                    <Button 
+                      colorScheme="red" 
+                      onClick={() => handleDeductCustomPoints(30)}
+                      isLoading={loading}
+                      leftIcon={<span>-30</span>}
+                      isDisabled={false}
+                      className="spellcast-button"
+                    >
+                      Deduct -30 Points
+                    </Button>
+                    <Button 
+                      colorScheme="green" 
+                      onClick={() => handleAddCustomPoints(40)}
+                      isLoading={loading}
+                      leftIcon={<span>+40</span>}
+                      isDisabled={false} 
+                      className="spellcast-button"
+                    >
+                      Award +40 Points
+                    </Button>
+                    <Button 
+                      colorScheme="red" 
+                      onClick={() => handleDeductCustomPoints(40)}
+                      isLoading={loading}
+                      leftIcon={<span>-40</span>}
+                      isDisabled={false}
+                      className="spellcast-button"
+                    >
+                      Deduct -40 Points
                     </Button>
                   </HStack>
                 </VStack>

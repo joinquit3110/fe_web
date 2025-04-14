@@ -102,7 +102,15 @@ const NotificationDisplay = () => {
   const extractCriteriaAndLevel = (notification) => {
     let { message, criteria, level } = notification;
     
-    // First, try to extract from message if criteria or level is missing
+    // If both criteria and level are already correctly set, just standardize them
+    if (criteria && level) {
+      return {
+        criteria: standardizeCriteria(criteria),
+        level: standardizeLevel(level)
+      };
+    }
+    
+    // Otherwise try to extract from message
     if (message) {
       // Extract criteria from message
       if (!criteria) {
@@ -121,32 +129,16 @@ const NotificationDisplay = () => {
       }
     }
     
-    // Check for swapped values by looking at content patterns
-    
-    // Is level actually containing criteria information?
-    const levelContainsCriteria = level && (
-      level.toLowerCase().includes('participation') || 
-      level.toLowerCase().includes('english') ||
-      level.toLowerCase().includes('language') ||
-      level.toLowerCase().includes('time') ||
-      level.toLowerCase().includes('complete tasks') ||
-      level.toLowerCase().includes('group members')
-    );
-    
-    // Is criteria actually containing level information?
-    const criteriaContainsLevel = criteria && (
-      criteria.toLowerCase().includes('excellent') ||
-      criteria.toLowerCase().includes('good') ||
-      criteria.toLowerCase().includes('satisfactory') ||
-      criteria.toLowerCase().includes('poor')
-    );
-    
-    // Fix swapped values if detected
-    if (levelContainsCriteria || criteriaContainsLevel) {
-      // Swap the values
-      const tempCriteria = criteria;
-      criteria = level;
-      level = tempCriteria;
+    // Check if level actually contains criteria information (the bug)
+    if (level && (
+        level.toLowerCase().includes('participation') || 
+        level.toLowerCase().includes('english') ||
+        level.toLowerCase().includes('complete tasks')
+      )) {
+      // Level contains criteria information - it's swapped
+      const tempCriteria = level;
+      level = criteria;
+      criteria = tempCriteria;
     }
     
     return {
@@ -1027,7 +1019,7 @@ const NotificationDisplay = () => {
                   {notification.pointsChange && (
                     <>
                       <Text as="span">
-                        {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded' : 'deducted'}{notification.house ? (notification.pointsChange > 0 ? ' to ' : ' from ') + notification.house : ''}
+                        {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded to' : 'deducted from'} {notification.house || 'unknown'}
                       </Text>
                       
                       {notification.reason && (
