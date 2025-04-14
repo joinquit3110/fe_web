@@ -8,7 +8,6 @@ import 'katex/dist/katex.min.css';
 import katex from 'katex';
 import './styles/App.css';
 import './styles/HarryPotter.css';
-// Fix AuthContext import
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
 import Login from './components/Login';
@@ -20,8 +19,10 @@ import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import NotificationDisplay from './components/NotificationDisplay';
 import { SocketProvider } from './context/SocketContext';
+import { useEffect } from 'react';
+import { PRELOAD_IMAGES } from './assets';
+import imageLoader from './utils/imageLoader';
 
-// Fix theme definition - must use proper color format
 const theme = extendTheme({
   colors: {
     blue: {
@@ -51,12 +52,10 @@ const theme = extendTheme({
   }
 });
 
-// Private Route component for protected routes
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   
-  // Allow bypassing auth in development mode
   if (!isAuthenticated && !isDevelopment) {
     return <Navigate to="/login" replace />;
   }
@@ -64,7 +63,6 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 
-// Helper function for KaTeX rendering
 const renderLatex = (latex) => {
   if (!latex) return '';
   try {
@@ -79,7 +77,7 @@ const renderLatex = (latex) => {
 
 const AppContent = () => {
   const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('activity1'); // Default to Activity 1 instead of Activity 2
+  const [activeTab, setActiveTab] = useState('activity1');
   const [inequalities, setInequalities] = useState([]);
   const [message, setMessage] = useState({ 
     text: "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality.", 
@@ -92,6 +90,10 @@ const AppContent = () => {
   const inequalityListRef = useRef(null);
   const [relatedToIntersection, setRelatedToIntersection] = useState([]);
   
+  useEffect(() => {
+    imageLoader.preloadImages(PRELOAD_IMAGES);
+  }, []);
+
   const handleAddInequality = (newInequality) => {
     const result = coordinatePlaneRef.current?.handleAddInequality(newInequality);
     
@@ -100,8 +102,6 @@ const AppContent = () => {
         text: "Spell cast successfully! Your inequality has been added to the magical plane.",
         type: "success"
       });
-      
-      // KaTeX renders immediately when used, no need for typeset calls
     }
     
     return result;
@@ -117,7 +117,7 @@ const AppContent = () => {
       type: "info"
     });
   };
-
+  
   useEffect(() => {
     if (quizMessage) {
       setMessage({
@@ -132,48 +132,36 @@ const AppContent = () => {
   const handleListItemHover = (equation) => {
     setHoveredEq(equation);
   };
-
+  
   const handleListItemClick = (inequality) => {
     setHoveredEq(inequality);
-    // If we have a reference to the coordinate plane, highlight this inequality
     coordinatePlaneRef.current?.highlightInequality(inequality);
   };
-
-  // Function to scroll to an inequality in the list
+  
   const scrollToInequality = (inequality) => {
     if (!inequality || !inequalityListRef.current) return;
     
-    // Find the inequality index
     const index = inequalities.findIndex(ineq => ineq.label === inequality.label);
     if (index === -1) return;
     
-    // Find the DOM element for that inequality
     const listItems = inequalityListRef.current.querySelectorAll('.inequality-item');
     if (index < listItems.length) {
-      // Add highlight animation class
       listItems[index].classList.add('scrolled-to');
-      
-      // Remove the class after animation completes
       setTimeout(() => {
         listItems[index].classList.remove('scrolled-to');
-      }, 800); // Reduced from 1000ms
+      }, 800);
       
-      // Scroll the item into view with smooth animation but faster
-      // Use scrollTo with custom duration instead of scrollIntoView for more control
       const container = inequalityListRef.current;
       const targetItem = listItems[index];
       const containerRect = container.getBoundingClientRect();
       const targetRect = targetItem.getBoundingClientRect();
       
-      // Calculate the scroll position to center the item
       const scrollTop = targetRect.top - containerRect.top - (containerRect.height / 2) + (targetRect.height / 2) + container.scrollTop;
       
-      // Use custom smooth scroll with shorter duration
-      smoothScrollTo(container, scrollTop, 200); // 200ms duration - faster than default scrollIntoView
+      smoothScrollTo(container, scrollTop, 200);
     }
   };
-  
-  // Custom smooth scroll function with controllable duration
+
   const smoothScrollTo = (element, to, duration) => {
     const start = element.scrollTop;
     const change = to - start;
@@ -187,21 +175,19 @@ const AppContent = () => {
         return;
       }
       
-      // Use easeOutQuad for smooth deceleration
       const progress = elapsedTime / duration;
       const easeOutValue = 1 - (1 - progress) * (1 - progress);
       
       element.scrollTop = start + change * easeOutValue;
       requestAnimationFrame(animateScroll);
-    };
-    
+};
+
     requestAnimationFrame(animateScroll);
-  };
+};
 
   const handleDelete = (e, inequality) => {
     e.stopPropagation();
     
-    // Kiểm tra xem nút xóa có thực sự hiển thị không
     const target = e.target;
     if (!target || !target.classList.contains('delete-icon')) {
       console.log('Prevented deletion - click not on delete icon');
@@ -211,13 +197,11 @@ const AppContent = () => {
     setInequalities(prev => prev.filter(item => item.label !== inequality.label));
     setQuizMessage('');
   };
-  
-  // Generate sequential labels for inequalities (d_1, d_2, ...)
+
   const getSequentialLabel = (index) => {
     return `d_${index + 1}`;
   };
-  
-  // Tạo mock user cho local development
+
   const localUser = {
     id: 'mock-user-id',
     username: 'HogwartsWizard',
@@ -226,8 +210,7 @@ const AppContent = () => {
     school: 'Hogwarts',
     grade: 'Advanced',
   };
-  
-  // Handle tab change and ensure rendering is reprocessed
+
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
   };
@@ -247,26 +230,17 @@ const AppContent = () => {
           element={
             <PrivateRoute>
               <div className="hogwarts-app">
-                {/* UserProfile component */}
                 <UserProfile user={user || (window.location.hostname === 'localhost' ? localUser : null)} />
-                
-                {/* Notification display */}
                 <NotificationDisplay />
-                
                 <header className="hogwarts-header">
                   <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
                 </header>
-                
-                {/* Tab Navigation */}
                 <TabNavigation activeTab={activeTab} setActiveTab={handleTabChange} />
-                
                 <div className="hogwarts-content">
-                  {/* Render different content based on active tab */}
                   {activeTab === 'activity1' ? (
                     <Activity1 />
                   ) : (
                     <>
-                      {/* Kiểm tra nếu người dùng là admin thì không hiển thị nội dung */}
                       {user && user.isAdmin ? (
                         <div className="admin-message wizard-panel" style={{
                           padding: "30px",
@@ -285,7 +259,6 @@ const AppContent = () => {
                         </div>
                       ) : (
                         <>
-                          {/* 1. Control Panel - Cast Spell at top */}
                           <div className="control-panel wizard-panel">
                             <div className="control-panel-content">
                               <h2 className="activity-title" style={{ 
@@ -319,13 +292,9 @@ const AppContent = () => {
                               />
                             </div>
                           </div>
-
-                          {/* 2. Message Box - Always show a message */}
                           <div className={`message-box ${message.type}`}>
                             <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
                           </div>
-
-                          {/* 3. Coordinate Plane */}
                           <div className="coordinate-container wizard-panel">
                             <h2 className="activity-title" style={{ 
                                 fontFamily: "'Cinzel', serif",
@@ -364,8 +333,6 @@ const AppContent = () => {
                               />
                             </div>
                           </div>
-
-                          {/* 4. Inequalities List at bottom */}
                           <div className="inequalities-list wizard-panel">
                             <h2 className="activity-title" style={{ 
                                 fontFamily: "'Cinzel', serif",
@@ -402,12 +369,12 @@ const AppContent = () => {
                                     style={{ 
                                       borderLeftColor: ineq.color,
                                       background: relatedToIntersection.some(eq => eq.label === ineq.label)
-                                        ? 'rgba(46, 125, 50, 0.3)' // Green background for related to intersection
+                                        ? 'rgba(46, 125, 50, 0.3)'
                                         : (hoveredEq?.label === ineq.label 
                                           ? 'rgba(211, 166, 37, 0.4)'
                                           : 'rgba(14, 26, 64, 0.7)'),
                                       boxShadow: relatedToIntersection.some(eq => eq.label === ineq.label)
-                                        ? '0 0 10px rgba(46, 125, 50, 0.5)' // Green glow for related to intersection
+                                        ? '0 0 10px rgba(46, 125, 50, 0.5)'
                                         : (hoveredEq?.label === ineq.label 
                                           ? '0 0 10px rgba(211, 166, 37, 0.5)'
                                           : 'none'),
@@ -452,7 +419,6 @@ const AppContent = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       
-      {/* Add the debug component */}
       <MagicPointsDebug />
       
       <footer className="hogwarts-footer">
@@ -464,7 +430,6 @@ const AppContent = () => {
   );
 };
 
-// Wrap App with ChakraProvider first
 const App = () => {
   return (
     <ChakraProvider theme={theme}>
