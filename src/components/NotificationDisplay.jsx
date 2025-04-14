@@ -594,6 +594,19 @@ const NotificationDisplay = () => {
       return;
     }
     
+    // Batch process notifications
+    const batchSize = 5;
+    const notificationBatch = notificationQueue.current.slice(0, batchSize);
+    
+    // Deduplicate batch
+    const uniqueNotifications = new Map();
+    notificationBatch.forEach(notification => {
+      const key = `${notification.type}-${notification.message}`;
+      if (!uniqueNotifications.has(key) || notification.isFresh) {
+        uniqueNotifications.set(key, notification);
+      }
+    });
+    
     processingQueue.current = true;
     
     // First, filter out unwanted notifications

@@ -41,6 +41,18 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError(null);
+      setLoading(true);
+      
+      // Check cache first
+      const cachedAuth = sessionStorage.getItem('authCache');
+      if (cachedAuth) {
+        const {timestamp, data} = JSON.parse(cachedAuth);
+        if (Date.now() - timestamp < 300000) { // 5 min cache
+          setUser(data.user);
+          setIsAuthenticated(true);
+          return data.user;
+        }
+      }
       
       console.log('Login attempt with:', credentials.email || credentials.username);
       
