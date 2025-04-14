@@ -388,7 +388,7 @@ const AdminHousePoints = () => {
                         className="spellcast-button"
                         flex={1}
                       >
-                        +20 Points
+                        Award Points
                       </Button>
                       <Button 
                         colorScheme="red" 
@@ -399,7 +399,7 @@ const AdminHousePoints = () => {
                         className="spellcast-button"
                         flex={1}
                       >
-                        -20 Points
+                        Deduct Points
                       </Button>
                     </HStack>
                     
@@ -413,7 +413,7 @@ const AdminHousePoints = () => {
                         className="spellcast-button"
                         flex={1}
                       >
-                        +30 Points
+                        Award Points
                       </Button>
                       <Button 
                         colorScheme="red" 
@@ -424,7 +424,7 @@ const AdminHousePoints = () => {
                         className="spellcast-button"
                         flex={1}
                       >
-                        -30 Points
+                        Deduct Points
                       </Button>
                     </HStack>
                     
@@ -438,7 +438,7 @@ const AdminHousePoints = () => {
                         className="spellcast-button"
                         flex={1}
                       >
-                        +40 Points
+                        Award Points
                       </Button>
                       <Button 
                         colorScheme="red" 
@@ -449,7 +449,7 @@ const AdminHousePoints = () => {
                         className="spellcast-button"
                         flex={1}
                       >
-                        -40 Points
+                        Deduct Points
                       </Button>
                     </HStack>
                   </VStack>
