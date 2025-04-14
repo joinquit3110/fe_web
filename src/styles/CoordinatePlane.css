@@ -1,0 +1,208 @@
+/* CoordinatePlane Styles */
+
+.coordinate-canvas {
+  cursor: grab;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.coordinate-canvas:active {
+  cursor: grabbing;
+}
+
+.canvas-container {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.zoom-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.zoom-button {
+  width: 40px;
+  height: 40px;
+  background-color: #0E1A40;
+  color: #D3A625;
+  border: 2px solid #D3A625;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.zoom-button:hover {
+  background-color: #D3A625;
+  color: #0E1A40;
+}
+
+.zoom-button:active {
+  transform: scale(0.95);
+}
+
+.reset-button {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: #740001;
+  color: #D3A625;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #D3A625;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.reset-button:hover {
+  background-color: #D3A625;
+  color: #740001;
+}
+
+.reset-button:active {
+  transform: scale(0.95);
+}
+
+/* Point Styles */
+.intersection-point {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.intersection-point:hover {
+  transform: scale(1.2);
+}
+
+/* Tooltip Styles */
+.tooltip {
+  position: absolute;
+  background-color: rgba(14, 26, 64, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #D3A625;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  font-family: 'STIX Two Math', 'Times New Roman', serif;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px 5px 0;
+  border-style: solid;
+  border-color: #D3A625 transparent transparent transparent;
+}
+
+/* Animation for highlighting */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.highlight-point {
+  animation: pulse 1s ease-in-out;
+}
+
+/* Input coordinates styles */
+.coordinates-input {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(14, 26, 64, 0.9);
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid #D3A625;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coordinate-point {
+  font-weight: bold;
+  color: #D3A625;
+}
+
+.coordinate-input {
+  width: 60px;
+  height: 30px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid #D3A625;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: white;
+  text-align: center;
+}
+
+.coordinate-input:focus {
+  outline: none;
+  border-color: #FFC107;
+  box-shadow: 0 0 5px rgba(211, 166, 37, 0.5);
+}
+
+.coordinate-check-button {
+  background-color: #D3A625;
+  color: #0E1A40;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.coordinate-check-button:hover {
+  background-color: #FFC107;
+}
+
+.coordinate-check-button:active {
+  transform: scale(0.95);
+}
+
+/* Status indicator */
+.status-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator.solved {
+  background-color: rgba(76, 175, 80, 0.3);
+  border: 1px solid #2E7D32;
+  color: #2E7D32;
+}
+
+.status-indicator.unsolved {
+  background-color: rgba(255, 152, 0, 0.3);
+  border: 1px solid #F57C00;
+  color: #F57C00;
+} 

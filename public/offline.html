@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inequality Web - Currently Offline</title>
+    <link rel="icon" href="/asset/Hogwarts logo.png" type="image/png">
+    <style>
+        @font-face {
+            font-family: 'HarryPotter';
+            src: url('/static/fonts/HarryPotter.woff2') format('woff2'),
+                 url('/static/fonts/HarryPotter.woff') format('woff');
+            font-display: swap;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: #f0f0f0;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                              url('/asset/Hogwarts logo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: rgba(0, 0, 0, 0.75);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            max-width: 150px;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-family: 'HarryPotter', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #ffd700;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #e0e0e0;
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #8e44ad;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background-color: #6c3483;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background-color: #ffd700;
+            color: #333;
+        }
+
+        .btn-primary:hover {
+            background-color: #e6c200;
+        }
+
+        .status {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status-icon {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+
+        .house-icons {
+            display: flex;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+
+        .house-icon {
+            width: 60px;
+            margin: 0 10px;
+            filter: grayscale(50%);
+            transition: filter 0.3s ease, transform 0.3s ease;
+        }
+
+        .house-icon:hover {
+            filter: grayscale(0%);
+            transform: scale(1.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: #ffd700;
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .offline-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 1.5rem;
+        }
+
+        .sync-status {
+            margin-top: 1rem;
+            font-style: italic;
+            color: #aaa;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+                width: 90%;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .house-icons {
+                flex-wrap: wrap;
+            }
+            
+            .house-icon {
+                width: 40px;
+                margin: 5px;
+            }
+        }
+
+        #cached-activities {
+            margin-top: 1.5rem;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            display: none;
+        }
+
+        #cached-activities ul {
+            padding-left: 20px;
+        }
+
+        #cached-activities li {
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+
+        #cached-activities li:hover {
+            color: #ffd700;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted #fff;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #connection-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #ff0000;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+            }
+            
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+            }
+            
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="connection-indicator" class="pulse"></div>
+    <div class="container">
+        <img src="/asset/Hogwarts logo.png" alt="Hogwarts Logo" class="logo" />
+        <h1>You're Currently Offline</h1>
+        <h2>No network connection detected</h2>
+
+        <div class="house-icons">
+            <img src="/asset/Gryffindor.png" alt="Gryffindor" class="house-icon" />
+            <img src="/asset/Hufflepuff.png" alt="Hufflepuff" class="house-icon" />
+            <img src="/asset/Ravenclaw.png" alt="Ravenclaw" class="house-icon" />
+            <img src="/asset/Slytherin.png" alt="Slytherin" class="house-icon" />
+        </div>
+
+        <div class="status">
+            <p>Don't worry! You can still continue with some activities offline.</p>
+            <p>Your progress will be saved and synchronized automatically when you're back online.</p>
+        </div>
+
+        <div class="progress-bar">
+            <div id="connection-progress" class="progress"></div>
+        </div>
+
+        <div class="offline-actions">
+            <button id="retry-button" class="btn btn-primary">Try Reconnecting</button>
+            <button id="go-to-home" class="btn">Go to Homepage</button>
+            <button id="view-cached" class="btn">View Available Activities</button>
+            <button id="sync-data" class="btn" disabled>Sync Data (Offline)</button>
+        </div>
+
+        <div id="sync-status" class="sync-status">
+            Waiting for connection...
+        </div>
+
+        <div id="cached-activities">
+            <h3>Available Offline Activities:</h3>
+            <ul id="activities-list">
+                <!-- Dynamically populated -->
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Your magic points and progress are safely stored locally.</p>
+            <p class="tooltip">Need help?
+                <span class="tooltiptext">Try refreshing the page or checking your internet connection.</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Check if service worker is active
+        const serviceWorkerActive = 'serviceWorker' in navigator;
+        
+        // Connection check state
+        let isOnline = navigator.onLine;
+        let connectionAttempts = 0;
+        let lastConnectionCheck = Date.now();
+        let connectionQuality = 'none';
+        const maxRetries = 5;
+        let retryTimeout = null;
+        
+        // Elements
+        const retryButton = document.getElementById('retry-button');
+        const homeButton = document.getElementById('go-to-home');
+        const viewCachedButton = document.getElementById('view-cached');
+        const syncButton = document.getElementById('sync-data');
+        const syncStatus = document.getElementById('sync-status');
+        const connectionIndicator = document.getElementById('connection-indicator');
+        const progressBar = document.getElementById('connection-progress');
+        const cachedActivities = document.getElementById('cached-activities');
+        const activitiesList = document.getElementById('activities-list');
+
+        // Track pending operations that need to be synced
+        let pendingOperations = [];
+        
+        // Update UI based on connection status
+        function updateConnectionStatus() {
+            if (isOnline) {
+                connectionIndicator.style.backgroundColor = '#4CAF50'; // green
+                connectionIndicator.classList.remove('pulse');
+                syncStatus.textContent = 'Connected! You can safely navigate back to the application.';
+                syncButton.disabled = false;
+                progressBar.style.width = '100%';
+            } else {
+                connectionIndicator.style.backgroundColor = '#FF0000'; // red
+                connectionIndicator.classList.add('pulse');
+                syncStatus.textContent = `Offline. Retried ${connectionAttempts}/${maxRetries} times.`;
+                syncButton.disabled = true;
+                
+                // Update progress bar based on retry attempts
+                const progressWidth = connectionAttempts > 0 ? (connectionAttempts / maxRetries) * 100 : 0;
+                progressBar.style.width = `${progressWidth}%`;
+            }
+        }
+        
+        // Check connection by attempting to fetch the health endpoint
+        async function checkConnection() {
+            connectionAttempts++;
+            
+            try {
+                // Try to fetch a small endpoint with cache busting
+                const response = await fetch('/api/health/ping?nocache=' + Date.now(), {
+                    method: 'GET',
+                    headers: { 'Cache-Control': 'no-cache' },
+                    mode: 'no-cors' // Less restrictive to help with service worker interception
+                });
+                
+                // If we get here, we're online
+                isOnline = true;
+                lastConnectionCheck = Date.now();
+                connectionQuality = 'good';
+                updateConnectionStatus();
+                
+                // Automatically redirect after successful connection if retried
+                if (connectionAttempts > 1) {
+                    setTimeout(() => {
+                        if (confirm('Connection restored! Return to the application?')) {
+                            window.location.href = '/';
+                        }
+                    }, 1500);
+                }
+                
+                // Notify service worker about connection quality
+                if (serviceWorkerActive && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        action: 'updateConnectionQuality',
+                        quality: connectionQuality
+                    });
+                }
+                
+                return true;
+            } catch (error) {
+                console.log('Connection check failed:', error);
+                isOnline = false;
+                connectionQuality = 'none';
+                updateConnectionStatus();
+                
+                // Notify service worker about connection quality
+                if (serviceWorkerActive && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        action: 'updateConnectionQuality',
+                        quality: connectionQuality
+                    });
+                }
+                
+                // Auto-retry with exponential backoff if under max retries
+                if (connectionAttempts < maxRetries) {
+                    const backoffTime = Math.min(1000 * Math.pow(1.5, connectionAttempts), 10000);
+                    syncStatus.textContent = `Offline. Retrying in ${Math.round(backoffTime/1000)}s...`;
+                    
+                    clearTimeout(retryTimeout);
+                    retryTimeout = setTimeout(checkConnection, backoffTime);
+                } else {
+                    syncStatus.textContent = `Still offline after ${maxRetries} attempts. Try again manually.`;
+                }
+                
+                return false;
+            }
+        }
+        
+        // Get offline cache status from service worker
+        async function loadCachedActivities() {
+            if (!serviceWorkerActive) {
+                activitiesList.innerHTML = '<li>Service worker not available</li>';
+                return;
+            }
+            
+            // Default activities that should be available offline
+            const defaultActivities = [
+                { id: 'linear-inequalities', name: 'Linear Inequalities Practice', path: '/activities/linear-inequalities' },
+                { id: 'inequality-system', name: 'System of Inequalities', path: '/activities/inequality-system' }
+            ];
+            
+            try {
+                // Create list items for all available activities
+                activitiesList.innerHTML = '';
+                defaultActivities.forEach(activity => {
+                    const li = document.createElement('li');
+                    li.textContent = activity.name;
+                    li.onclick = () => {
+                        // Navigate to activity
+                        window.location.href = activity.path;
+                    };
+                    activitiesList.appendChild(li);
+                });
+                
+                // Try to get any locally saved progress for activities
+                const localProgress = localStorage.getItem('activityProgress');
+                if (localProgress) {
+                    const progress = JSON.parse(localProgress);
+                    const resumeItem = document.createElement('li');
+                    resumeItem.textContent = 'Resume latest activity';
+                    resumeItem.style.fontWeight = 'bold';
+                    resumeItem.style.color = '#ffd700';
+                    resumeItem.onclick = () => {
+                        window.location.href = progress.path || '/activities';
+                    };
+                    activitiesList.insertBefore(resumeItem, activitiesList.firstChild);
+                }
+                
+                // If no activities found
+                if (activitiesList.children.length === 0) {
+                    activitiesList.innerHTML = '<li>No cached activities available</li>';
+                }
+                
+            } catch (error) {
+                console.error('Error loading cached activities:', error);
+                activitiesList.innerHTML = '<li>Error loading activities</li>';
+            }
+        }
+        
+        // Load pending operations from localStorage
+        function loadPendingOperations() {
+            try {
+                const storedOps = localStorage.getItem('pendingOperations');
+                if (storedOps) {
+                    pendingOperations = JSON.parse(storedOps);
+                    
+                    if (pendingOperations.length > 0) {
+                        syncStatus.textContent = `${pendingOperations.length} operations pending sync`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading pending operations:', error);
+            }
+        }
+        
+        // Event listeners
+        retryButton.addEventListener('click', () => {
+            syncStatus.textContent = 'Checking connection...';
+            checkConnection();
+        });
+        
+        homeButton.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+        
+        viewCachedButton.addEventListener('click', () => {
+            cachedActivities.style.display = cachedActivities.style.display === 'block' ? 'none' : 'block';
+            if (cachedActivities.style.display === 'block') {
+                loadCachedActivities();
+            }
+        });
+        
+        syncButton.addEventListener('click', () => {
+            if (!isOnline) {
+                syncStatus.textContent = 'Cannot sync while offline';
+                return;
+            }
+            
+            syncStatus.textContent = 'Syncing data...';
+            
+            // Try to sync via service worker
+            if (serviceWorkerActive && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    action: 'forceSync'
+                });
+                
+                // Listen for sync completion message
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data && event.data.action === 'sync_all_complete') {
+                        syncStatus.textContent = 'Sync complete!';
+                        setTimeout(() => {
+                            if (confirm('Data synchronized successfully! Return to the application?')) {
+                                window.location.href = '/';
+                            }
+                        }, 1000);
+                    } else if (event.data && event.data.action === 'sync_all_failed') {
+                        syncStatus.textContent = `Sync failed: ${event.data.error || 'Unknown error'}`;
+                    } else if (event.data && event.data.action === 'sync_partial') {
+                        syncStatus.textContent = `Sync partial: ${event.data.processed} processed, ${event.data.remaining} remaining.`;
+                    }
+                });
+            } else {
+                // Fallback to manual sync through IndexedDB
+                syncStatus.textContent = 'Service worker not available for syncing';
+            }
+        });
+        
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            syncStatus.textContent = 'Connection detected! Verifying...';
+            checkConnection();
+        });
+        
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            connectionQuality = 'none';
+            updateConnectionStatus();
+        });
+        
+        // Register service worker if needed
+        if ('serviceWorker' in navigator && !navigator.serviceWorker.controller) {
+            navigator.serviceWorker.register('/service-worker.js').then(registration => {
+                console.log('Service worker registered for offline support');
+            }).catch(error => {
+                console.error('Service worker registration failed:', error);
+            });
+        }
+        
+        // Service worker message handler
+        if (serviceWorkerActive) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (!event.data || !event.data.action) return;
+                
+                switch (event.data.action) {
+                    case 'connection_quality_update':
+                        connectionQuality = event.data.quality;
+                        // Update UI based on connection quality
+                        if (connectionQuality === 'good') {
+                            connectionIndicator.style.backgroundColor = '#4CAF50'; // green
+                        } else if (connectionQuality === 'slow') {
+                            connectionIndicator.style.backgroundColor = '#FFC107'; // amber
+                        } else if (connectionQuality === 'poor') {
+                            connectionIndicator.style.backgroundColor = '#FF9800'; // orange
+                        } else {
+                            connectionIndicator.style.backgroundColor = '#F44336'; // red
+                        }
+                        break;
+                        
+                    case 'sync_complete':
+                    case 'sync_partial':
+                    case 'sync_failed':
+                        syncStatus.textContent = event.data.message || 
+                            `Sync ${event.data.action.split('_')[1]}: ${
+                                event.data.processed ? event.data.processed + ' operations processed' : 
+                                (event.data.error || 'Unknown status')
+                            }`;
+                        break;
+                }
+            });
+        }
+        
+        // Request pending operations from service worker
+        function requestPendingOperations() {
+            if (serviceWorkerActive && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    action: 'get_pending_operations'
+                });
+            }
+        }
+        
+        // Load cached activities on page load
+        loadPendingOperations();
+        
+        // Initial connection check
+        checkConnection();
+        
+        // Request pending operations from service worker
+        setTimeout(requestPendingOperations, 1000);
+    </script>
+</body>
+</html>

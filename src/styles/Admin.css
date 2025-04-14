@@ -1,0 +1,329 @@
+/* Admin UI Styles */
+
+/* Admin Dashboard */
+.admin-user-management {
+  width: 100%;
+  padding: 20px;
+  color: white;
+}
+
+/* House Badges */
+.house-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.house-badge.gryffindor {
+  background-color: #740001;
+  color: #D3A625;
+}
+
+.house-badge.slytherin {
+  background-color: #1A472A;
+  color: #AAAAAA;
+}
+
+.house-badge.ravenclaw {
+  background-color: #0E1A40;
+  color: #946B2D;
+}
+
+.house-badge.hufflepuff {
+  background-color: #FFD800;
+  color: #000000;
+}
+
+.house-badge.muggle {
+  background-color: #6B6B6B;
+  color: #FFFFFF;
+}
+
+.house-badge.admin {
+  background-color: #4B0082;
+  color: #FFFFFF;
+}
+
+/* Admin Table */
+.admin-table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important;
+}
+
+.admin-table th {
+  background-color: #1A472A !important;
+  color: #e0e0e0 !important;
+  font-family: 'Cinzel', serif !important;
+  padding: 12px 16px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+}
+
+.admin-table td {
+  background-color: rgba(30, 38, 55, 0.8) !important;
+  padding: 10px 16px !important;
+  border-top: 1px solid #3a4559 !important;
+  border-bottom: 1px solid #3a4559 !important;
+}
+
+.admin-table tr td:first-of-type {
+  border-left: 1px solid #3a4559 !important;
+  border-top-left-radius: 4px !important;
+  border-bottom-left-radius: 4px !important;
+}
+
+.admin-table tr td:last-of-type {
+  border-right: 1px solid #3a4559 !important;
+  border-top-right-radius: 4px !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+.admin-table tr:hover td {
+  background-color: rgba(30, 38, 55, 0.95) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Admin Actions */
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Admin House Select */
+.admin-house-select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid rgba(211, 166, 37, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.admin-house-select:hover {
+  border-color: #D3A625;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.admin-house-select:focus {
+  outline: none;
+  border-color: #D3A625;
+  box-shadow: 0 0 0 2px rgba(211, 166, 37, 0.3);
+}
+
+.admin-house-select option {
+  padding: 10px;
+  font-size: 14px;
+}
+
+/* House Option Colors */
+.admin-house-select option[value="gryffindor"] {
+  background-color: #740001;
+  color: #FFC500;
+}
+
+.admin-house-select option[value="slytherin"] {
+  background-color: #1A472A;
+  color: #AAAAAA;
+}
+
+.admin-house-select option[value="ravenclaw"] {
+  background-color: #0E1A40;
+  color: #946B2D;
+}
+
+.admin-house-select option[value="hufflepuff"] {
+  background-color: #ecb939;
+  color: #000000;
+}
+
+.admin-house-select option[value="muggle"] {
+  background-color: #6B6B6B;
+  color: #FFFFFF;
+}
+
+.admin-house-select option[value="admin"] {
+  background-color: #4B0082;
+  color: #FFFFFF;
+}
+
+/* Admin Badge */
+.admin-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* Admin Control Bar */
+.admin-control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: rgba(14, 26, 64, 0.7);
+  border-radius: 8px;
+  border: 1px solid rgba(211, 166, 37, 0.3);
+}
+
+/* Admin Title */
+.admin-title {
+  font-family: 'Cinzel', serif;
+  color: #D3A625;
+  margin-bottom: 16px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Admin Loading */
+.admin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  width: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .admin-table th,
+  .admin-table td {
+    padding: 6px 4px !important;
+    font-size: 12px !important;
+  }
+  
+  .admin-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .admin-control-bar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .admin-user-management {
+    padding: 10px;
+  }
+
+  .admin-table {
+    min-width: 100%;
+    overflow-x: auto;
+  }
+
+  .chakra-button.chakra-menu__menu-button {
+    font-size: 12px !important;
+    min-width: 100px !important;
+    padding: 6px !important;
+  }
+  
+  .chakra-menu__menuitem {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  
+  .admin-badge {
+    padding: 4px 8px;
+    font-size: 12px !important;
+  }
+  
+  .chakra-button {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-table th,
+  .admin-table td {
+    padding: 4px 2px !important;
+    font-size: 11px !important;
+  }
+  
+  .admin-actions button {
+    font-size: 10px !important;
+    padding: 4px 6px !important;
+  }
+  
+  .chakra-button.chakra-menu__menu-button {
+    font-size: 10px !important;
+    min-width: 80px !important;
+    padding: 4px !important;
+  }
+  
+  .admin-badge {
+    font-size: 10px !important;
+    padding: 2px 4px;
+  }
+}
+
+/* Enhanced house selection */
+.admin-house-select {
+  appearance: none;
+  cursor: pointer;
+}
+
+/* House menu styling */
+.chakra-menu__menu-list {
+  background-color: #1e2637 !important;
+  border: 1px solid #3a4559 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.chakra-menu__menuitem {
+  position: relative;
+  padding: 8px 16px !important;
+  transition: all 0.2s ease !important;
+  font-weight: bold !important;
+  border-left: 3px solid transparent !important;
+}
+
+.chakra-menu__menuitem:hover {
+  filter: brightness(1.1) !important;
+  border-left-color: white !important;
+}
+
+/* Admin logout button */
+.chakra-button.logout-btn {
+  background-color: #740001 !important;
+  color: white !important;
+}
+
+.chakra-button.logout-btn:hover {
+  background-color: #9c0000 !important;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.3) !important;
+}
+
+/* Button for house selection */
+.chakra-button.chakra-menu__menu-button {
+  text-align: left !important;
+  transition: all 0.3s ease !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  font-size: 14px !important;
+  min-width: 160px !important;
+}
+
+.chakra-button.chakra-menu__menu-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+} 
