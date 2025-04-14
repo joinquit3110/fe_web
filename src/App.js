@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
 import { MagicPointsProvider } from './context/MagicPointsContext';
 import { SocketProvider } from './context/SocketContext';
+import HogwartsLayout, { GridArea } from './components/HogwartsLayout';
 import './styles/App.css';
 import './styles/HarryPotter.css';
 import './styles/responsive.css'; // Import our new responsive styles
@@ -20,9 +21,6 @@ const UserProfile = lazy(() => import('./components/UserProfile'));
 const MagicPointsDebug = lazy(() => import('./components/MagicPointsDebug'));
 const AdminHousePoints = lazy(() => import('./components/AdminHousePoints'));
 const NotificationDisplay = lazy(() => import('./components/NotificationDisplay'));
-
-// Import layouts
-import HogwartsLayout, { GridArea } from './components/HogwartsLayout';
 
 // Fix theme definition - must use proper color format
 const theme = extendTheme({
