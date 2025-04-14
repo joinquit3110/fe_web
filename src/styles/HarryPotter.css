@@ -48,10 +48,42 @@ body {
   background-color: var(--background-color);
   color: var(--text-color);
   line-height: 1.6;
-  background-image: url('/images/hogwarts-bg.jpg');
+  background-image: url('/assets/images/hogwarts-bg.jpg');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* Performance Optimizations */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+/* Performance-optimized animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Touch-friendly elements */
+.interactive-element {
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  touch-action: manipulation;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Magical Container */
@@ -86,7 +118,7 @@ body {
   position: relative;
   margin: 20px 0;
   text-shadow: 0 0 10px rgba(211, 166, 37, 0.5);
-  }
+}
 
 .magical-heading::after {
   content: '';
@@ -112,7 +144,7 @@ body {
   overflow: hidden;
   transition: all var(--transition-speed) ease;
   box-shadow: var(--button-glow);
-  }
+}
 
 .magical-button:hover {
   transform: translateY(-2px);
@@ -209,6 +241,10 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
+  }
+  
   .magical-container {
     margin: 10px;
     padding: 15px;
@@ -320,4 +356,14 @@ body {
   text-align: center;
   font-family: var(--font-secondary);
   position: relative;
+}
+
+/* Reduce Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

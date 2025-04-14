@@ -19,5 +19,20 @@
         { "key": "Access-Control-Allow-Credentials", "value": "true" }
       ]
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "CI": "false"
+    }
+  },
+  "images": {
+    "sizes": [256, 512, 1024],
+    "domains": ["inequality-web.vercel.app"],
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "inequality-web.vercel.app"
+      }
+    ]
+  }
 }
