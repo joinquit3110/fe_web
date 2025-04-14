@@ -352,88 +352,107 @@ const AdminHousePoints = () => {
                     />
                   </FormControl>
                   
-                  <HStack>
-                    <Button 
-                      colorScheme="green" 
-                      onClick={handleAddPoints}
-                      isLoading={loading}
-                      leftIcon={<span>+10</span>}
-                      isDisabled={false} 
-                      className="spellcast-button"
-                    >
-                      Award Points
-                    </Button>
-                    <Button 
-                      colorScheme="red" 
-                      onClick={handleDeductPoints}
-                      isLoading={loading}
-                      leftIcon={<span>-10</span>}
-                      isDisabled={false}
-                      className="spellcast-button"
-                    >
-                      Deduct Points
-                    </Button>
-                    <Button 
-                      colorScheme="green" 
-                      onClick={() => handleAddCustomPoints(20)}
-                      isLoading={loading}
-                      leftIcon={<span>+20</span>}
-                      isDisabled={false} 
-                      className="spellcast-button"
-                    >
-                      Award +20 Points
-                    </Button>
-                    <Button 
-                      colorScheme="red" 
-                      onClick={() => handleDeductCustomPoints(20)}
-                      isLoading={loading}
-                      leftIcon={<span>-20</span>}
-                      isDisabled={false}
-                      className="spellcast-button"
-                    >
-                      Deduct -20 Points
-                    </Button>
-                    <Button 
-                      colorScheme="green" 
-                      onClick={() => handleAddCustomPoints(30)}
-                      isLoading={loading}
-                      leftIcon={<span>+30</span>}
-                      isDisabled={false} 
-                      className="spellcast-button"
-                    >
-                      Award +30 Points
-                    </Button>
-                    <Button 
-                      colorScheme="red" 
-                      onClick={() => handleDeductCustomPoints(30)}
-                      isLoading={loading}
-                      leftIcon={<span>-30</span>}
-                      isDisabled={false}
-                      className="spellcast-button"
-                    >
-                      Deduct -30 Points
-                    </Button>
-                    <Button 
-                      colorScheme="green" 
-                      onClick={() => handleAddCustomPoints(40)}
-                      isLoading={loading}
-                      leftIcon={<span>+40</span>}
-                      isDisabled={false} 
-                      className="spellcast-button"
-                    >
-                      Award +40 Points
-                    </Button>
-                    <Button 
-                      colorScheme="red" 
-                      onClick={() => handleDeductCustomPoints(40)}
-                      isLoading={loading}
-                      leftIcon={<span>-40</span>}
-                      isDisabled={false}
-                      className="spellcast-button"
-                    >
-                      Deduct -40 Points
-                    </Button>
-                  </HStack>
+                  <VStack spacing={3} align="stretch">
+                    <HStack>
+                      <Button 
+                        colorScheme="green" 
+                        onClick={handleAddPoints}
+                        isLoading={loading}
+                        leftIcon={<span>+10</span>}
+                        isDisabled={false} 
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        Award Points
+                      </Button>
+                      <Button 
+                        colorScheme="red" 
+                        onClick={handleDeductPoints}
+                        isLoading={loading}
+                        leftIcon={<span>-10</span>}
+                        isDisabled={false}
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        Deduct Points
+                      </Button>
+                    </HStack>
+                    
+                    <HStack>
+                      <Button 
+                        colorScheme="green" 
+                        onClick={() => handleAddCustomPoints(20)}
+                        isLoading={loading}
+                        leftIcon={<span>+20</span>}
+                        isDisabled={false} 
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        +20 Points
+                      </Button>
+                      <Button 
+                        colorScheme="red" 
+                        onClick={() => handleDeductCustomPoints(20)}
+                        isLoading={loading}
+                        leftIcon={<span>-20</span>}
+                        isDisabled={false}
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        -20 Points
+                      </Button>
+                    </HStack>
+                    
+                    <HStack>
+                      <Button 
+                        colorScheme="green" 
+                        onClick={() => handleAddCustomPoints(30)}
+                        isLoading={loading}
+                        leftIcon={<span>+30</span>}
+                        isDisabled={false} 
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        +30 Points
+                      </Button>
+                      <Button 
+                        colorScheme="red" 
+                        onClick={() => handleDeductCustomPoints(30)}
+                        isLoading={loading}
+                        leftIcon={<span>-30</span>}
+                        isDisabled={false}
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        -30 Points
+                      </Button>
+                    </HStack>
+                    
+                    <HStack>
+                      <Button 
+                        colorScheme="green" 
+                        onClick={() => handleAddCustomPoints(40)}
+                        isLoading={loading}
+                        leftIcon={<span>+40</span>}
+                        isDisabled={false} 
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        +40 Points
+                      </Button>
+                      <Button 
+                        colorScheme="red" 
+                        onClick={() => handleDeductCustomPoints(40)}
+                        isLoading={loading}
+                        leftIcon={<span>-40</span>}
+                        isDisabled={false}
+                        className="spellcast-button"
+                        flex={1}
+                      >
+                        -40 Points
+                      </Button>
+                    </HStack>
+                  </VStack>
                 </VStack>
               </Box>
             </TabPanel>
