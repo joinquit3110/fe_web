@@ -22,7 +22,7 @@
   --success-color: #1E7D35;    /* Enhanced success color */
   --warning-color: #F2A007;    /* Enhanced warning color */
   --info-color: #0A8DDA;       /* Enhanced info color */
-  
+
   /* Enhanced sky and moon variables */
   --sky-bg-color: #0A0C17;     /* Darker night sky */
   --moon-color: #FFFAE1;       /* Warmer moon */
@@ -43,7 +43,7 @@
   --shadow-color: rgba(0, 0, 0, 0.6);
   --glow-color: rgba(240, 199, 94, 0.7);
   --input-bg: rgba(20, 23, 46, 0.85);
-  
+
   /* Magical element effects */
   --magical-glow: 0 0 8px rgba(240, 199, 94, 0.5), 0 0 15px rgba(240, 199, 94, 0.3);
   --spell-glow: 0 0 10px rgba(240, 199, 94, 0.7), 0 0 20px rgba(240, 199, 94, 0.4);
@@ -1057,20 +1057,20 @@ button, input, select, textarea {
   .profile-menu {
     width: 280px;
   }
-  
+
   .menu-username {
     font-size: 16px;
   }
-  
+
   .menu-user-details {
     font-size: 12px;
   }
-  
+
   .menu-tabs button {
     padding: 10px 0;
     font-size: 14px;
   }
-  
+
   .avatar-section {
     width: 70px;
     height: 70px;
@@ -1164,7 +1164,7 @@ button, input, select, textarea {
   .moonlight.moonlight-3 { width: 200px; height: 200px; }
   .moonlight.moonlight-2 { width: 250px; height: 250px; }
   .moonlight.moonlight-1 { width: 320px; height: 320px; }
-  
+
   .hogwarts-crest {
     width: 100px;
     height: 120px;
@@ -1244,7 +1244,7 @@ button, input, select, textarea {
     margin-left: 0;
     margin-top: 10px;
   }
-  
+
   .hogwarts-crest {
     width: 70px;
     height: 90px;
@@ -1256,83 +1256,20 @@ button, input, select, textarea {
 @media (max-width: 480px) {
   /* For extra small screens */
   .hogwarts-header h1 {
-    font-size: 1rem;
-    padding: 0 8px;
+    font-size: clamp(0.9rem, 4vw, 1.2rem);
   }
-  
-  .hogwarts-header h1:before,
-  .hogwarts-header h1:after {
-    font-size: 0.9rem;
-    left: -10px;
-    right: -10px;
-  }
-  
-  .hogwarts-header {
-    padding: 8px 0;
-    margin-bottom: 5px;
-  }
-  
-  /* Add a magic wand icon to the title in mobile view */
-  .hogwarts-header h1:before {
-    content: '✦';
-    left: -12px;
-  }
-  
-  .hogwarts-header h1:after {
-    content: '✦';
-    right: -12px;
-  }
-  
-  .footer-content {
-    font-size: 0.5rem;
-    padding: 0 5px;
-  }
-  
-  /* Rest of existing mobile styles */
+
   .wizard-panel {
-    padding: 3px;
-    margin-bottom: 3px;
+    padding: 8px;
   }
-  
-  .panel-decoration {
-    width: 15px;
-    height: 15px;
+
+  .floating-element {
+    display: none;
   }
-  
-  /* Improve input styling for small screens */
-  .input-group input {
-    padding: 3px 4px;
-    font-size: 0.8rem;
-  }
-  
-  .latex-preview-container {
-    margin-top: 2px;
-    padding: 2px 3px;
-    min-height: 15px;
-  }
-  
-  .button-group {
-    gap: 3px;
-    margin-top: 3px;
-  }
-  
-  .spellcast-button, .finite-button {
-    padding: 3px 4px;
-    font-size: 0.7rem;
-  }
-  
-  .message-box {
-    padding: 3px 5px;
-    margin-bottom: 3px;
-    min-height: 20px;
-  }
-  
-  .hogwarts-content {
-    gap: 3px;
-  }
-  
-  .app {
-    padding: 3px;
+
+  .spellcast-button {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
 
@@ -1341,7 +1278,7 @@ button, input, select, textarea {
   .hogwarts-header h1 {
     font-size: 1.8rem;
   }
-  
+
   .coordinate-plane-container canvas {
     width: 100%;
     height: auto;
@@ -1352,7 +1289,7 @@ button, input, select, textarea {
   .hogwarts-header h1 {
     font-size: 2.4rem;
   }
-  
+
   .mobile-friendly {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1362,41 +1299,41 @@ button, input, select, textarea {
       "inequalities inequalities";
     gap: 30px;
   }
-  
+
   .control-panel {
     grid-area: control;
   }
-  
+
   .message-box {
     grid-area: message;
     align-items: center;
   }
-  
+
   .coordinate-container {
     grid-area: coordinate;
   }
-  
+
   .inequalities-list {
     grid-area: inequalities;
   }
-  
+
   .moon-wrapper {
     width: 180px;
     height: 180px;
     right: 8%;
     top: 30px;
   }
-  
+
   .moon {
     width: 80px;
     height: 80px;
   }
-  
+
   .moonlight.moonlight-4 { width: 140px; height: 140px; }
   .moonlight.moonlight-3 { width: 200px; height: 200px; }
   .moonlight.moonlight-2 { width: 250px; height: 250px; }
   .moonlight.moonlight-1 { width: 320px; height: 320px; }
-  
+
   .hogwarts-crest {
     width: 100px;
     height: 120px;
@@ -1409,15 +1346,15 @@ button, input, select, textarea {
     grid-template-areas: 
       "control coordinate inequalities";
   }
-  
+
   .inequalities-list {
     max-height: none;
   }
-  
+
   .coordinate-container {
     max-height: none;
   }
-  
+
   .hogwarts-crest {
     width: 120px;
     height: 150px;
@@ -1458,15 +1395,6 @@ button, input, select, textarea {
   z-index: 0;
 }
 
-/*
-.hogwarts-content {
-  position: relative;
-  z-index: 1;
-  padding: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-*/
 
 .app-header {
   text-align: center;
@@ -1827,7 +1755,7 @@ canvas {
   text-align: center;
   padding: 20px 0;
   border-top: 1px solid rgba(240, 199, 94, 0.3);
-  position: relative;
+ position: relative;
   background: rgba(14, 26, 64, 0.4);
   border-radius: 8px 8px 0 0;
 }
@@ -2272,12 +2200,12 @@ canvas {
     flex-direction: column;
     gap: 5px;
   }
-  
+
   .crop-tool {
     max-width: 250px;
     max-height: 250px;
   }
-  
+
   .latex-preview {
     font-size: 16px;
   }
@@ -2329,5 +2257,58 @@ canvas {
   50% { 
     transform: translate(-50%, -54%);
     box-shadow: 0 25px 15px rgba(0,0,0,0.2);
+  }
+}
+@media (max-width: 768px) {
+  .hogwarts-header h1 {
+    font-size: clamp(1rem, 5vw, 1.5rem);
+    padding: 0 8px;
+  }
+
+  .hogwarts-content {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .wizard-panel {
+    padding: 12px;
+  }
+
+  .inequality-input-field {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .spellcast-button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .floating-element {
+    transform: scale(0.7);
+  }
+
+  .latex-preview-container {
+    padding: 8px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hogwarts-header h1 {
+    font-size: clamp(0.9rem, 4vw, 1.2rem);
+  }
+
+  .wizard-panel {
+    padding: 8px;
+  }
+
+  .floating-element {
+    display: none;
+  }
+
+  .spellcast-button {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
