@@ -1,40 +1,50 @@
-import React from 'react';
-import { Box } from '@chakra-ui/react';
 
-export const BackgroundWrapper = ({ children }) => {
+import React, { memo } from 'react';
+import { Box, Container } from '@chakra-ui/react';
+
+const BackgroundWrapper = memo(({ children }) => {
   return (
     <Box
-      width="100%"
+      className="hogwarts-app"
       minHeight="100vh"
+      width="100%"
+      position="relative"
+      overflow="hidden"
       backgroundImage="url('/assets/images/hogwarts-bg.jpg')"
       backgroundSize="cover"
       backgroundPosition="center"
-      backgroundRepeat="no-repeat"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      position="relative"
-      py={8}
+      backgroundAttachment="fixed"
+      sx={{
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bg: 'rgba(14, 26, 64, 0.92)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 0,
+          transition: 'all 0.3s ease',
+        }
+      }}
     >
-      {/* Dark overlay */}
-      <Box
-        position="absolute"
-        top="0"
-        left="0"
-        width="100%"
-        height="100%"
-        bg="rgba(0, 0, 0, 0.6)"
-        zIndex={0}
-      />
-      
-      {/* Content */}
-      <Box
+      <Container
+        maxW="container.xl"
         position="relative"
         zIndex={1}
-        width="100%"
+        px={{ base: 4, md: 6, lg: 8 }}
+        py={{ base: 6, md: 8, lg: 10 }}
+        height="100%"
+        display="flex"
+        flexDirection="column"
       >
         {children}
-      </Box>
+      </Container>
     </Box>
   );
-};
+});
+
+BackgroundWrapper.displayName = 'BackgroundWrapper';
+
+export default BackgroundWrapper;

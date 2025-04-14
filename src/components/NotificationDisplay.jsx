@@ -594,6 +594,19 @@ const NotificationDisplay = () => {
       return;
     }
     
+    // Batch process notifications
+    const batchSize = 5;
+    const notificationBatch = notificationQueue.current.slice(0, batchSize);
+    
+    // Deduplicate batch
+    const uniqueNotifications = new Map();
+    notificationBatch.forEach(notification => {
+      const key = `${notification.type}-${notification.message}`;
+      if (!uniqueNotifications.has(key) || notification.isFresh) {
+        uniqueNotifications.set(key, notification);
+      }
+    });
+    
     processingQueue.current = true;
     
     // First, filter out unwanted notifications
@@ -734,22 +747,22 @@ const NotificationDisplay = () => {
     });
     
     // Process each group - keep only the newest notification from each group
-    const uniqueNotifications = [];
+    const processedNotifications = [];
     dedupeGroups.forEach((group, key) => {
       // If there's only one, just keep it
       if (group.length === 1) {
-        uniqueNotifications.push(group[0]);
+        processedNotifications.push(group[0]);
       } 
       // If there are multiple in a group, only keep the newest one
       else if (group.length > 1) {
         console.log(`[NOTIFICATION] Deduplicated ${group.length} similar notifications with key ${key}`);
         // The notifications are already sorted by timestamp, so take the first one
-        uniqueNotifications.push(group[0]);
+        processedNotifications.push(group[0]);
       }
     });
     
     // Replace the queue with deduplicated notifications
-    notificationQueue.current = uniqueNotifications;
+    notificationQueue.current = processedNotifications;
     
     console.log(`[NOTIFICATION] After deduplication: ${notificationQueue.current.length} notifications`);
 
