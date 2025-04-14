@@ -596,8 +596,22 @@ const NotificationDisplay = () => {
     
     processingQueue.current = true;
     
-    // First, filter out unwanted notifications - point changes and point totals
+    // First, filter out unwanted notifications
     notificationQueue.current = notificationQueue.current.filter(notification => {
+      // Skip notifications for admin, muggle, or unassigned users
+      if (user?.house === 'admin' || user?.house === 'muggle' || !user?.house) {
+        // Filter out point change notifications and house-related notifications
+        if (notification.pointsChange || 
+            (notification.message && (
+              notification.message.includes('points') || 
+              notification.message.includes('Points') ||
+              notification.message.toLowerCase().includes('house')
+            ))) {
+          console.log('[NOTIFICATION] Filtering point/house notification for admin/muggle/unassigned user');
+          return false;
+        }
+      }
+      
       // Filter out notifications about "Your magic points have been updated to X"
       if (notification.message && notification.message.includes('magic points have been updated to')) {
         console.log('[NOTIFICATION] Filtering out point total notification:', notification.message);

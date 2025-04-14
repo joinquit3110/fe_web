@@ -319,13 +319,13 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received house points update:', data);
       setLastMessage({ type: 'house_points_update', data, timestamp: new Date() });
       
-      // Only skip if both conditions are true: skipAdmin flag is set AND user is an admin
-      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
-        console.log(`[SOCKET] Skipping house points notification for admin user: ${user?.username}`);
+      // Skip notifications for admin, muggle, or unassigned users
+      if (isAdminUser.current || user?.house === 'muggle' || !user?.house) {
+        console.log(`[SOCKET] Skipping house points notification for user ${user?.username} (${user?.house || 'unassigned'})`);
         return;
       }
       
-      // For regular users or admins that should see this notification, show it
+      // For regular users that should see this notification, show it
       // Add notification about house points change
       if (data.house === user?.house) {
         const pointsChange = data.points;
