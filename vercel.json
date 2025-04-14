@@ -34,5 +34,15 @@
       "CI": "false",
       "NODE_ENV": "production"
     }
+  },
+  "images": {
+    "sizes": [256, 512, 1024],
+    "domains": ["inequality-web.vercel.app"],
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "inequality-web.vercel.app"
+      }
+    ]
   }
 }

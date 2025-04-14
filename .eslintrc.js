@@ -8,9 +8,10 @@ module.exports = {
     'react-app'
   ],
   rules: {
-    'no-unused-vars': 'off',
+    'no-unused-vars': 'warn',
     'unicode-bom': 'off',
     'no-useless-escape': 'off',
-    'react-hooks/exhaustive-deps': 'off'
+    'react-hooks/exhaustive-deps': 'warn',
+    'no-duplicate-imports': 'error'
   }
 };
