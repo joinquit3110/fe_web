@@ -20,7 +20,8 @@ const AdminHousePoints = () => {
     loading,
     error,
     fetchUsers,
-    forceSyncForUsers
+    forceSyncForUsers,
+    users
   } = useAdmin();
   
   const { logout } = useAuth();
@@ -29,6 +30,14 @@ const AdminHousePoints = () => {
   
   // State for house statistics
   const [houseStats, setHouseStats] = useState({
+    gryffindor: 0,
+    slytherin: 0,
+    ravenclaw: 0,
+    hufflepuff: 0
+  });
+  
+  // State for house average points
+  const [houseAverages, setHouseAverages] = useState({
     gryffindor: 0,
     slytherin: 0,
     ravenclaw: 0,
@@ -73,10 +82,53 @@ const AdminHousePoints = () => {
   useEffect(() => {
     const refreshData = async () => {
       await fetchUsers();
+      calculateHouseAverages();
     };
     
     refreshData();
   }, [fetchUsers]);
+  
+  // Function to calculate house average points
+  const calculateHouseAverages = () => {
+    if (!users || users.length === 0) return;
+    
+    const houseData = {
+      gryffindor: { total: 0, count: 0 },
+      slytherin: { total: 0, count: 0 },
+      ravenclaw: { total: 0, count: 0 },
+      hufflepuff: { total: 0, count: 0 }
+    };
+    
+    // Calculate totals and count for each house
+    users.forEach(user => {
+      const house = user.house;
+      // Skip users without a valid house or non-student houses
+      if (!house || !houseData[house]) return;
+      
+      // Add user's magic points to house total
+      const points = user.magicPoints || 0;
+      houseData[house].total += points;
+      houseData[house].count++;
+    });
+    
+    // Calculate averages
+    const averages = {
+      gryffindor: houseData.gryffindor.count ? Math.round(houseData.gryffindor.total / houseData.gryffindor.count) : 0,
+      slytherin: houseData.slytherin.count ? Math.round(houseData.slytherin.total / houseData.slytherin.count) : 0,
+      ravenclaw: houseData.ravenclaw.count ? Math.round(houseData.ravenclaw.total / houseData.ravenclaw.count) : 0,
+      hufflepuff: houseData.hufflepuff.count ? Math.round(houseData.hufflepuff.total / houseData.hufflepuff.count) : 0
+    };
+    
+    setHouseAverages(averages);
+    
+    // Update statistics for later use
+    setHouseStats({
+      gryffindor: { points: averages.gryffindor, users: houseData.gryffindor.count },
+      slytherin: { points: averages.slytherin, users: houseData.slytherin.count },
+      ravenclaw: { points: averages.ravenclaw, users: houseData.ravenclaw.count },
+      hufflepuff: { points: averages.hufflepuff, users: houseData.hufflepuff.count }
+    });
+  };
   
   // Navigate to user management
   const goToUserManagement = () => {
@@ -311,6 +363,7 @@ const AdminHousePoints = () => {
           <TabList>
             <Tab>House Points</Tab>
             <Tab>Group Assessment</Tab>
+            <Tab>Activity 2</Tab>
           </TabList>
           
           <TabPanels>
@@ -574,6 +627,80 @@ const AdminHousePoints = () => {
                   >
                     Submit Assessment
                   </Button>
+                </VStack>
+              </Box>
+            </TabPanel>
+            
+            {/* House Average Points Tab (Activity 2) */}
+            <TabPanel>
+              <Box className="wizard-panel" p={4} borderRadius="md">
+                <VStack spacing={6} align="stretch">
+                  <Heading size="md" textAlign="center">House Average Points</Heading>
+                  <Text fontSize="sm" opacity={0.8} textAlign="center">
+                    Average magic points across all users in each Hogwarts house
+                  </Text>
+                  
+                  <Button 
+                    size="sm" 
+                    colorScheme="blue" 
+                    onClick={calculateHouseAverages}
+                    isLoading={loading}
+                    alignSelf="center"
+                    mb={2}
+                  >
+                    Refresh Data
+                  </Button>
+                  
+                  {loading ? (
+                    <Flex justify="center" py={10}>
+                      <Spinner size="xl" color="purple.500" />
+                    </Flex>
+                  ) : (
+                    <Box>
+                      {houses.map(house => (
+                        <Box
+                          key={house.value}
+                          bg={house.bgColor}
+                          color={house.textColor}
+                          borderRadius="md"
+                          p={4}
+                          mb={3}
+                          boxShadow="md"
+                          position="relative"
+                          overflow="hidden"
+                        >
+                          <Flex justify="space-between" align="center">
+                            <HStack>
+                              <Heading size="md">{house.label}</Heading>
+                              <Badge colorScheme={house.value === 'gryffindor' ? 'red' : 
+                                              house.value === 'slytherin' ? 'green' :
+                                              house.value === 'ravenclaw' ? 'blue' : 'yellow'}
+                                    px={2}
+                                    py={1}
+                              >
+                                {houseStats[house.value]?.users || 0} students
+                              </Badge>
+                            </HStack>
+                            
+                            <Box 
+                              p={3} 
+                              borderRadius="full" 
+                              bg={house.textColor} 
+                              color={house.bgColor}
+                              fontWeight="bold"
+                              fontSize="xl"
+                            >
+                              {houseAverages[house.value] || 0}
+                            </Box>
+                          </Flex>
+                          
+                          <Text mt={2} opacity={0.9} fontSize="sm">
+                            Average points per student in {house.label}
+                          </Text>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
                 </VStack>
               </Box>
             </TabPanel>
