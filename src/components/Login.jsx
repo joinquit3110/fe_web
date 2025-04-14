@@ -134,13 +134,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    // Debounce loading state to prevent flicker
-    const loadingTimeout = setTimeout(() => setIsLoading(true), 150);
-    
-    // Track submission attempt
-    const attemptId = Date.now();
-    sessionStorage.setItem('lastLoginAttempt', attemptId);
+    setIsLoading(true);
     
     try {
       // Check for admin credentials

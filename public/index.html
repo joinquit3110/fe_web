@@ -2,30 +2,136 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <link rel="icon" href="%PUBLIC_URL%/asset/Hogwarts logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0E1A40" />
-    <meta
-      name="description"
-      content="Hogwarts School of Inequality Magic - An interactive inequality visualization app"
-    />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <meta name="description" content="Hogwarts School of Inequality Magic - An interactive inequality visualization app with Harry Potter theme" />
+    <meta name="author" content="Hogwarts Development Team" />
     
-    <!-- Google Fonts for Harry Potter Theme -->
+    <!-- Performance & SEO Improvements -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="canonical" href="https://inequality-web.vercel.app/" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hogwarts Math" />
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/asset/Hogwarts logo.png" />
+    
+    <!-- Preconnect to essential domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&family=MedievalSharp&family=Tangerine:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     
-    <!-- Material Icons for UI elements -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Preload critical fonts & assets -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap" as="style">
+    <link rel="preload" href="%PUBLIC_URL%/asset/Hogwarts logo.png" as="image">
     
-    <!-- KaTeX Stylesheet -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <!-- CSS with performance optimizations -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
     
-    <title>Hogwarts School of Witchcraft and Wizardry</title>
+    <title>Hogwarts School of Inequality Magic</title>
+    
+    <!-- Inline critical CSS for faster rendering -->
+    <style>
+      /* Critical styles for initial load */
+      :root {
+        --primary-color: #740001;
+        --secondary-color: #D3A625;
+        --accent-color: #0E1A40;
+        --dark-accent: #1A472A;
+        --background-color: #2A2D34;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Cinzel', serif;
+        background-color: var(--accent-color);
+        color: #F8F8F8;
+        overflow-x: hidden;
+      }
+      
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* Loading spinner for initial load - shown immediately */
+      .initial-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--accent-color);
+        z-index: 9999;
+      }
+      
+      .loader {
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(211, 166, 37, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--secondary-color);
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: 'Cinzel', serif;">
+        <h1 style="color: #D3A625;">JavaScript Required</h1>
+        <p>This magical experience requires JavaScript to be enabled. Please enable JavaScript to continue your journey at Hogwarts School of Inequality Magic.</p>
+      </div>
+    </noscript>
+    
+    <!-- Initial loading spinner -->
+    <div class="initial-loader" id="initial-loader">
+      <div class="loader"></div>
+    </div>
+    
     <div id="root"></div>
+    
+    <!-- Inline critical initialization script -->
+    <script>
+      // Remove loader when content is ready
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.style.opacity = '0';
+            loader.style.transition = 'opacity 0.3s ease';
+            setTimeout(function() {
+              loader.style.display = 'none';
+            }, 300);
+          }
+        }, 200);
+      });
+      
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
