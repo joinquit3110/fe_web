@@ -1,0 +1,631 @@
+/* ProfileUI.css - Styling for the redesigned UserProfile component */
+
+/* Container */
+.profile-container-fixed {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 1000;
+  box-sizing: border-box;
+  font-family: 'Cinzel', serif;
+}
+
+/* Avatar Button */
+.profile-avatar-button {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: #333;
+  color: white;
+}
+
+.profile-avatar-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 15px rgba(240, 199, 94, 0.5);
+}
+
+.profile-avatar-button.gryffindor {
+  background: linear-gradient(135deg, #740001 0%, #ae0001 100%);
+  border-color: #ffc500;
+}
+
+.profile-avatar-button.slytherin {
+  background: linear-gradient(135deg, #1a472a 0%, #2a623d 100%);
+  border-color: #aaaaaa;
+}
+
+.profile-avatar-button.ravenclaw {
+  background: linear-gradient(135deg, #0e1a40 0%, #222f5b 100%);
+  border-color: #946b2d;
+}
+
+.profile-avatar-button.hufflepuff {
+  background: linear-gradient(135deg, #ecb939 0%, #f0c75e 100%);
+  border-color: #000000;
+  color: #000;
+}
+
+.profile-avatar-button.muggle {
+  background: linear-gradient(135deg, #4b4b4b 0%, #6b6b6b 100%);
+  border-color: #dddddd;
+}
+
+.profile-avatar-button.admin {
+  background: linear-gradient(135deg, #4b0082 0%, #800080 100%);
+  border-color: #ffffff;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile-avatar-initials {
+  font-size: 22px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* House Badge */
+.profile-house-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  background: var(--house-bg, #333);
+  color: var(--house-text, white);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--house-border, #555);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.profile-house-badge.gryffindor {
+  background: #740001;
+  color: #FFC500;
+  border-color: #ae0001;
+}
+
+.profile-house-badge.slytherin {
+  background: #1A472A;
+  color: #AAAAAA;
+  border-color: #2a623d;
+}
+
+.profile-house-badge.ravenclaw {
+  background: #0E1A40;
+  color: #946B2D;
+  border-color: #222f5b;
+}
+
+.profile-house-badge.hufflepuff {
+  background: #ECB939;
+  color: #000000;
+  border-color: #f0c75e;
+}
+
+.profile-house-badge.muggle {
+  background: #6B6B6B;
+  color: #FFFFFF;
+  border-color: #888888;
+}
+
+.profile-house-badge.admin {
+  background: #4B0082;
+  color: #FFFFFF;
+  border-color: #800080;
+}
+
+/* Profile Menu */
+.profile-menu {
+  position: absolute;
+  top: 55px;
+  right: 0;
+  width: 300px;
+  max-width: 90vw;
+  background-color: rgba(14, 26, 64, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(240, 199, 94, 0.4);
+  border: 2px solid var(--house-border, rgba(240, 199, 94, 0.6));
+  z-index: 1000;
+  padding: 15px;
+  animation: menu-fade-in 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes menu-fade-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Profile Header */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.profile-avatar-large-container {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.profile-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--house-bg, #333);
+  color: var(--house-text, white);
+  border: 3px solid var(--house-border, #555);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-avatar-large.gryffindor {
+  background: linear-gradient(135deg, #740001 0%, #ae0001 100%);
+  border-color: #ffc500;
+}
+
+.profile-avatar-large.slytherin {
+  background: linear-gradient(135deg, #1a472a 0%, #2a623d 100%);
+  border-color: #aaaaaa;
+}
+
+.profile-avatar-large.ravenclaw {
+  background: linear-gradient(135deg, #0e1a40 0%, #222f5b 100%);
+  border-color: #946b2d;
+}
+
+.profile-avatar-large.hufflepuff {
+  background: linear-gradient(135deg, #ecb939 0%, #f0c75e 100%);
+  border-color: #000000;
+  color: #000;
+}
+
+.profile-avatar-large.muggle {
+  background: linear-gradient(135deg, #4b4b4b 0%, #6b6b6b 100%);
+  border-color: #dddddd;
+}
+
+.profile-avatar-large.admin {
+  background: linear-gradient(135deg, #4b0082 0%, #800080 100%);
+  border-color: #ffffff;
+}
+
+.profile-avatar-large-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-large-initials {
+  font-size: 36px;
+  font-weight: bold;
+}
+
+.profile-avatar-edit-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--house-bg, #333);
+  color: var(--house-text, white);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--house-border, #555);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.profile-avatar-edit-icon .material-icons {
+  font-size: 14px;
+}
+
+.profile-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
+.profile-username {
+  margin: 0 0 5px;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--house-text, white);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.profile-house-badge-large {
+  display: inline-block;
+  background: var(--house-bg, #333);
+  color: var(--house-text, white);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--house-border, #555);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+}
+
+.profile-house-badge-large.gryffindor {
+  background: #740001;
+  color: #FFC500;
+  border-color: #ae0001;
+}
+
+.profile-house-badge-large.slytherin {
+  background: #1A472A;
+  color: #AAAAAA;
+  border-color: #2a623d;
+}
+
+.profile-house-badge-large.ravenclaw {
+  background: #0E1A40;
+  color: #946B2D;
+  border-color: #222f5b;
+}
+
+.profile-house-badge-large.hufflepuff {
+  background: #ECB939;
+  color: #000000;
+  border-color: #f0c75e;
+}
+
+.profile-house-badge-large.muggle {
+  background: #6B6B6B;
+  color: #FFFFFF;
+  border-color: #888888;
+}
+
+.profile-house-badge-large.admin {
+  background: #4B0082;
+  color: #FFFFFF;
+  border-color: #800080;
+}
+
+.profile-email {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 5px;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.profile-divider {
+  height: 1px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 10px 0;
+}
+
+/* Profile Tabs */
+.profile-tabs {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 10px 0;
+  color: #ddd;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.profile-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--house-border, #555);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.profile-tab:hover {
+  color: white;
+}
+
+.profile-tab:hover::after {
+  transform: scaleX(0.5);
+}
+
+.profile-tab.active {
+  color: var(--house-text, white);
+}
+
+.profile-tab.active::after {
+  transform: scaleX(1);
+}
+
+/* Profile Tab Content */
+.profile-tab-content {
+  padding: 15px 0;
+}
+
+/* Profile Form */
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.profile-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.profile-form-label {
+  font-size: 12px;
+  color: #ddd;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.profile-form-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.profile-form-input:focus {
+  outline: none;
+  border-color: var(--house-border, #555);
+  box-shadow: 0 0 0 1px var(--house-border, #555);
+}
+
+.profile-form-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Profile Buttons */
+.profile-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--house-bg, #333);
+  color: var(--house-text, white);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+}
+
+.profile-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.profile-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+
+.profile-button .material-icons {
+  font-size: 16px;
+}
+
+.profile-button-gryffindor {
+  background: #740001;
+  color: #FFC500;
+}
+
+.profile-button-gryffindor:hover {
+  background: #8a0001;
+}
+
+.profile-button-slytherin {
+  background: #1A472A;
+  color: #AAAAAA;
+}
+
+.profile-button-slytherin:hover {
+  background: #235939;
+}
+
+.profile-button-ravenclaw {
+  background: #0E1A40;
+  color: #946B2D;
+}
+
+.profile-button-ravenclaw:hover {
+  background: #162a61;
+}
+
+.profile-button-hufflepuff {
+  background: #ECB939;
+  color: #000000;
+}
+
+.profile-button-hufflepuff:hover {
+  background: #f0c75e;
+}
+
+.profile-button-muggle {
+  background: #6B6B6B;
+  color: #FFFFFF;
+}
+
+.profile-button-muggle:hover {
+  background: #7a7a7a;
+}
+
+.profile-button-admin {
+  background: #4B0082;
+  color: #FFFFFF;
+}
+
+.profile-button-admin:hover {
+  background: #5a0099;
+}
+
+.profile-button-success {
+  background: #1e7d35;
+  color: white;
+}
+
+.profile-button-success:hover {
+  background: #25963f;
+}
+
+.profile-button-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.profile-button-danger:hover {
+  background: #e33939;
+}
+
+.profile-button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Message Boxes */
+.profile-error-message {
+  background-color: rgba(211, 47, 47, 0.2);
+  border: 1px solid #d32f2f;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.profile-success-message {
+  background-color: rgba(46, 125, 50, 0.2);
+  border: 1px solid #2e7d32;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Crop container */
+.profile-crop-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-section-title {
+  font-size: 18px;
+  color: var(--house-text, white);
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.profile-crop-preview {
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive styles */
+@media (max-width: 575px) {
+  .profile-menu {
+    width: calc(100vw - 30px);
+    right: 0;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  
+  .profile-avatar-large {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .profile-avatar-large-initials {
+    font-size: 30px;
+  }
+}
+
+/* Fixed position layout fix for all screen sizes */
+@media (min-width: 776px) {
+  .profile-menu {
+    width: 320px;
+    right: 0;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
+
+/* Make sure the scrollbar is styled nicely */
+.profile-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-menu::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+
+.profile-menu::-webkit-scrollbar-thumb {
+  background-color: var(--house-border, rgba(240, 199, 94, 0.5));
+  border-radius: 6px;
+}
+
+/* Additional animation to make the UI feel responsive */
+.profile-avatar-button:active {
+  transform: scale(0.95);
+}
+
+.profile-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}

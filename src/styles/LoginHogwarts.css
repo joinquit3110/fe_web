@@ -12,10 +12,10 @@
   font-family: 'MedievalSharp', cursive !important;
   color: var(--hogwarts-secondary) !important;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 2.5rem !important;
+  letter-spacing: 3px !important;
+  font-size: 3rem !important;
   position: relative;
-  text-shadow: 0 0 10px rgba(240, 199, 94, 0.5);
+  text-shadow: 0 0 15px rgba(240, 199, 94, 0.6), 0 0 30px rgba(240, 199, 94, 0.3) !important;
   margin-bottom: 0.5rem !important;
 }
 
@@ -321,6 +321,22 @@
     opacity: 0;
     transform: translate(var(--x, 100px), var(--y, -100px)) scale(0);
   }
+}
+
+/* Add logo animation for login page */
+@keyframes float-logo {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg); 
+    filter: drop-shadow(0 0 15px rgba(240, 199, 94, 0.7));
+  }
+  50% { 
+    transform: translateY(-6px) rotate(2deg); 
+    filter: drop-shadow(0 0 25px rgba(240, 199, 94, 0.9));
+  }
+}
+
+.animated-logo {
+  animation: float-logo 4s ease-in-out infinite;
 }
 
 /* Custom form field styling */

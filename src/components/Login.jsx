@@ -421,14 +421,16 @@ const Login = () => {
           <Image
             src={hogwartsLogoImg}
             alt="Hogwarts Logo"
-            width="70px"
+            width="120px"
             height="auto"
-            mb={1}
-            className="hogwarts-logo"
-            style={{ filter: 'drop-shadow(0 0 16px #f0c75e)' }}
+            mb={3}
+            className="hogwarts-logo animated-logo"
+            style={{ 
+              filter: 'drop-shadow(0 0 16px #f0c75e)',
+              animation: 'float-logo 3s infinite ease-in-out'
+            }}
           />
-          <Box position="relative" display="flex" alignItems="center">
-            <span className="magic-wand-icon" style={{fontSize: '2rem', color: '#f0c75e', marginRight: 8, filter: 'drop-shadow(0 0 6px #f0c75e)'}}>🪄</span>
+          <Box position="relative" display="flex" alignItems="center" justifyContent="center">
             <Heading
               as="h1"
               size="xl"
@@ -444,11 +446,9 @@ const Login = () => {
                 zIndex: 2
               }}
             >
-              Hogwarts School of <Box as="span" className="highlight magic-glow" style={{color:'#fffbe6', position:'relative', zIndex:3, textShadow:'0 0 24px #f0c75e, 0 0 8px #fffbe6'}}>Inequality Magic</Box>
+              Hogwarts
             </Heading>
-            <span className="magic-wand-icon" style={{fontSize: '2rem', color: '#f0c75e', marginLeft: 8, filter: 'drop-shadow(0 0 6px #f0c75e)'}}>🪄</span>
           </Box>
-          <Box className="magic-underline" style={{height: '6px', width: '80%', margin: '0 auto', background: 'linear-gradient(90deg, transparent, #f0c75e 50%, transparent)', borderRadius: 3, boxShadow: '0 0 12px #f0c75e', marginTop: 6, animation: 'panel-fade-in 1.2s'}}></Box>
         </Box>
         
         <VStack spacing={6} align="center" className="control-panel-content">
