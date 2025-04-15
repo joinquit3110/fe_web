@@ -87,6 +87,30 @@ button, input, select, textarea {
   background-blend-mode: overlay;
 }
 
+/* Magic floating sparkles for background */
+.magic-sparkle-bg {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  width: 100vw;
+  height: 100vh;
+  top: 0; left: 0;
+  overflow: hidden;
+}
+.magic-sparkle-dot {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f0c75e 0%, rgba(240,199,94,0.0) 80%);
+  opacity: 0.5;
+  animation: sparkle-float 4s infinite linear;
+}
+@keyframes sparkle-float {
+  0% { transform: translateY(0) scale(1); opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { transform: translateY(-60px) scale(1.2); opacity: 0.2; }
+}
+
 /* Hogwarts Crest */
 .hogwarts-crest {
   position: absolute;
@@ -205,6 +229,7 @@ button, input, select, textarea {
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   position: relative;
+  animation: panel-fade-in 0.7s cubic-bezier(.4,0,.2,1);
 }
 
 .hogwarts-header:before {
@@ -276,6 +301,7 @@ button, input, select, textarea {
   gap: 5px;
   width: 100%;
   z-index: 2;
+  animation: panel-fade-in 0.7s cubic-bezier(.4,0,.2,1);
 }
 
 /* Wizard panel enhancement */
@@ -288,6 +314,12 @@ button, input, select, textarea {
   margin-bottom: 5px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   overflow: hidden;
+  border-image: linear-gradient(120deg, #f0c75e 10%, #0e1a40 90%) 1;
+  border-width: 2.5px;
+  border-style: solid;
+  box-shadow: 0 0 24px 4px rgba(240,199,94,0.10), 0 2px 16px 0 rgba(0,0,0,0.12);
+  background-blend-mode: lighten;
+  animation: panel-fade-in 0.7s cubic-bezier(.4,0,.2,1);
 }
 
 .wizard-panel:before {
@@ -796,10 +828,16 @@ button, input, select, textarea {
   background-color: rgba(14, 26, 64, 0.95);
   border-radius: 8px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(240, 199, 94, 0.4);
-  border: 2px solid var(--hogwarts-secondary);
+  border: 2.5px solid;
+  border-image: linear-gradient(120deg, #f0c75e 10%, #0e1a40 90%) 1;
   z-index: 1000;
   overflow: hidden;
-  animation: menu-appear 0.3s ease forwards;
+  animation: panel-fade-in 0.7s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes panel-fade-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes menu-appear {
