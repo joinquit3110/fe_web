@@ -37,8 +37,18 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [userHouse, setUserHouse] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Khi component mount, kiểm tra localStorage để tự động điền username nếu đã lưu
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('rememberedUsername');
+    if (savedUsername) {
+      setEmail(savedUsername);
+      setRememberMe(true);
+    }
+  }, []);
 
   // Add stars to the background
   useEffect(() => {
@@ -135,6 +145,13 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    // Lưu username nếu chọn ghi nhớ
+    if (rememberMe) {
+      localStorage.setItem('rememberedUsername', email);
+    } else {
+      localStorage.removeItem('rememberedUsername');
+    }
     
     try {
       // Check for admin credentials
@@ -497,6 +514,42 @@ const Login = () => {
                     />
                   </InputRightElement>
                 </InputGroup>
+              </FormControl>
+              
+              {/* Checkbox Remember Me - Enhanced styling */}
+              <FormControl 
+                display="flex" 
+                alignItems="center"
+                bg="rgba(14, 26, 64, 0.4)"
+                p={2}
+                borderRadius="md"
+                mt={1}
+              >
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  style={{ 
+                    marginRight: 8,
+                    accentColor: 'var(--hogwarts-secondary)',
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <label 
+                  htmlFor="rememberMe" 
+                  style={{ 
+                    color: 'var(--text-primary)', 
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    fontFamily: "'Cormorant Garamond', serif",
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  Remember my wizard name
+                </label>
               </FormControl>
               
               <Box position="relative" width="100%">

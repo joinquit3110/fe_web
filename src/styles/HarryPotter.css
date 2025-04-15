@@ -730,26 +730,30 @@ button, input, select, textarea {
 /* Profile hover card - enhanced */
 .profile-hover-card {
   position: absolute;
-  top: 45px;
+  top: 50px;
   right: 0;
-  width: 200px;
+  width: 230px;
   background-color: rgba(14, 26, 64, 0.95);
   border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(240, 199, 94, 0.3);
   border: 1px solid var(--hogwarts-secondary);
+  padding: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  visibility: hidden;
   opacity: 0;
   transform: translateY(-10px);
-  pointer-events: none;
   transition: all 0.3s ease;
-  z-index: 1000;
-  overflow: hidden;
+  pointer-events: none;
+  /* Added fixed width and position */
+  right: 0;
+  max-width: 250px;
 }
 
-.profile-icon:hover .profile-hover-card {
+/* Fix hover behavior */
+.profile-container:hover .profile-hover-card {
+  visibility: visible;
   opacity: 1;
   transform: translateY(0);
-  pointer-events: auto;
 }
 
 .profile-hover-card::before {
@@ -2367,5 +2371,28 @@ canvas {
   50% { 
     transform: translate(-50%, -54%);
     box-shadow: 0 25px 15px rgba(0,0,0,0.2);
+  }
+}
+
+/* Fix for screens wider than 775px */
+@media screen and (min-width: 775px) {
+  .profile-menu {
+    max-width: 350px;
+    right: 0;
+    position: absolute;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+  
+  .profile-hover-card {
+    max-width: 300px;
+    right: 0;
+  }
+  
+  /* Ensure proper layout in hogwarts-content */
+  .hogwarts-content {
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-areas: "control coordinate inequalities";
+    gap: 16px;
   }
 }
