@@ -1765,3 +1765,66 @@ input:-webkit-autofill:active {
   border: 1px solid rgba(220, 53, 69, 0.5);
   color: #dc3545;
 }
+
+/* Breakpoints for responsive design */
+@media (max-width: 900px) {
+  .hogwarts-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    padding: 0 2vw !important;
+    box-sizing: border-box;
+  }
+  .wizard-panel, .coordinate-container, .inequalities-list, .control-panel {
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+    margin: 0 auto 10px auto !important;
+    box-sizing: border-box;
+  }
+  .admin-table, .admin-table th, .admin-table td {
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    word-break: break-word !important;
+    font-size: 12px !important;
+  }
+  .profile-menu, .profile-hover-card {
+    max-width: 95vw !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .hogwarts-header, .hogwarts-title, .login-header h1 {
+    font-size: 1.2rem !important;
+    padding: 0 2vw !important;
+    word-break: break-word !important;
+  }
+  .hogwarts-app, .app {
+    padding: 0 !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .hogwarts-content, .wizard-panel, .coordinate-container, .inequalities-list, .control-panel {
+    padding: 0 1vw !important;
+    gap: 6px !important;
+  }
+  .hogwarts-header, .hogwarts-title, .login-header h1 {
+    font-size: 1rem !important;
+    padding: 0 1vw !important;
+  }
+  .profile-menu, .profile-hover-card {
+    max-width: 99vw !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .admin-table, .admin-table th, .admin-table td {
+    font-size: 10px !important;
+    padding: 2px 1px !important;
+  }
+}

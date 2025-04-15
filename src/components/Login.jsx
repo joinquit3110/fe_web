@@ -393,20 +393,48 @@ const Login = () => {
         <Box className="panel-decoration left" />
         <Box className="panel-decoration right" />
         
-        <VStack spacing={6} align="center" className="control-panel-content">
-          <Image 
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          mb={2}
+          className="hogwarts-header magic-title-block"
+          position="relative"
+        >
+          <Image
             src={hogwartsLogoImg}
-            alt="Hogwarts School of Witchcraft and Wizardry"
-            width="120px"
+            alt="Hogwarts Logo"
+            width="70px"
             height="auto"
-            mb={2}
+            mb={1}
             className="hogwarts-logo"
+            style={{ filter: 'drop-shadow(0 0 16px #f0c75e)' }}
           />
-          
-          <Heading as="h1" size="xl" className="hogwarts-title" textAlign="center">
-            Hogwarts
-          </Heading>
-          
+          <Box position="relative" display="flex" alignItems="center">
+            <span className="magic-wand-icon" style={{fontSize: '2rem', color: '#f0c75e', marginRight: 8, filter: 'drop-shadow(0 0 6px #f0c75e)'}}>🪄</span>
+            <Heading
+              as="h1"
+              size="xl"
+              className="hogwarts-title magic-title"
+              textAlign="center"
+              fontFamily="'MedievalSharp', 'Cinzel', serif"
+              fontWeight="bold"
+              letterSpacing={2}
+              color="#F0C75E"
+              style={{
+                textShadow: '0 0 18px #f0c75e, 0 2px 8px #0e1a40',
+                position: 'relative',
+                zIndex: 2
+              }}
+            >
+              Hogwarts School of <Box as="span" className="highlight magic-glow" style={{color:'#fffbe6', position:'relative', zIndex:3, textShadow:'0 0 24px #f0c75e, 0 0 8px #fffbe6'}}>Inequality Magic</Box>
+            </Heading>
+            <span className="magic-wand-icon" style={{fontSize: '2rem', color: '#f0c75e', marginLeft: 8, filter: 'drop-shadow(0 0 6px #f0c75e)'}}>🪄</span>
+          </Box>
+          <Box className="magic-underline" style={{height: '6px', width: '80%', margin: '0 auto', background: 'linear-gradient(90deg, transparent, #f0c75e 50%, transparent)', borderRadius: 3, boxShadow: '0 0 12px #f0c75e', marginTop: 6, animation: 'panel-fade-in 1.2s'}}></Box>
+        </Box>
+        
+        <VStack spacing={6} align="center" className="control-panel-content">
           <Heading as="h2" size="lg" className="highlight" textAlign="center">
             Welcome, Wizard
           </Heading>
@@ -576,6 +604,16 @@ const Login = () => {
             opacity: 0;
           }
         }
+
+        .magic-title-block { margin-bottom: 18px; }
+        .magic-title { font-size: 2.1rem !important; }
+        .magic-glow { animation: magic-glow 2.2s infinite alternate; }
+        @keyframes magic-glow {
+          0% { text-shadow: 0 0 18px #f0c75e, 0 2px 8px #0e1a40; }
+          50% { text-shadow: 0 0 32px #fffbe6, 0 2px 12px #f0c75e; }
+          100% { text-shadow: 0 0 18px #f0c75e, 0 2px 8px #0e1a40; }
+        }
+        .magic-underline { animation: panel-fade-in 1.2s; }
       `}</style>
     </Box>
   );

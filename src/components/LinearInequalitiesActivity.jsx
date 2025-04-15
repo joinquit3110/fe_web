@@ -905,7 +905,7 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
       }} ref={notificationContainerRef}></div>
       <Heading 
         as="h3" 
-        size="md" 
+        size="sm" 
         mb="4" 
         color="var(--secondary-color)"
         textAlign="center"
@@ -914,6 +914,7 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
           position: "relative",
           textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
           letterSpacing: "1px",
+          fontSize: "1.1rem"
         }}
         className="activity-title"
       >
@@ -1111,7 +1112,7 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
           </div>
           
           <Heading
-            size="md"
+            size="sm"
             color="var(--secondary-color)"
             textAlign="center"
             style={{ 
@@ -1120,12 +1121,13 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
               position: "relative",
               letterSpacing: "1.5px",
               marginBottom: "10px",
+              fontSize: "1.1rem"
             }}
           >
             <span style={{ 
               display: "inline-block",
               color: "var(--secondary-color)",
-              fontSize: "22px",
+              fontSize: "1.1rem",
               textTransform: "uppercase"
             }}>
               Magical Incantations Vault
@@ -1181,9 +1183,9 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
               padding: "8px",
               position: "relative",
               zIndex: 2,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-              gridGap: "12px"
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px"
             }}
             className="word-bank-scrollable"
             onDragOver={(e) => e.preventDefault()}
@@ -1193,11 +1195,11 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
             {wordBankItems.map((item, index) => (
               <Box 
                 key={index}
-                p="3"
+                p="2"
                 bg="rgba(30, 33, 50, 0.95)"
                 border="1px solid rgba(211, 166, 37, 0.6)"
                 borderRadius="10px"
-                fontSize="md"
+                fontSize="0.95rem"
                 color="var(--secondary-color)"
                 draggable
                 onDragStart={(e) => handleDragStart(e, item)}
@@ -1208,19 +1210,14 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
                 style={{ 
                   fontFamily: "'Cinzel', serif",
                   transition: "all 0.15s ease",
-                  minWidth: "100px",
-                  maxWidth: "150px",
-                  height: "42px",
-                  textAlign: "center",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  position: "relative",
-                  display: "flex",
+                  minWidth: "90px",
+                  maxWidth: "120px",
+                  height: "38px",
+                  margin: "4px",
+                  display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "8px",
-                  fontWeight: "500",
-                  letterSpacing: "0.5px",
-                  fontSize: "16px"
+                  whiteSpace: "nowrap"
                 }}
                 className="word-bank-item"
                 _hover={{ 
@@ -1561,7 +1558,7 @@ const SystemOfInequalitiesChallenge = ({ onSolutionCheck, onFormatCheck }) => {
     <Box mt="6">
       <Heading 
         as="h3" 
-        size="md" 
+        size="sm" 
         mb="4" 
         color="var(--secondary-color)"
         textAlign="center"
@@ -1570,6 +1567,7 @@ const SystemOfInequalitiesChallenge = ({ onSolutionCheck, onFormatCheck }) => {
           position: "relative",
           textShadow: "0 0 10px rgba(211, 166, 37, 0.5)",
           letterSpacing: "1px",
+          fontSize: "1.1rem"
         }}
         className="activity-title"
       >
