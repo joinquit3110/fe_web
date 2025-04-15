@@ -824,15 +824,17 @@ const NotificationDisplay = () => {
       }
       
       // Auto-dismiss after notification duration - FIXED to ensure proper dismissal
-      const duration = notification.duration || getDurationByType(notification.type) || 7000;
-      console.log(`Setting auto-dismiss for notification ${notifId} to disappear after ${duration}ms`);
+      let dynamicDuration = notification.duration || getDurationByType(notification.type) || 7000;
+      if (notificationQueue.current.length > 2) dynamicDuration = Math.min(dynamicDuration, 5000);
+      if (notificationQueue.current.length > 4) dynamicDuration = Math.min(dynamicDuration, 3000);
+      console.log(`Setting auto-dismiss for notification ${notifId} to disappear after ${dynamicDuration}ms`);
       
       const timeoutId = setTimeout(() => {
         console.log(`Auto-dismissing notification ${notifId}`);
         setActiveNotifications(prev => prev.filter(item => item.id !== notifId));
         // Remove this timeout ID from the tracking array
         activeTimeouts.current = activeTimeouts.current.filter(id => id !== timeoutId);
-      }, duration);
+      }, dynamicDuration);
       
       // Store timeout ID for cleanup
       activeTimeouts.current.push(timeoutId);
@@ -857,10 +859,26 @@ const NotificationDisplay = () => {
     setActiveNotifications(prev => prev.filter(item => item.id !== id));
   };
   
+  // Responsive: adjust notification stack for mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
+
   if (activeNotifications.length === 0) return null;
   
   return (
-    <Stack spacing={5} position="fixed" top="100px" right="20px" zIndex={1000} maxWidth="480px" maxHeight="calc(100vh - 150px)" overflowY="auto">
+    <Stack
+      spacing={isMobile ? 2 : 5}
+      position="fixed"
+      top={isMobile ? '10px' : '100px'}
+      right={isMobile ? '0' : '20px'}
+      left={isMobile ? '0' : undefined}
+      zIndex={1000}
+      maxWidth={isMobile ? '98vw' : '480px'}
+      width={isMobile ? '98vw' : 'auto'}
+      maxHeight={isMobile ? 'calc(100vh - 20px)' : 'calc(100vh - 150px)'}
+      overflowY="auto"
+      alignItems={isMobile ? 'center' : 'flex-end'}
+      px={isMobile ? 1 : 0}
+    >
       {activeNotifications.map(notification => (
         <Fade key={notification.id} in={true}>
           <Box

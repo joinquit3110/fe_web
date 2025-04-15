@@ -205,4 +205,43 @@
   background-color: rgba(255, 152, 0, 0.3);
   border: 1px solid #F57C00;
   color: #F57C00;
-} 
+}
+
+/* Responsive: Ensure canvas and controls fit mobile screens */
+@media (max-width: 600px) {
+  .canvas-container, .coordinate-canvas {
+    max-width: 100vw;
+    width: 100vw;
+    min-width: 0;
+    border-radius: 6px;
+  }
+  .zoom-controls {
+    top: 4px;
+    right: 4px;
+    gap: 2px;
+  }
+  .zoom-button {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+  .reset-button {
+    bottom: 4px;
+    right: 4px;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 12px;
+  }
+  .coordinates-input {
+    bottom: 4px;
+    left: 4px;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .coordinate-input {
+    width: 40px;
+    height: 24px;
+    font-size: 13px;
+  }
+}
