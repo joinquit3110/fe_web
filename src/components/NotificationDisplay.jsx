@@ -2,24 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import axios from 'axios';
 // Import the image assets
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
 
-const API_URL = 'https://be-web-6c4k.onrender.com/api';
-
 const NotificationDisplay = () => {
-  const [serverNotifications, setServerNotifications] = useState([]);
   const [activeNotifications, setActiveNotifications] = useState([]);
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   
-  // Add a try-catch to safely use the socket context
+  // Get socket notifications directly from the SocketContext
   let socketNotifications = [];
   let removeNotification = () => {};
   
   try {
-    // Try to get socket context - this might not be available if SocketProvider is not in the tree
     const socketContext = useSocket();
     socketNotifications = socketContext?.notifications || [];
     removeNotification = socketContext?.removeNotification || (() => {});
@@ -29,18 +24,17 @@ const NotificationDisplay = () => {
   
   const notificationQueue = useRef([]);
   const processingQueue = useRef(false);
-  const activeTimeouts = useRef([]); // Track all active timeouts
+  const activeTimeouts = useRef([]);
+  const globalDedupeRegistry = useRef(new Map());
   
-  // Enhanced robust hash function for better deduplication
+  // Helper function to create a notification hash for deduplication
   const getNotificationHash = (notification) => {
-    // Create a stable, consistent identifier based on content
     const type = notification.type || 'info';
     const pointsChange = notification.pointsChange ? `pc:${notification.pointsChange}` : '';
     const criteria = notification.criteria ? `cr:${notification.criteria}` : '';
     const level = notification.level ? `lv:${notification.level}` : '';
     const msgStart = notification.message ? notification.message.substring(0, 30) : '';
     
-    // Return a consistent hash for deduplication
     return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}`;
   };
   
@@ -48,7 +42,6 @@ const NotificationDisplay = () => {
   const standardizeCriteria = (criteriaText) => {
     if (!criteriaText) return '';
     
-    // Match to one of the three standard criteria types
     const lowerCriteria = criteriaText.toLowerCase();
     
     if (lowerCriteria.includes('participation') || lowerCriteria.includes('member')) {
@@ -63,7 +56,6 @@ const NotificationDisplay = () => {
       return 'Time taken by the group to complete tasks';
     }
     
-    // Return original if no match
     return criteriaText;
   };
   
@@ -71,38 +63,21 @@ const NotificationDisplay = () => {
   const standardizeLevel = (levelText) => {
     if (!levelText) return '';
     
-    // Match to one of the five standard performance levels
     const lowerLevel = levelText.toLowerCase();
     
-    if (lowerLevel.includes('excellent')) {
-      return 'Excellent';
-    }
+    if (lowerLevel.includes('excellent')) return 'Excellent';
+    if (lowerLevel.includes('good')) return 'Good';
+    if (lowerLevel.includes('satisfactory')) return 'Satisfactory';
+    if (lowerLevel.includes('poor') && lowerLevel.includes('very')) return 'Very Poor';
+    if (lowerLevel.includes('poor')) return 'Poor';
     
-    if (lowerLevel.includes('good')) {
-      return 'Good';
-    }
-    
-    if (lowerLevel.includes('satisfactory')) {
-      return 'Satisfactory';
-    }
-    
-    if (lowerLevel.includes('poor') && lowerLevel.includes('very')) {
-      return 'Very Poor';
-    }
-    
-    if (lowerLevel.includes('poor')) {
-      return 'Poor';
-    }
-    
-    // Return original if no match
     return levelText;
   };
   
-  // Process message to extract the correct criteria and level values
+  // Extract criteria and level
   const extractCriteriaAndLevel = (notification) => {
     let { message, criteria, level } = notification;
     
-    // If both criteria and level are already correctly set, just standardize them
     if (criteria && level) {
       return {
         criteria: standardizeCriteria(criteria),
@@ -110,9 +85,7 @@ const NotificationDisplay = () => {
       };
     }
     
-    // Otherwise try to extract from message
     if (message) {
-      // Extract criteria from message
       if (!criteria) {
         const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
         if (criteriaMatch) {
@@ -120,7 +93,6 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Extract level from message
       if (!level) {
         const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
         if (levelMatch) {
@@ -129,13 +101,12 @@ const NotificationDisplay = () => {
       }
     }
     
-    // Check if level actually contains criteria information (the bug)
+    // Fix potentially swapped values
     if (level && (
         level.toLowerCase().includes('participation') || 
         level.toLowerCase().includes('english') ||
         level.toLowerCase().includes('complete tasks')
-      )) {
-      // Level contains criteria information - it's swapped
+    )) {
       const tempCriteria = level;
       level = criteria;
       criteria = tempCriteria;
@@ -147,20 +118,16 @@ const NotificationDisplay = () => {
     };
   };
   
-  // Global dedupe registry with 2-minute lifetime for entries
-  const globalDedupeRegistry = useRef(new Map());
-  
-  // Cleanup stale dedupe entries
+  // Cleanup stale dedupe entries every minute
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
-      // Remove entries older than 2 minutes
       globalDedupeRegistry.current.forEach((timestamp, key) => {
-        if (now - timestamp > 120000) { // 2 minutes
+        if (now - timestamp > 60000) { // 1 minute (reduced from 2 min)
           globalDedupeRegistry.current.delete(key);
         }
       });
-    }, 60000); // Run cleanup every minute
+    }, 30000); // Run cleanup every 30 seconds
     
     return () => clearInterval(cleanupInterval);
   }, []);
@@ -168,360 +135,23 @@ const NotificationDisplay = () => {
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      // Clear all notification timeouts on unmount
       activeTimeouts.current.forEach(timeoutId => {
         clearTimeout(timeoutId);
       });
     };
   }, []);
   
-  // Enhanced notification logging for debugging
-  useEffect(() => {
-    // Listen for sync updates that contain user notifications
-    const handleSyncUpdate = (event) => {
-      if (event.detail?.data?.type === 'user_update') {
-        console.log('[NOTIFICATION] Detected user update event:', event.detail.data);
-        
-        // If this contains a magic points update, create a fallback notification
-        const updatedFields = event.detail.data?.data?.updatedFields;
-        if (updatedFields && updatedFields.magicPoints !== undefined) {
-          console.log('[NOTIFICATION] Creating fallback notification for points update:', updatedFields.magicPoints);
-          
-          // Store this locally in case the socket notification system fails
-          const pointsNotification = {
-            id: `points_update_${Date.now()}`,
-            type: 'info',
-            message: `Your magic points have been updated to ${updatedFields.magicPoints}`,
-            timestamp: new Date(),
-            pointsChange: updatedFields.magicPoints - (user?.magicPoints || 100)
-          };
-          
-          // Add to pending notifications in localStorage as fallback
-          const pendingNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-          pendingNotifications.push(pointsNotification);
-          localStorage.setItem('pendingNotifications', JSON.stringify(pendingNotifications));
-        }
-      }
-    };
-    
-    window.addEventListener('serverSyncUpdate', handleSyncUpdate);
-    
-    return () => {
-      window.removeEventListener('serverSyncUpdate', handleSyncUpdate);
-    };
-  }, [user]);
-  
-  // Merge server and socket notifications
-  useEffect(() => {
-    if (socketNotifications.length > 0) {
-      // Add new socket notifications to the queue
-      socketNotifications.forEach(notification => {
-        // Process message to extract point change amount if it's a points notification
-        let pointsChange = null;
-        let reason = null;
-        let criteria = null;
-        let level = null;
-        
-        // Check for direct properties first (these would come from AdminContext)
-        if (notification.pointsChange !== undefined) {
-          pointsChange = notification.pointsChange;
-        }
-        
-        if (notification.reason) {
-          reason = notification.reason;
-        }
-        
-        if (notification.criteria) {
-          criteria = notification.criteria;
-        }
-        
-        if (notification.level) {
-          level = notification.level;
-        }
-        
-        // If direct properties aren't available, try to extract from message
-        if (notification.message) {
-          // Remove "by admin" from message if present
-          let message = notification.message.replace(/ by admin/g, '');
-          
-          // Extract points change information if not already set
-          if (pointsChange === null) {
-            if (message.includes('increased by') || message.includes('decreased by')) {
-              const match = message.match(/(increased|decreased) by (\d+)/);
-              if (match) {
-                const changeType = match[1];
-                const amount = parseInt(match[2], 10);
-                pointsChange = changeType === 'increased' ? amount : -amount;
-              }
-            }
-            
-            // Alternative formats: "+10 points" or "-10 points"
-            if (pointsChange === null) {
-              const plusMatch = message.match(/\+(\d+) points/);
-              const minusMatch = message.match(/\-(\d+) points/);
-              if (plusMatch) {
-                pointsChange = parseInt(plusMatch[1], 10);
-              } else if (minusMatch) {
-                pointsChange = -parseInt(minusMatch[1], 10);
-              }
-            }
-            
-            // Another pattern: "awarded to" or "deducted from"
-            if (pointsChange === null) {
-              const awardedMatch = message.match(/(\d+) points awarded to/);
-              const deductedMatch = message.match(/(\d+) points deducted from/);
-              if (awardedMatch) {
-                pointsChange = parseInt(awardedMatch[1], 10);
-              } else if (deductedMatch) {
-                pointsChange = -parseInt(deductedMatch[1], 10);
-              }
-            }
-          }
-          
-          // Check for reasons in message if not already set
-          if (!reason) {
-            const reasonMatch = message.match(/[Rr]eason:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Level:)/);
-            if (reasonMatch) {
-              reason = reasonMatch[1].trim();
-            }
-          }
-          
-          // Try to extract criteria and level from message if not already set
-          if (!criteria || !level) {
-            const extracted = extractCriteriaAndLevel({ message, criteria, level });
-            criteria = extracted.criteria;
-            level = extracted.level;
-          }
-          
-          // Update message without "by admin"
-          notification.message = message;
-        }
-        
-        console.log('Socket notification processed:', {
-          id: notification.id,
-          message: notification.message,
-          pointsChange,
-          reason,
-          criteria,
-          level
-        });
-        
-        const notificationItem = {
-          id: notification.id,
-          type: notification.type,
-          title: getNotificationTitle(notification.type),
-          message: notification.message,
-          timestamp: notification.timestamp ? new Date(notification.timestamp) : new Date(),
-          source: 'socket',
-          duration: getDurationByType(notification.type),
-          pointsChange,
-          reason,
-          criteria,
-          level
-        };
-        
-        // Create a composite key for this notification to help with deduplication
-        const notifKey = pointsChange ? 
-          `point-change:${pointsChange}:${Date.now()}` : 
-          `${notification.type}:${notification.message?.substring(0, 30)}:${Date.now()}`;
-          
-        notificationItem.compositeKey = notifKey;
-        
-        // Add to queue if not already present
-        if (!notificationQueue.current.some(item => item.id === notification.id)) {
-          notificationQueue.current.push(notificationItem);
-        }
-      });
-      
-      // Delay processing to allow potential follow-up notifications with more details
-      if (!processingQueue.current) {
-        // Use a small delay (250ms) to allow closely-timed notifications to be grouped together
-        const delayTimeoutId = setTimeout(() => {
-          processNotificationQueue();
-          // Clean up timeout
-          activeTimeouts.current = activeTimeouts.current.filter(id => id !== delayTimeoutId);
-        }, 250);
-        
-        // Track timeout for cleanup
-        activeTimeouts.current.push(delayTimeoutId);
-      }
-    }
-  }, [socketNotifications]);
-  
-  // Poll for server notifications
-  useEffect(() => {
-    let interval = null;
-    
-    const fetchNotifications = async () => {
-      if (!isAuthenticated || !user) return;
-      
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        const response = await axios.get(`${API_URL}/notifications`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.data && response.data.length > 0) {
-          // Update server notifications
-          setServerNotifications(response.data);
-          
-          // Add new server notifications to the queue
-          response.data.forEach(notification => {
-            // Check if this notification is already in the queue
-            const existingNotification = notificationQueue.current.find(
-              item => item.source === 'server' && item.id === notification._id
-            );
-            
-            if (!existingNotification) {
-              // Process message to extract point change amount if it's a points notification
-              let pointsChange = null;
-              let reason = notification.reason || null;
-              let criteria = null;
-              let level = null;
-              
-              // Check for direct properties first
-              if (notification.pointsChange !== undefined) {
-                pointsChange = notification.pointsChange;
-              }
-              
-              if (notification.criteria) {
-                criteria = notification.criteria;
-              }
-              
-              if (notification.level) {
-                level = notification.level;
-              }
-              
-              // If direct properties aren't available, try to extract from message
-              if (notification.message) {
-                // Remove "by admin" from message if present
-                let message = notification.message.replace(/ by admin/g, '');
-                
-                // Extract points change information if not already set
-                if (pointsChange === null) {
-                  if (message.includes('increased by') || message.includes('decreased by')) {
-                    const match = message.match(/(increased|decreased) by (\d+)/);
-                    if (match) {
-                      const changeType = match[1];
-                      const amount = parseInt(match[2], 10);
-                      pointsChange = changeType === 'increased' ? amount : -amount;
-                    }
-                  }
-                  
-                  // Alternative formats: "+10 points" or "-10 points"
-                  if (pointsChange === null) {
-                    const plusMatch = message.match(/\+(\d+) points/);
-                    const minusMatch = message.match(/\-(\d+) points/);
-                    if (plusMatch) {
-                      pointsChange = parseInt(plusMatch[1], 10);
-                    } else if (minusMatch) {
-                      pointsChange = -parseInt(minusMatch[1], 10);
-                    }
-                  }
-                  
-                  // Another pattern: "awarded to" or "deducted from"
-                  if (pointsChange === null) {
-                    const awardedMatch = message.match(/(\d+) points awarded to/);
-                    const deductedMatch = message.match(/(\d+) points deducted from/);
-                    if (awardedMatch) {
-                      pointsChange = parseInt(awardedMatch[1], 10);
-                    } else if (deductedMatch) {
-                      pointsChange = -parseInt(deductedMatch[1], 10);
-                    }
-                  }
-                }
-                
-                // Check for reasons if not already set
-                if (!reason) {
-                  const reasonMatch = message.match(/[Rr]eason:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Level:)/);
-                  if (reasonMatch) {
-                    reason = reasonMatch[1].trim();
-                  }
-                }
-                
-                // Try to extract criteria and level if not already set
-                if (!criteria || !level) {
-                  const extracted = extractCriteriaAndLevel({ message, criteria, level });
-                  criteria = extracted.criteria;
-                  level = extracted.level;
-                }
-                
-                // Update message without "by admin"
-                notification.message = message;
-              }
-              
-              console.log('Server notification processed:', {
-                id: notification._id,
-                message: notification.message,
-                pointsChange,
-                reason,
-                criteria, 
-                level
-              });
-              
-              const notificationItem = {
-                id: notification._id,
-                type: notification.type || 'info',
-                title: notification.title || getNotificationTitle(notification.type || 'info'),
-                message: notification.message,
-                timestamp: new Date(notification.createdAt),
-                source: 'server',
-                duration: getDurationByType(notification.type || 'info'),
-                pointsChange,
-                reason,
-                criteria,
-                level
-              };
-              notificationQueue.current.push(notificationItem);
-            }
-          });
-          
-          // Process the queue if not already processing
-          if (!processingQueue.current) {
-            processNotificationQueue();
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      }
-    };
-    
-    // Initial fetch
-    fetchNotifications();
-    
-    // Set up polling interval (every 15 seconds)
-    if (isAuthenticated) {
-      interval = setInterval(fetchNotifications, 15000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isAuthenticated, user]);
-  
-  // Check for locally stored notifications from localStorage fallback
+  // Process fallback notifications from localStorage
   useEffect(() => {
     const checkLocalFallbackNotifications = () => {
       try {
         const pendingNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
         
         if (pendingNotifications.length > 0) {
-          console.log('Found local fallback notifications:', pendingNotifications);
+          console.log('[NOTIFICATION] Processing local fallback notifications:', pendingNotifications.length);
           
-          // Process each notification and add it to the queue
           pendingNotifications.forEach(notification => {
-            // Check if this notification is already in the queue
-            const existingNotification = notificationQueue.current.find(
-              item => item.id === notification.id
-            );
-            
-            if (!existingNotification) {
-              console.log('Adding local fallback notification to queue:', notification);
-              
+            if (!notificationQueue.current.some(item => item.id === notification.id)) {
               const notificationItem = {
                 id: notification.id,
                 type: notification.type || 'info',
@@ -539,10 +169,8 @@ const NotificationDisplay = () => {
             }
           });
           
-          // Clear the processed notifications
           localStorage.setItem('pendingNotifications', '[]');
           
-          // Process the queue if not already processing
           if (!processingQueue.current) {
             processNotificationQueue();
           }
@@ -552,18 +180,101 @@ const NotificationDisplay = () => {
       }
     };
     
-    // Initial check
+    // Initial check and set interval (reduced from 3000ms to 2000ms)
     checkLocalFallbackNotifications();
+    const interval = setInterval(checkLocalFallbackNotifications, 2000);
     
-    // Set up interval to check for new local fallback notifications
-    const interval = setInterval(checkLocalFallbackNotifications, 3000);
-    
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
   
-  // Helper function to get appropriate title
+  // Process socket notifications when they change
+  useEffect(() => {
+    if (socketNotifications.length > 0) {
+      socketNotifications.forEach(notification => {
+        // Extract data from notification
+        let pointsChange = notification.pointsChange !== undefined ? notification.pointsChange : null;
+        let reason = notification.reason || null;
+        let criteria = notification.criteria || null;
+        let level = notification.level || null;
+        
+        // Process message if available
+        if (notification.message) {
+          let message = notification.message.replace(/ by admin/g, '');
+          
+          // Extract points change if not already set
+          if (pointsChange === null) {
+            if (message.includes('increased by') || message.includes('decreased by')) {
+              const match = message.match(/(increased|decreased) by (\d+)/);
+              if (match) {
+                const changeType = match[1];
+                const amount = parseInt(match[2], 10);
+                pointsChange = changeType === 'increased' ? amount : -amount;
+              }
+            }
+            
+            // Try alternative formats
+            if (pointsChange === null) {
+              const plusMatch = message.match(/\+(\d+) points/);
+              const minusMatch = message.match(/\-(\d+) points/);
+              const awardedMatch = message.match(/(\d+) points awarded to/);
+              const deductedMatch = message.match(/(\d+) points deducted from/);
+              
+              if (plusMatch) pointsChange = parseInt(plusMatch[1], 10);
+              else if (minusMatch) pointsChange = -parseInt(minusMatch[1], 10);
+              else if (awardedMatch) pointsChange = parseInt(awardedMatch[1], 10);
+              else if (deductedMatch) pointsChange = -parseInt(deductedMatch[1], 10);
+            }
+          }
+          
+          // Extract reason, criteria and level
+          if (!reason) {
+            const reasonMatch = message.match(/[Rr]eason:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Level:)/);
+            if (reasonMatch) reason = reasonMatch[1].trim();
+          }
+          
+          if (!criteria || !level) {
+            const extracted = extractCriteriaAndLevel({ message, criteria, level });
+            criteria = extracted.criteria;
+            level = extracted.level;
+          }
+          
+          notification.message = message;
+        }
+        
+        // Create notification item with all data
+        const notificationItem = {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title || getNotificationTitle(notification.type),
+          message: notification.message,
+          timestamp: notification.timestamp ? new Date(notification.timestamp) : new Date(),
+          source: 'socket',
+          duration: getDurationByType(notification.type),
+          pointsChange,
+          reason,
+          criteria,
+          level
+        };
+        
+        // Add to queue if not already present
+        if (!notificationQueue.current.some(item => item.id === notification.id)) {
+          notificationQueue.current.push(notificationItem);
+        }
+      });
+      
+      // Process queue with minimal delay (30ms)
+      if (!processingQueue.current) {
+        const delayTimeoutId = setTimeout(() => {
+          processNotificationQueue();
+          activeTimeouts.current = activeTimeouts.current.filter(id => id !== delayTimeoutId);
+        }, 30);
+        
+        activeTimeouts.current.push(delayTimeoutId);
+      }
+    }
+  }, [socketNotifications]);
+  
+  // Helper functions for notification display
   const getNotificationTitle = (type) => {
     switch (type) {
       case 'success': return 'Success!';
@@ -574,21 +285,20 @@ const NotificationDisplay = () => {
     }
   };
   
-  // Helper function to get duration by notification type
   const getDurationByType = (type) => {
     switch (type) {
-      case 'error': return 15000; // 15 seconds (increased from 10s)
-      case 'warning': return 12000; // 12 seconds (increased from 8s)
-      case 'success': return 10000; // 10 seconds (increased from 6s) 
-      case 'announcement': return 20000; // 20 seconds (increased from 15s)
-      default: return 10000; // 10 seconds (increased from 7s)
+      case 'error': return 12000; // 12 seconds
+      case 'warning': return 10000; // 10 seconds
+      case 'success': return 8000; // 8 seconds
+      case 'announcement': return 15000; // 15 seconds
+      default: return 8000; // 8 seconds
     }
   };
   
-  // Helper to create a random ID
+  // Create random ID helper
   const createId = () => Math.random().toString(36).substring(2, 15);
   
-  // Process notification queue with deduplication logic
+  // Process notification queue with improved efficiency
   const processNotificationQueue = () => {
     if (notificationQueue.current.length === 0 || processingQueue.current) {
       return;
@@ -596,41 +306,33 @@ const NotificationDisplay = () => {
     
     processingQueue.current = true;
     
-    // First, filter out unwanted notifications
+    // Filter irrelevant notifications for user
     notificationQueue.current = notificationQueue.current.filter(notification => {
-      // Skip notifications for admin, muggle, or unassigned users
+      // Skip point notifications for admin/muggle/unassigned users
       if (user?.house === 'admin' || user?.house === 'muggle' || !user?.house) {
-        // Filter out point change notifications and house-related notifications
         if (notification.pointsChange || 
             (notification.message && (
               notification.message.includes('points') || 
               notification.message.includes('Points') ||
               notification.message.toLowerCase().includes('house')
             ))) {
-          console.log('[NOTIFICATION] Filtering point/house notification for admin/muggle/unassigned user');
           return false;
         }
       }
       
-      // Filter out notifications about "Your magic points have been updated to X"
-      if (notification.message && notification.message.includes('magic points have been updated to')) {
-        console.log('[NOTIFICATION] Filtering out point total notification:', notification.message);
+      // Filter out "points updated to" notifications
+      if (notification.message && (
+          notification.message.includes('magic points have been updated to') ||
+          notification.message.includes('magic points have been increased by') || 
+          notification.message.includes('magic points have been decreased by')
+      )) {
         return false;
       }
       
-      // Filter out notifications about "Your magic points have been increased/decreased by X"
-      if (notification.message && 
-         (notification.message.includes('magic points have been increased by') || 
-          notification.message.includes('magic points have been decreased by'))) {
-        console.log('[NOTIFICATION] Filtering out point change notification:', notification.message);
-        return false;
-      }
-      
-      // Keep other types of notifications
       return true;
     });
 
-    // Standardize criteria and levels in all notifications
+    // Standardize data and mark fresh notifications
     notificationQueue.current.forEach(notification => {
       if (notification.criteria || notification.level) {
         const extracted = extractCriteriaAndLevel(notification);
@@ -638,132 +340,59 @@ const NotificationDisplay = () => {
         notification.level = extracted.level;
       }
       
-      // Mark fresh notifications (less than 10 seconds old) to bypass deduplication
       const timestamp = notification.timestamp instanceof Date ? 
         notification.timestamp.getTime() : 
         notification.timestamp ? new Date(notification.timestamp).getTime() : Date.now();
       
-      const isFresh = Date.now() - timestamp < 10000; // 10 seconds
-      notification.isFresh = isFresh;
-      
-      if (isFresh) {
-        console.log('[NOTIFICATION] Fresh notification detected:', notification.message);
-      }
+      notification.isFresh = Date.now() - timestamp < 10000; // 10 seconds
     });
-
-    // Log how many notifications are being processed after filtering
-    console.log(`[NOTIFICATION] Processing ${notificationQueue.current.length} notifications after filtering point notifications`);
     
-    // If no notifications left after filtering, exit the processing
-    if (notificationQueue.current.length === 0) {
-      processingQueue.current = false;
-      return;
-    }
-
-    // ENHANCED DEDUPLICATION: Sort and deduplicate notifications
-    // First, sort by timestamp (newest first)
+    // Sort by timestamp (newest first)
     notificationQueue.current.sort((a, b) => {
       const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : Date.now();
       const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : Date.now();
-      return timeB - timeA; // newest first
+      return timeB - timeA;
     });
     
-    // Create a map to group notifications by criteria/reason/level for deduplication
+    // Deduplicate notifications
     const dedupeGroups = new Map();
     
-    // Group notifications by their deduplication keys
     notificationQueue.current.forEach(notification => {
-      // Create a hash for this notification
       const hash = getNotificationHash(notification);
       
-      // Check if this hash is already in the global registry, but bypass for fresh notifications
       if (!notification.isFresh && globalDedupeRegistry.current.has(hash)) {
-        console.log(`[NOTIFICATION] Skipping recently seen notification hash: ${hash}`);
-        return; // Skip this notification
+        return; // Skip recently seen notification
       }
       
-      // If it's fresh, always show it regardless of the registry
-      if (notification.isFresh) {
-        // Special handling for point change notifications
-        if (notification.pointsChange) {
-          // Create a key that combines important attributes + "fresh" to ensure it's unique
-          const pointChangeKey = `pointChange:${notification.house || 'all'}:${notification.criteria || ''}:fresh:${Date.now()}`;
-          
-          if (!dedupeGroups.has(pointChangeKey)) {
-            dedupeGroups.set(pointChangeKey, []);
-          }
-          
-          // Add to the group
-          dedupeGroups.get(pointChangeKey).push(notification);
-        } else {
-          // For non-point change notifications
-          const key = `${notification.type}:${notification.message?.substring(0, 20)}:fresh:${Date.now()}`;
-          
-          if (!dedupeGroups.has(key)) {
-            dedupeGroups.set(key, []);
-          }
-          
-          // Add to the group
-          dedupeGroups.get(key).push(notification);
-        }
-      } else {
-        // Standard handling for non-fresh notifications
-        // Special handling for point change notifications
-        if (notification.pointsChange) {
-          // Create a key that combines important attributes
-          const pointChangeKey = `pointChange:${notification.house || 'all'}:${notification.criteria || ''}`;
-          
-          if (!dedupeGroups.has(pointChangeKey)) {
-            dedupeGroups.set(pointChangeKey, []);
-          }
-          
-          // Add to the group
-          dedupeGroups.get(pointChangeKey).push(notification);
-        } else {
-          // For non-point change notifications, use a standard key
-          const key = `${notification.type}:${notification.message?.substring(0, 20)}`;
-          
-          if (!dedupeGroups.has(key)) {
-            dedupeGroups.set(key, []);
-          }
-          
-          // Add to the group
-          dedupeGroups.get(key).push(notification);
-        }
+      const key = notification.isFresh ? 
+        `${notification.type}:${notification.pointsChange || ''}:${Date.now()}` : 
+        `${notification.type}:${notification.pointsChange || ''}:${notification.criteria || ''}`;
+      
+      if (!dedupeGroups.has(key)) {
+        dedupeGroups.set(key, []);
       }
+      
+      dedupeGroups.get(key).push(notification);
     });
     
-    // Process each group - keep only the newest notification from each group
+    // Take only the newest notification from each group
     const uniqueNotifications = [];
-    dedupeGroups.forEach((group, key) => {
-      // If there's only one, just keep it
-      if (group.length === 1) {
-        uniqueNotifications.push(group[0]);
-      } 
-      // If there are multiple in a group, only keep the newest one
-      else if (group.length > 1) {
-        console.log(`[NOTIFICATION] Deduplicated ${group.length} similar notifications with key ${key}`);
-        // The notifications are already sorted by timestamp, so take the first one
-        uniqueNotifications.push(group[0]);
-      }
+    dedupeGroups.forEach((group) => {
+      uniqueNotifications.push(group[0]);
     });
     
-    // Replace the queue with deduplicated notifications
     notificationQueue.current = uniqueNotifications;
     
-    console.log(`[NOTIFICATION] After deduplication: ${notificationQueue.current.length} notifications`);
-
-    // Get the next notification to display
+    // Process a notification
     const notification = notificationQueue.current.shift();
     if (notification) {
-      // Add this notification hash to the global registry to prevent duplicates
-      // BUT only if it's not a fresh notification (to prevent immediate duplicates)
+      // Add to dedupe registry
       const hash = getNotificationHash(notification);
       if (!notification.isFresh) {
         globalDedupeRegistry.current.set(hash, Date.now());
       }
       
-      // Ensure point changes have appropriate titles
+      // Set appropriate title
       if (notification.pointsChange) {
         if (notification.pointsChange > 0 && (!notification.title || !notification.title.includes('POINTS'))) {
           notification.title = 'POINTS AWARDED!';
@@ -772,49 +401,35 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Make sure we have a valid timestamp
+      // Ensure valid timestamp
       if (!notification.timestamp) {
         notification.timestamp = new Date();
       } else if (!(notification.timestamp instanceof Date)) {
         try {
-          // Ensure the timestamp is a valid Date object
           notification.timestamp = new Date(notification.timestamp);
-          // Check if it's a valid date
           if (isNaN(notification.timestamp.getTime())) {
-            throw new Error('Invalid date');
+            notification.timestamp = new Date();
           }
-        } catch (e) {
-          console.warn('Invalid timestamp format, creating new timestamp');
+        } catch {
           notification.timestamp = new Date();
         }
       }
       
-      // Generate a consistent ID for this notification if it doesn't have one
+      // Generate ID and display notification
       const notifId = notification.id || createId();
       
-      // Log the notification being displayed
-      console.log('[NOTIFICATION] Displaying notification:', notification);
-      
-      // For fresh notifications, always display them
       setActiveNotifications(prev => {
-        // Create unique ID if not present
-        const notifWithId = {
-          ...notification,
-          id: notifId
-        };
+        const notifWithId = { ...notification, id: notifId };
         
-        // Skip duplicates only by exact ID match
-        const exactDuplicate = prev.some(n => n.id === notifWithId.id);
-        
-        if (exactDuplicate) {
-          console.log('Skipping exact duplicate notification');
+        // Skip exact duplicates
+        if (prev.some(n => n.id === notifId)) {
           return prev;
         }
         
         return [notifWithId, ...prev].slice(0, 5); // Keep max 5 active notifications
       });
       
-      // Remove from original source to prevent reprocessing
+      // Remove from SocketContext to prevent reprocessing
       if (notification.source === 'socket') {
         try {
           removeNotification(notification.id);
@@ -823,43 +438,39 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Auto-dismiss after notification duration - FIXED to ensure proper dismissal
-      let dynamicDuration = notification.duration || getDurationByType(notification.type) || 7000;
-      if (notificationQueue.current.length > 2) dynamicDuration = Math.min(dynamicDuration, 5000);
-      if (notificationQueue.current.length > 4) dynamicDuration = Math.min(dynamicDuration, 3000);
-      console.log(`Setting auto-dismiss for notification ${notifId} to disappear after ${dynamicDuration}ms`);
+      // Set auto-dismiss timeout
+      let duration = notification.duration || getDurationByType(notification.type) || 7000;
+      
+      // Reduce duration if there are more notifications waiting
+      if (notificationQueue.current.length > 2) duration = Math.min(duration, 5000);
+      if (notificationQueue.current.length > 4) duration = Math.min(duration, 3000);
       
       const timeoutId = setTimeout(() => {
-        console.log(`Auto-dismissing notification ${notifId}`);
         setActiveNotifications(prev => prev.filter(item => item.id !== notifId));
-        // Remove this timeout ID from the tracking array
         activeTimeouts.current = activeTimeouts.current.filter(id => id !== timeoutId);
-      }, dynamicDuration);
+      }, duration);
       
-      // Store timeout ID for cleanup
       activeTimeouts.current.push(timeoutId);
       
-      // Process next notification after delay
+      // Process next notification after short delay (75ms)
       const nextProcessTimeoutId = setTimeout(() => {
         processingQueue.current = false;
         processNotificationQueue();
-        // Remove this timeout ID from the tracking array
         activeTimeouts.current = activeTimeouts.current.filter(id => id !== nextProcessTimeoutId);
-      }, 500); // Small delay between notifications
+      }, 75);
       
-      // Store timeout ID for cleanup
       activeTimeouts.current.push(nextProcessTimeoutId);
     } else {
       processingQueue.current = false;
     }
   };
 
-  // Clear a specific notification
+  // Handle manual close
   const handleClose = (id) => {
     setActiveNotifications(prev => prev.filter(item => item.id !== id));
   };
   
-  // Responsive: adjust notification stack for mobile
+  // Responsive check
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
 
   if (activeNotifications.length === 0) return null;
@@ -959,7 +570,7 @@ const NotificationDisplay = () => {
             
             {/* Main content area */}
             <Box position="relative" zIndex={2} p={4}>
-              {/* Point change visualization - more compact and magical */}
+              {/* Point change visualization */}
               {notification.pointsChange && (
                 <Box 
                   position="relative"
@@ -1006,7 +617,7 @@ const NotificationDisplay = () => {
                       </Text>
                     </Box>
                     
-                    {/* Point change glowing effect */}
+                    {/* Point change glow effect */}
                     <Box
                       position="absolute"
                       top="0"
@@ -1022,7 +633,7 @@ const NotificationDisplay = () => {
                 </Box>
               )}
               
-              {/* Message with parchment-like styling */}
+              {/* Message with styling */}
               <Box 
                 bg="rgba(255,255,255,0.15)" 
                 p={4} 
@@ -1070,7 +681,7 @@ const NotificationDisplay = () => {
                 </Text>
               </Box>
               
-              {/* House points details section */}
+              {/* Details section */}
               {(notification.reason || notification.criteria || notification.level) && (
                 <Box 
                   borderRadius="md"
@@ -1080,7 +691,7 @@ const NotificationDisplay = () => {
                   boxShadow="0 5px 15px rgba(0,0,0,0.2)"
                   mb={3}
                 >
-                  {/* Reason section with icon */}
+                  {/* Reason section */}
                   {notification.reason && (
                     <Box 
                       p={4}
@@ -1114,7 +725,7 @@ const NotificationDisplay = () => {
                     </Box>
                   )}
                   
-                  {/* Criteria section with icon */}
+                  {/* Criteria section */}
                   {notification.criteria && (
                     <Box 
                       p={4}
@@ -1148,7 +759,7 @@ const NotificationDisplay = () => {
                     </Box>
                   )}
                   
-                  {/* Level section with icon */}
+                  {/* Level section */}
                   {notification.level && (
                     <Box 
                       p={4}
@@ -1199,7 +810,7 @@ const NotificationDisplay = () => {
                 </Box>
               )}
               
-              {/* Timestamp footer */}
+              {/* Timestamp */}
               <Text 
                 fontSize="xs" 
                 color="rgba(255,255,255,0.7)" 
@@ -1216,7 +827,7 @@ const NotificationDisplay = () => {
         </Fade>
       ))}
       
-      {/* Custom CSS for animations - simplified to reduce lag */}
+      {/* CSS for animations */}
       <style jsx global>{`
         @keyframes pop-in {
           0% { transform: scale(0.95); opacity: 0; }
@@ -1228,32 +839,13 @@ const NotificationDisplay = () => {
           transform-origin: center center;
         }
         
-        .notification-panel::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: rgba(255,255,255,0.7);
-          z-index: 10;
-          animation: wipe-through 3s linear forwards;
-        }
-        
-        @keyframes wipe-through {
-          0% { left: 0; right: 100%; }
-          100% { left: 0; right: 0; }
+        @keyframes points-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); text-shadow: 0 0 15px rgba(0,0,0,0.8); }
         }
         
         .points-text-animation {
           animation: points-pulse 1.5s ease-in-out infinite;
-          position: relative;
-          z-index: 3;
-        }
-        
-        @keyframes points-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); text-shadow: 0 0 15px rgba(0,0,0,0.8); }
         }
         
         .point-glow-positive {
@@ -1276,24 +868,6 @@ const NotificationDisplay = () => {
           50% { box-shadow: 0 0 25px rgba(231, 76, 60, 1); }
         }
         
-        .message-parchment {
-          position: relative;
-        }
-        
-        .details-scroll {
-          position: relative;
-          transform: translateZ(0);
-          transition: transform 0.2s;
-        }
-        
-        .details-scroll:hover {
-          transform: translateY(-2px);
-        }
-        
-        .point-change-container {
-          animation: appear-fade 0.5s ease-out forwards;
-        }
-        
         .image-container {
           position: relative;
           transform-origin: center center;
@@ -1308,107 +882,23 @@ const NotificationDisplay = () => {
         .increase-animation {
           filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
           animation: increase-image-animation 3s ease-in-out infinite;
-          transform-origin: center center;
         }
         
         @keyframes increase-image-animation {
-          0% { 
-            filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
-            transform: rotate(-2deg) scale(1);
-          }
-          25% { 
-            filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.9)); 
-            transform: rotate(0deg) scale(1.05);
-          }
-          50% { 
-            filter: drop-shadow(0 0 25px rgba(46, 204, 113, 1));
-            transform: rotate(2deg) scale(1.1);
-          }
-          75% { 
-            filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.9)); 
-            transform: rotate(0deg) scale(1.05);
-          }
-          100% { 
-            filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
-            transform: rotate(-2deg) scale(1);
-          }
+          0% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
+          50% { filter: drop-shadow(0 0 25px rgba(46, 204, 113, 1)); transform: rotate(2deg) scale(1.1); }
+          100% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
         }
         
         .decrease-animation {
           filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
           animation: decrease-image-animation 3s ease-in-out infinite;
-          transform-origin: center center;
         }
         
         @keyframes decrease-image-animation {
-          0% { 
-            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
-            transform: rotate(2deg) scale(1);
-          }
-          25% { 
-            filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.9)); 
-            transform: rotate(0deg) scale(1.05);
-          }
-          50% { 
-            filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1));
-            transform: rotate(-2deg) scale(1.1);
-          }
-          75% { 
-            filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.9)); 
-            transform: rotate(0deg) scale(1.05);
-          }
-          100% { 
-            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
-            transform: rotate(2deg) scale(1);
-          }
-        }
-        
-        @keyframes appear-fade {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-        
-        /* Add sparkle effects around the images */
-        .image-container::before, 
-        .image-container::after {
-          content: '';
-          position: absolute;
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          opacity: 0;
-          z-index: 2;
-        }
-        
-        .increase-animation + div + div::before,
-        .increase-animation + div + div::after {
-          background: rgba(46, 204, 113, 0.8);
-          box-shadow: 0 0 10px rgba(46, 204, 113, 1), 0 0 20px rgba(46, 204, 113, 0.8);
-          animation: sparkle 4s infinite;
-        }
-        
-        .decrease-animation + div + div::before,
-        .decrease-animation + div + div::after {
-          background: rgba(231, 76, 60, 0.8);
-          box-shadow: 0 0 10px rgba(231, 76, 60, 1), 0 0 20px rgba(231, 76, 60, 0.8);
-          animation: sparkle 4s infinite;
-        }
-        
-        .image-container::before {
-          top: 20%;
-          left: 15%;
-          animation-delay: 0.5s;
-        }
-        
-        .image-container::after {
-          bottom: 20%;
-          right: 15%;
-          animation-delay: 1.5s;
-        }
-        
-        @keyframes sparkle {
-          0%, 100% { transform: scale(0); opacity: 0; }
-          50% { transform: scale(1); opacity: 1; }
+          0% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
+          50% { filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1)); transform: rotate(-2deg) scale(1.1); }
+          100% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
         }
       `}</style>
     </Stack>

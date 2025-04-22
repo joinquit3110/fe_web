@@ -2396,3 +2396,95 @@ canvas {
     gap: 16px;
   }
 }
+
+/* Desktop layout optimization - 16:9 aspect ratio support */
+@media screen and (min-width: 1200px) {
+  .hogwarts-content {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(500px, 2fr) minmax(280px, 1fr);
+    grid-template-areas: "control coordinate inequalities";
+    gap: 20px;
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .control-panel.wizard-panel {
+    grid-area: control;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 180px);
+    overflow-y: auto;
+    margin-bottom: 0;
+    min-width: 280px;
+  }
+  
+  .coordinate-container.wizard-panel {
+    grid-area: coordinate;
+    min-height: 600px;
+    height: calc(100vh - 180px);
+    max-height: none;
+    margin-bottom: 0;
+  }
+  
+  .inequalities-list.wizard-panel {
+    grid-area: inequalities;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 180px);
+    max-height: none;
+    overflow-y: auto;
+    margin-bottom: 0;
+    min-width: 280px;
+  }
+  
+  .hogwarts-header {
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px 30px;
+  }
+  
+  .hogwarts-header h1 {
+    font-size: 2.5rem;
+  }
+  
+  .app {
+    max-width: 1900px;
+    padding: 20px 30px;
+  }
+  
+  .coordinate-plane {
+    min-height: 550px;
+  }
+  
+  /* Improve moon positioning for widescreen */
+  .moon-wrapper {
+    width: 200px;
+    height: 200px;
+    right: 5%;
+    top: 80px;
+  }
+  
+  .moonlight.moonlight-4 { width: 160px; height: 160px; }
+  .moonlight.moonlight-3 { width: 220px; height: 220px; }
+  .moonlight.moonlight-2 { width: 280px; height: 280px; }
+  .moonlight.moonlight-1 { width: 350px; height: 350px; }
+  
+  /* Better hogwarts crest for widescreen */
+  .hogwarts-crest {
+    width: 140px;
+    height: 180px;
+    left: 50px;
+    top: 20px;
+  }
+  
+  /* Ensure profile menus don't overflow */
+  .profile-menu,
+  .profile-hover-card {
+    right: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}

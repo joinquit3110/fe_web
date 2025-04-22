@@ -753,63 +753,62 @@ input:-webkit-autofill:active {
   .crop-tool {
     max-width: 100%;
   }
-}
-
-/* Sửa style cho menu profile */
-.menu-user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-.profile-email {
-  font-family: 'Cinzel', serif;
-  color: #f0c75e;
-  font-size: 14px;
-  margin-bottom: 0;
-  letter-spacing: 0.5px;
-  word-break: break-all;
-}
-
-.profile-house {
-  font-family: 'Cinzel', serif;
-  color: #f0c75e;
-  font-size: 15px;
-  font-weight: bold;
-  margin-top: 10px;
-  margin-bottom: 12px;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(211, 166, 37, 0.3);
-  padding-bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.house-dropdown {
-  background: rgba(14, 26, 64, 0.8);
-  color: #f0c75e;
-  border: 1px solid rgba(211, 166, 37, 0.5);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-family: 'Cinzel', serif;
-  font-size: 14px;
-  width: 100%;
-  margin-top: 6px;
-  outline: none;
-  cursor: pointer;
-}
-
-.house-dropdown:focus {
-  border-color: rgba(211, 166, 37, 0.8);
-  box-shadow: 0 0 0 2px rgba(211, 166, 37, 0.2);
-}
-
-.house-dropdown option {
-  background: rgba(14, 26, 64, 0.95);
-  color: #f0c75e;
-  font-family: 'Cinzel', serif;
+  
+  .menu-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  
+  .profile-email {
+    font-family: 'Cinzel', serif;
+    color: #f0c75e;
+    font-size: 14px;
+    margin-bottom: 0;
+    letter-spacing: 0.5px;
+    word-break: break-all;
+  }
+  
+  .profile-house {
+    font-family: 'Cinzel', serif;
+    color: #f0c75e;
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(211, 166, 37, 0.3);
+    padding-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .house-dropdown {
+    background: rgba(14, 26, 64, 0.8);
+    color: #f0c75e;
+    border: 1px solid rgba(211, 166, 37, 0.5);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    width: 100%;
+    margin-top: 6px;
+    outline: none;
+    cursor: pointer;
+  }
+  
+  .house-dropdown:focus {
+    border-color: rgba(211, 166, 37, 0.8);
+    box-shadow: 0 0 0 2px rgba(211, 166, 37, 0.2);
+  }
+  
+  .house-dropdown option {
+    background: rgba(14, 26, 64, 0.95);
+    color: #f0c75e;
+    font-family: 'Cinzel', serif;
+  }
 }
 
 @keyframes menu-appear {
@@ -1005,6 +1004,95 @@ input:-webkit-autofill:active {
   
   .coordinate-container {
     min-height: 500px;
+  }
+}
+
+/* Desktop widescreen layout optimization - 16:9 aspect ratio */
+@media screen and (min-width: 1200px) {
+  .farm-content {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(500px, 2fr) minmax(280px, 1fr);
+    grid-template-areas: "controls coords list";
+    gap: 24px;
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .control-panel {
+    grid-area: controls;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 180px);
+    overflow-y: auto;
+    margin-bottom: 0;
+    min-width: 280px;
+  }
+  
+  .coordinate-container {
+    grid-area: coords;
+    min-height: 600px;
+    height: calc(100vh - 180px);
+    max-height: none;
+    margin-bottom: 0;
+  }
+  
+  .inequalities-list {
+    grid-area: list;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 180px);
+    max-height: none;
+    overflow-y: auto;
+    margin-bottom: 0;
+    min-width: 280px;
+  }
+  
+  .coordinate-plane {
+    min-height: 550px;
+  }
+  
+  .farm-header {
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px 30px;
+  }
+  
+  .farm-header h1 {
+    font-size: 2.2rem;
+  }
+  
+  /* Improve control panel spacing */
+  .control-panel-content {
+    gap: 15px;
+    padding: 5px;
+  }
+  
+  /* Better form input spacing */
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  /* Fix profile menu positions on widescreen */
+  .profile-menu,
+  .profile-hover-card {
+    right: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  /* Ensure tabs don't collapse */
+  .tab-navigation {
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 15px;
+  }
+  
+  .tab-button {
+    min-width: 150px;
+    padding: 12px 24px;
   }
 }
 

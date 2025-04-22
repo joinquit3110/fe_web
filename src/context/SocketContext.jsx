@@ -66,14 +66,15 @@ export const SocketProvider = ({ children }) => {
     
     console.log('[SOCKET] Initializing socket connection');
     
-    // Create new socket instance
+    // Create new socket instance with optimized connection settings
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 10000
+      reconnectionDelay: 500,         // Reduced from 1000ms
+      reconnectionDelayMax: 3000,     // Reduced from 5000ms
+      timeout: 5000,                  // Reduced from 10000ms
+      forceNew: true                  // Force a new connection to avoid sharing
     });
     
     // Set up event handlers
@@ -190,52 +191,38 @@ export const SocketProvider = ({ children }) => {
     }
   }, [socket, isConnected, user?.house]);
 
-  // Enhanced socket event handling - now with user state updating capability
+  // Enhanced real-time notification processor
   useEffect(() => {
     if (!socket) return;
 
-    // Listen for sync_update - targeted to this specific user
+    // Process notifications more efficiently with immediate delivery
     socket.on('sync_update', (data) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
-      
-      // Log the full data for debugging
-      console.log('[SOCKET] Full sync update data:', JSON.stringify(data));
-      
-      // Dispatch a custom event to allow components to react IMMEDIATELY
-      const event = new CustomEvent('serverSyncUpdate', {
-        detail: { type: 'sync_update', data }
-      });
-      window.dispatchEvent(event);
       
       // Enhanced user update handling with immediate effect
       if (data.type === 'user_update' && data.data?.updatedFields) {
         const updatedFields = data.data.updatedFields;
         
-        // If house was updated, update the user object directly
+        // If house was updated, update the user object immediately
         if (updatedFields.house && user && setUser) {
           console.log(`[SOCKET] House updated from server: ${updatedFields.house}`);
           
-          // Update user object in AuthContext with high priority
           try {
             setUser(prevUser => {
               if (!prevUser) return prevUser;
               
-              // Create a new user object with updated house
               const updatedUser = {
                 ...prevUser,
                 previousHouse: prevUser.house,
                 house: updatedFields.house
               };
               
-              // Also update localStorage to persist the change
               localStorage.setItem('user', JSON.stringify(updatedUser));
               
-              // Dispatch a custom event for other components that might need to react
-              const houseEvent = new CustomEvent('userHouseChanged', {
+              window.dispatchEvent(new CustomEvent('userHouseChanged', {
                 detail: { house: updatedFields.house, immediate: true }
-              });
-              window.dispatchEvent(houseEvent);
+              }));
               
               return updatedUser;
             });
@@ -255,19 +242,18 @@ export const SocketProvider = ({ children }) => {
           ]);
         }
         
-        // If magic points were updated, show notification and dispatch event
+        // If magic points were updated, handle with high priority
         if (updatedFields.magicPoints !== undefined) {
           const newPoints = parseInt(updatedFields.magicPoints, 10);
           const prevPoints = user?.magicPoints || parseInt(localStorage.getItem('magicPoints') || '100', 10);
           const diff = newPoints - prevPoints;
-          // Only consider it a reset if it comes with a reason indicating it's a reset by admin
           const isReset = updatedFields.lastUpdateReason === 'Points reset by admin';
           const changeDirection = diff > 0 ? 'increased by' : 'decreased by';
           
           if (!isNaN(newPoints)) {
             console.log(`[SOCKET] Magic points updated from server: ${newPoints} (change: ${diff}, isReset: ${isReset})`);
             
-            // Add notification about points change with more specific information
+            // Add immediate notification about points change
             setNotifications(prev => [
               {
                 id: Date.now(),
@@ -277,21 +263,21 @@ export const SocketProvider = ({ children }) => {
                   : (diff !== 0 
                   ? `Your magic points have been ${changeDirection} ${Math.abs(diff)}`
                     : `Your magic points have been updated to ${newPoints}`),
-                timestamp: new Date()
+                timestamp: new Date(),
+                pointsChange: diff
               },
               ...prev.slice(0, 9)
             ]);
             
-            // Dispatch a custom event for MagicPointsContext with high priority flag
-            const pointsEvent = new CustomEvent('magicPointsUpdated', {
+            // Dispatch high priority event
+            window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
               detail: { 
                 points: newPoints,
                 source: 'serverSync',
                 immediate: true,
                 isReset: isReset
               }
-            });
-            window.dispatchEvent(pointsEvent);
+            }));
             
             // Update user object with new points immediately
             setUser(prevUser => {
@@ -303,8 +289,6 @@ export const SocketProvider = ({ children }) => {
               };
               
               localStorage.setItem('user', JSON.stringify(updatedUser));
-              
-              // Force update localStorage magic points separately for redundancy
               localStorage.setItem('magicPoints', newPoints.toString());
               
               return updatedUser;
@@ -314,65 +298,54 @@ export const SocketProvider = ({ children }) => {
       }
     });
     
-    // Listen for house_points_update - broadcasts to all in a house
+    // Optimize house_points_update handling
     socket.on('house_points_update', (data) => {
       console.log('[SOCKET] Received house points update:', data);
       setLastMessage({ type: 'house_points_update', data, timestamp: new Date() });
       
-      // Skip notifications for admin, muggle, or unassigned users
+      // Skip for specific user types
       if (isAdminUser.current || user?.house === 'muggle' || !user?.house) {
-        console.log(`[SOCKET] Skipping house points notification for user ${user?.username} (${user?.house || 'unassigned'})`);
         return;
       }
       
-      // For regular users that should see this notification, show it
-      // Add notification about house points change
+      // Add house points notification for relevant users
       if (data.house === user?.house) {
         const pointsChange = data.points;
         const isPositive = pointsChange > 0;
-        
-        // Create a uniqueId for this house points update to prevent duplicates
-        // Using timestamp from server or current time as a fallback
         const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
-        
-        // Check for exact duplicates using a more robust key
         const dedupeKey = `${data.house}:${pointsChange}:${data.criteria || ''}:${data.level || ''}`;
         
-        // Make sure we have valid criteria and level data
+        // Get data fields with defaults
         const criteria = data.criteria || null;
         const level = data.level || null;
         const reason = data.reason || 'Admin action';
         
-        // If we've seen this exact notification recently, skip it
+        // Skip duplicate notifications
         if (recentNotifications.current.has(dedupeKey)) {
-          console.log(`[SOCKET] Skipping duplicate notification with key: ${dedupeKey}`);
           return;
         }
         
-        // Add to recent notifications to prevent duplicates
+        // Mark as seen for deduplication
         recentNotifications.current.add(dedupeKey);
         
-        // Create a full message that includes all the details
+        // Format comprehensive message
         let fullMessage = `House ${data.house} has ${isPositive ? 'gained' : 'lost'} ${Math.abs(pointsChange)} points! New total: ${data.newTotal}`;
         if (criteria) fullMessage += `. Criteria: ${criteria}`;
         if (level) fullMessage += `. Level: ${level}`;
         if (reason && reason !== 'Admin action') fullMessage += `. Reason: ${reason}`;
         
+        // Add notification immediately
         setNotifications(prev => {
-          // Check if we already have very similar notifications in the last few seconds
-          // This prevents duplicates coming from multiple house members
+          // Skip if very similar notification exists
           const similarExists = prev.some(n => 
             n.source === 'house_points_update' &&
             n.pointsChange === pointsChange &&
             n.criteria === criteria &&
             n.level === level &&
-            (Date.now() - new Date(n.timestamp).getTime()) < 30000 // Within 30 seconds
+            (Date.now() - new Date(n.timestamp).getTime()) < 15000 // Within 15 seconds
           );
           
-          if (similarExists) {
-            console.log('[SOCKET] Skipping duplicate house points notification');
-            return prev; // Skip duplicate
-          }
+          if (similarExists) return prev;
           
           return [
             {
@@ -381,21 +354,19 @@ export const SocketProvider = ({ children }) => {
               title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
               message: fullMessage,
               timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-              // Include additional data for the notification system
               pointsChange,
               reason,
               criteria,
               level,
-              // Add additional keys to help with debugging and duplicate detection
               source: 'house_points_update',
-              eventTime: data.timestamp || new Date().toISOString()
+              house: data.house
             },
             ...prev.slice(0, 9)
           ];
         });
         
-        // Dispatch event for house points update
-        const housePointsEvent = new CustomEvent('housePointsUpdated', {
+        // Dispatch event for other components
+        window.dispatchEvent(new CustomEvent('housePointsUpdated', {
           detail: {
             house: data.house,
             points: pointsChange,
@@ -404,27 +375,23 @@ export const SocketProvider = ({ children }) => {
             criteria,
             level,
             timestamp: data.timestamp || new Date().toISOString(),
-            uniqueKey: dedupeKey // Add the unique key to help other components deduplicate
+            uniqueKey: dedupeKey
           }
-        });
-        window.dispatchEvent(housePointsEvent);
+        }));
       }
     });
     
-    // Listen for admin_notification - sent by admin to specific users or houses
+    // Optimize admin_notification handling
     socket.on('admin_notification', (data) => {
       console.log('[SOCKET] Received admin notification:', data);
       setLastMessage({ type: 'admin_notification', data, timestamp: new Date() });
       
       // Skip if this notification should skip admins and the current user is an admin
-      if (data.skipAdmin === true || data.skipAdmin === "true") {
-        if (isAdminUser.current) {
-          console.log(`[SOCKET] Skipping admin notification for admin user: ${user?.username}`);
-          return;
-        }
+      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
+        return;
       }
       
-      // Add to notifications
+      // Add to notifications immediately
       setNotifications(prev => [
         {
           id: Date.now(),
@@ -435,28 +402,27 @@ export const SocketProvider = ({ children }) => {
         ...prev.slice(0, 9)
       ]);
       
-      // Dispatch a custom event for the notification
-      const notificationEvent = new CustomEvent('adminNotification', {
+      // Dispatch event for other components
+      window.dispatchEvent(new CustomEvent('adminNotification', {
         detail: data
-      });
-      window.dispatchEvent(notificationEvent);
+      }));
     });
     
-    // Listen for global_announcement - sent to all connected users
+    // Handle global announcements
     socket.on('global_announcement', (data) => {
       console.log('[SOCKET] Received global announcement:', data);
       setLastMessage({ type: 'global_announcement', data, timestamp: new Date() });
       
       // Add to notifications with special styling
-        setNotifications(prev => [
-          {
-            id: Date.now(), 
+      setNotifications(prev => [
+        {
+          id: Date.now(), 
           type: 'announcement',
           message: `ANNOUNCEMENT: ${data.message}`,
-            timestamp: new Date()
-          },
-          ...prev.slice(0, 9)
-        ]);
+          timestamp: new Date()
+        },
+        ...prev.slice(0, 9)
+      ]);
     });
 
     return () => {

@@ -7,7 +7,7 @@ import {
   Text, useToast, Divider, Flex, Spinner,
   Tabs, TabList, TabPanels, Tab, TabPanel,
   FormControl, FormLabel, Select, Input, Textarea,
-  Radio, RadioGroup, Stack
+  Radio, RadioGroup, Stack, SimpleGrid
 } from '@chakra-ui/react';
 import '../styles/Admin.css';
 
@@ -28,7 +28,6 @@ const AdminHousePoints = () => {
   const navigate = useNavigate();
   const toast = useToast();
   
-  // State for house statistics
   const [houseStats, setHouseStats] = useState({
     gryffindor: 0,
     slytherin: 0,
@@ -36,7 +35,6 @@ const AdminHousePoints = () => {
     hufflepuff: 0
   });
   
-  // State for house average points
   const [houseAverages, setHouseAverages] = useState({
     gryffindor: 0,
     slytherin: 0,
@@ -44,17 +42,14 @@ const AdminHousePoints = () => {
     hufflepuff: 0
   });
   
-  // State for direct house points
   const [selectedHouse, setSelectedHouse] = useState('gryffindor');
   const [reason, setReason] = useState('');
   
-  // State for group performance assessment
   const [groupHouse, setGroupHouse] = useState('gryffindor');
   const [criteriaType, setCriteriaType] = useState('participation');
   const [performanceLevel, setPerformanceLevel] = useState('satisfactory');
   const [details, setDetails] = useState('');
   
-  // Houses options
   const houses = [
     { value: 'gryffindor', label: 'Gryffindor', color: 'red.500', bgColor: '#740001', textColor: '#FFC500' },
     { value: 'slytherin', label: 'Slytherin', color: 'green.500', bgColor: '#1A472A', textColor: '#AAAAAA' },
@@ -62,14 +57,12 @@ const AdminHousePoints = () => {
     { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000' }
   ];
   
-  // Criteria options
   const criteriaTypes = [
     { value: 'participation', label: 'Level of participation of group members' },
     { value: 'english', label: 'Level of English usage in the group' },
     { value: 'completion', label: 'Time taken by the group to complete tasks' }
   ];
   
-  // Performance levels
   const performanceLevels = [
     { value: 'excellent', label: 'Excellent', points: criteriaPoints.excellent },
     { value: 'good', label: 'Good', points: criteriaPoints.good },
@@ -78,7 +71,6 @@ const AdminHousePoints = () => {
     { value: 'veryPoor', label: 'Very Poor', points: criteriaPoints.veryPoor }
   ];
   
-  // Refresh data and calculate house statistics
   useEffect(() => {
     const refreshData = async () => {
       await fetchUsers();
@@ -88,7 +80,6 @@ const AdminHousePoints = () => {
     refreshData();
   }, [fetchUsers]);
   
-  // Function to calculate house average points
   const calculateHouseAverages = () => {
     if (!users || users.length === 0) return;
     
@@ -99,19 +90,15 @@ const AdminHousePoints = () => {
       hufflepuff: { total: 0, count: 0 }
     };
     
-    // Calculate totals and count for each house
     users.forEach(user => {
       const house = user.house;
-      // Skip users without a valid house or non-student houses
       if (!house || !houseData[house]) return;
       
-      // Add user's magic points to house total
       const points = user.magicPoints || 0;
       houseData[house].total += points;
       houseData[house].count++;
     });
     
-    // Calculate averages
     const averages = {
       gryffindor: houseData.gryffindor.count ? Math.round(houseData.gryffindor.total / houseData.gryffindor.count) : 0,
       slytherin: houseData.slytherin.count ? Math.round(houseData.slytherin.total / houseData.slytherin.count) : 0,
@@ -121,7 +108,6 @@ const AdminHousePoints = () => {
     
     setHouseAverages(averages);
     
-    // Update statistics for later use
     setHouseStats({
       gryffindor: { points: averages.gryffindor, users: houseData.gryffindor.count },
       slytherin: { points: averages.slytherin, users: houseData.slytherin.count },
@@ -130,14 +116,11 @@ const AdminHousePoints = () => {
     });
   };
   
-  // Navigate to user management
   const goToUserManagement = () => {
     navigate('/admin');
   };
   
-  // Add points to a house
   const handleAddPoints = async () => {
-    // Sử dụng reason mặc định nếu người dùng không nhập
     const pointReason = reason.trim() ? reason : "Points adjustment";
     
     try {
@@ -152,7 +135,6 @@ const AdminHousePoints = () => {
         });
         setReason('');
         
-        // Force sync affected users to ensure they get the update
         setTimeout(() => {
           forceSyncAllHouseUsers(selectedHouse);
         }, 500);
@@ -167,9 +149,7 @@ const AdminHousePoints = () => {
     }
   };
   
-  // Deduct points from a house
   const handleDeductPoints = async () => {
-    // Sử dụng reason mặc định nếu người dùng không nhập
     const pointReason = reason.trim() ? reason : "Points deduction";
     
     try {
@@ -184,7 +164,6 @@ const AdminHousePoints = () => {
         });
         setReason('');
         
-        // Force sync affected users to ensure they get the update
         setTimeout(() => {
           forceSyncAllHouseUsers(selectedHouse);
         }, 500);
@@ -199,7 +178,6 @@ const AdminHousePoints = () => {
     }
   };
   
-  // Generic function to add points with custom amount
   const handleAddCustomPoints = async (amount) => {
     const pointReason = reason.trim() ? reason : "Points adjustment";
     
@@ -215,7 +193,6 @@ const AdminHousePoints = () => {
         });
         setReason('');
         
-        // Force sync affected users to ensure they get the update
         setTimeout(() => {
           forceSyncAllHouseUsers(selectedHouse);
         }, 500);
@@ -230,7 +207,6 @@ const AdminHousePoints = () => {
     }
   };
   
-  // Generic function to deduct points with custom amount
   const handleDeductCustomPoints = async (amount) => {
     const pointReason = reason.trim() ? reason : "Points deduction";
     
@@ -246,7 +222,6 @@ const AdminHousePoints = () => {
         });
         setReason('');
         
-        // Force sync affected users to ensure they get the update
         setTimeout(() => {
           forceSyncAllHouseUsers(selectedHouse);
         }, 500);
@@ -261,7 +236,6 @@ const AdminHousePoints = () => {
     }
   };
   
-  // Force sync for all users in a house
   const forceSyncAllHouseUsers = async (house) => {
     try {
       const response = await fetch('https://be-web-6c4k.onrender.com/api/users', {
@@ -290,7 +264,6 @@ const AdminHousePoints = () => {
     }
   };
   
-  // Update points based on group criteria
   const handleGroupCriteriaSubmit = async () => {
     try {
       const success = await updateGroupCriteriaPoints(
@@ -312,7 +285,6 @@ const AdminHousePoints = () => {
         });
         setDetails('');
         
-        // Force sync affected users
         setTimeout(() => {
           forceSyncAllHouseUsers(groupHouse);
         }, 500);
@@ -327,385 +299,362 @@ const AdminHousePoints = () => {
     }
   };
   
-  // If not admin, don't show anything
   if (!isAdmin) {
     return null;
   }
   
   return (
-    <Box className="admin-user-management">
+    <Box className="admin-container">
       <VStack spacing={4} align="stretch">
-        <HStack justify="space-between">
-          <Heading size="lg" className="highlight admin-title">Hogwarts House Points</Heading>
-          <HStack>
-            <Badge colorScheme="purple" fontSize="md" p={2}>Admin Console</Badge>
+        <Stack 
+          direction={{ base: "column", md: "row" }} 
+          justify="space-between"
+          spacing={{ base: 3, md: 0 }}
+          className="admin-header"
+        >
+          <Heading 
+            size={{ base: "md", md: "lg" }} 
+            className="admin-title"
+            textAlign={{ base: "center", md: "left" }}
+          >
+            Hogwarts House Points
+          </Heading>
+          <Stack 
+            direction={{ base: "row", md: "row" }} 
+            justify={{ base: "center", md: "flex-end" }}
+            spacing={2}
+            wrap="wrap"
+            className="admin-nav"
+          >
+            <Badge colorScheme="purple" fontSize={{ base: "xs", md: "md" }} p={2} className="admin-badge">Admin Console</Badge>
             <Button 
               colorScheme="purple" 
-              size="sm" 
+              size={{ base: "xs", md: "sm" }} 
               onClick={goToUserManagement}
-              mr={2}
+              className="admin-button primary"
             >
               User Management
             </Button>
-            <Button colorScheme="red" size="sm" onClick={logout}>Logout</Button>
-          </HStack>
-        </HStack>
+            <Button 
+              colorScheme="red" 
+              size={{ base: "xs", md: "sm" }} 
+              onClick={logout}
+              className="admin-button danger"
+            >
+              Logout
+            </Button>
+          </Stack>
+        </Stack>
         
         <Divider />
         
         {error && (
-          <Box className="message-box error">
-            <Text className="message-content">{error}</Text>
+          <Box className="admin-message-box error">
+            <Text>{error}</Text>
           </Box>
         )}
         
-        <Tabs variant="enclosed" colorScheme="purple">
-          <TabList>
-            <Tab>House Points</Tab>
-            <Tab>Group Assessment</Tab>
-            <Tab>Activity 2</Tab>
-          </TabList>
-          
-          <TabPanels>
-            {/* Direct House Points Tab */}
-            <TabPanel>
-              <Box className="wizard-panel" p={4} borderRadius="md">
-                <VStack spacing={4} align="stretch">
-                  <FormControl>
-                    <FormLabel>Select House</FormLabel>
-                    <Select 
-                      value={selectedHouse} 
-                      onChange={(e) => setSelectedHouse(e.target.value)}
-                      className="admin-house-select"
-                      bg={houses.find(h => h.value === selectedHouse)?.bgColor || 'gray.700'}
-                      color={houses.find(h => h.value === selectedHouse)?.textColor || 'white'}
-                      borderColor={houses.find(h => h.value === selectedHouse)?.color || 'gray.500'}
-                      _hover={{ borderColor: 'white' }}
-                      size={{ base: "md", md: "md" }}
-                      fontSize={{ base: "md", md: "md" }}
-                      h={{ base: "auto", md: "auto" }}
-                      py={{ base: 2 }}
-                      iconSize="20px"
-                    >
-                      {houses.map(house => (
-                        <option key={house.value} value={house.value} style={{fontSize: "16px"}}>
-                          {house.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  
-                  <FormControl>
-                    <FormLabel>Reason</FormLabel>
-                    <Textarea 
-                      value={reason} 
-                      onChange={(e) => setReason(e.target.value)} 
-                      placeholder="Enter reason for point change"
-                      className="inequality-input-field"
-                    />
-                  </FormControl>
-                  
-                  <VStack spacing={3} align="stretch">
-                    <HStack>
-                      <Button 
-                        colorScheme="green" 
-                        onClick={handleAddPoints}
-                        isLoading={loading}
-                        leftIcon={<span>+10</span>}
-                        isDisabled={false} 
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Award Points
-                      </Button>
-                      <Button 
-                        colorScheme="red" 
-                        onClick={handleDeductPoints}
-                        isLoading={loading}
-                        leftIcon={<span>-10</span>}
-                        isDisabled={false}
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Deduct Points
-                      </Button>
-                    </HStack>
-                    
-                    <HStack>
-                      <Button 
-                        colorScheme="green" 
-                        onClick={() => handleAddCustomPoints(20)}
-                        isLoading={loading}
-                        leftIcon={<span>+20</span>}
-                        isDisabled={false} 
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Award Points
-                      </Button>
-                      <Button 
-                        colorScheme="red" 
-                        onClick={() => handleDeductCustomPoints(20)}
-                        isLoading={loading}
-                        leftIcon={<span>-20</span>}
-                        isDisabled={false}
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Deduct Points
-                      </Button>
-                    </HStack>
-                    
-                    <HStack>
-                      <Button 
-                        colorScheme="green" 
-                        onClick={() => handleAddCustomPoints(30)}
-                        isLoading={loading}
-                        leftIcon={<span>+30</span>}
-                        isDisabled={false} 
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Award Points
-                      </Button>
-                      <Button 
-                        colorScheme="red" 
-                        onClick={() => handleDeductCustomPoints(30)}
-                        isLoading={loading}
-                        leftIcon={<span>-30</span>}
-                        isDisabled={false}
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Deduct Points
-                      </Button>
-                    </HStack>
-                    
-                    <HStack>
-                      <Button 
-                        colorScheme="green" 
-                        onClick={() => handleAddCustomPoints(40)}
-                        isLoading={loading}
-                        leftIcon={<span>+40</span>}
-                        isDisabled={false} 
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Award Points
-                      </Button>
-                      <Button 
-                        colorScheme="red" 
-                        onClick={() => handleDeductCustomPoints(40)}
-                        isLoading={loading}
-                        leftIcon={<span>-40</span>}
-                        isDisabled={false}
-                        className="spellcast-button"
-                        flex={1}
-                      >
-                        Deduct Points
-                      </Button>
-                    </HStack>
-                  </VStack>
-                </VStack>
-              </Box>
-            </TabPanel>
+        <Box className="admin-tabs">
+          <Tabs variant="enclosed" colorScheme="yellow" isFitted>
+            <TabList className="admin-tabs-list">
+              <Tab className="admin-tab" _selected={{ className: "admin-tab active" }}>House Points</Tab>
+              <Tab className="admin-tab" _selected={{ className: "admin-tab active" }}>Group Assessment</Tab>
+              <Tab className="admin-tab" _selected={{ className: "admin-tab active" }}>House Statistics</Tab>
+            </TabList>
             
-            {/* Group Assessment Tab */}
-            <TabPanel>
-              <Box className="wizard-panel" p={4} borderRadius="md">
-                <VStack spacing={4} align="stretch">
-                  <FormControl>
-                    <FormLabel>Select House</FormLabel>
-                    <Select 
-                      value={groupHouse} 
-                      onChange={(e) => setGroupHouse(e.target.value)}
-                      className="admin-house-select"
-                      bg={houses.find(h => h.value === groupHouse)?.bgColor || 'gray.700'}
-                      color={houses.find(h => h.value === groupHouse)?.textColor || 'white'}
-                      borderColor={houses.find(h => h.value === groupHouse)?.color || 'gray.500'}
-                      _hover={{ borderColor: 'white' }}
-                      size={{ base: "md", md: "md" }}
-                      fontSize={{ base: "md", md: "md" }}
-                      h={{ base: "auto", md: "auto" }}
-                      py={{ base: 2 }}
-                      iconSize="20px"
-                    >
-                      {houses.map(house => (
-                        <option key={house.value} value={house.value} style={{fontSize: "16px"}}>
-                          {house.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  
-                  <FormControl>
-                    <FormLabel>Assessment Criteria</FormLabel>
-                    <Select 
-                      value={criteriaType} 
-                      onChange={(e) => setCriteriaType(e.target.value)}
-                      className="inequality-input-field"
-                      bg="rgba(0, 0, 0, 0.6)"
-                      color="white"
-                      _hover={{ borderColor: 'white' }}
-                      size={{ base: "md", md: "md" }}
-                      fontSize={{ base: "md", md: "md" }}
-                      h={{ base: "auto", md: "auto" }}
-                      py={{ base: 2 }}
-                      iconSize="20px"
-                    >
-                      {criteriaTypes.map(criteria => (
-                        <option 
-                          key={criteria.value} 
-                          value={criteria.value}
-                          style={{
-                            backgroundColor: '#1A202C',
-                            color: 'white',
-                            fontSize: "16px"
-                          }}
+            <TabPanels>
+              <TabPanel className="admin-tab-content active">
+                <Box className="admin-panel">
+                  <VStack spacing={5} align="stretch">
+                    <FormControl className="admin-form-group">
+                      <FormLabel className="admin-form-label">Select House</FormLabel>
+                      <Select 
+                        value={selectedHouse} 
+                        onChange={(e) => setSelectedHouse(e.target.value)}
+                        className="admin-house-select"
+                        bg={houses.find(h => h.value === selectedHouse)?.bgColor || 'gray.700'}
+                        color={houses.find(h => h.value === selectedHouse)?.textColor || 'white'}
+                        borderColor={houses.find(h => h.value === selectedHouse)?.color || 'gray.500'}
+                      >
+                        {houses.map(house => (
+                          <option key={house.value} value={house.value}>
+                            {house.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    <FormControl className="admin-form-group">
+                      <FormLabel className="admin-form-label">Reason for Point Change</FormLabel>
+                      <Textarea 
+                        value={reason} 
+                        onChange={(e) => setReason(e.target.value)} 
+                        placeholder="Enter reason for point change (e.g., 'Outstanding performance in Potions class')"
+                        className="admin-form-textarea"
+                      />
+                    </FormControl>
+                    
+                    <Box className="admin-control-bar">
+                      <Text className="info-text">Award or deduct points from {houses.find(h => h.value === selectedHouse)?.label}</Text>
+                    </Box>
+                    
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <VStack spacing={3}>
+                        <Button 
+                          onClick={handleAddPoints}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">+10</Text>}
+                          isDisabled={loading} 
+                          className="admin-button success"
+                          width="100%"
                         >
-                          {criteria.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  
-                  <FormControl>
-                    <FormLabel>Performance Level</FormLabel>
-                    <RadioGroup value={performanceLevel} onChange={setPerformanceLevel}>
-                      <Stack direction="column" spacing={2}>
-                        {performanceLevels.map(level => (
-                          <Radio 
-                            key={level.value} 
-                            value={level.value}
-                            colorScheme={level.points > 0 ? "green" : "red"}
-                            sx={{
-                              ".chakra-radio__control": {
-                                borderWidth: "2px",
-                                borderColor: level.points > 0 ? "green.500" : "red.500",
-                                bg: "transparent",
-                                _checked: {
-                                  bg: level.points > 0 ? "green.500" : "red.500",
-                                  borderColor: level.points > 0 ? "green.500" : "red.500"
-                                }
-                              }
+                          Award 10 Points
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handleAddCustomPoints(20)}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">+20</Text>}
+                          isDisabled={loading} 
+                          className="admin-button success"
+                          width="100%"
+                        >
+                          Award 20 Points
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handleAddCustomPoints(30)}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">+30</Text>}
+                          isDisabled={loading} 
+                          className="admin-button success"
+                          width="100%"
+                        >
+                          Award 30 Points
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handleAddCustomPoints(40)}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">+40</Text>}
+                          isDisabled={loading} 
+                          className="admin-button success"
+                          width="100%"
+                        >
+                          Award 40 Points
+                        </Button>
+                      </VStack>
+                      
+                      <VStack spacing={3}>
+                        <Button 
+                          onClick={handleDeductPoints}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">-10</Text>}
+                          isDisabled={loading}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 10 Points
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handleDeductCustomPoints(20)}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">-20</Text>}
+                          isDisabled={loading}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 20 Points
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handleDeductCustomPoints(30)}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">-30</Text>}
+                          isDisabled={loading}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 30 Points
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => handleDeductCustomPoints(40)}
+                          isLoading={loading}
+                          leftIcon={<Text as="span">-40</Text>}
+                          isDisabled={loading}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 40 Points
+                        </Button>
+                      </VStack>
+                    </SimpleGrid>
+                  </VStack>
+                </Box>
+              </TabPanel>
+              
+              <TabPanel className="admin-tab-content active">
+                <Box className="admin-panel">
+                  <VStack spacing={5} align="stretch">
+                    <FormControl className="admin-form-group">
+                      <FormLabel className="admin-form-label">Select House</FormLabel>
+                      <Select 
+                        value={groupHouse} 
+                        onChange={(e) => setGroupHouse(e.target.value)}
+                        className="admin-house-select"
+                        bg={houses.find(h => h.value === groupHouse)?.bgColor || 'gray.700'}
+                        color={houses.find(h => h.value === groupHouse)?.textColor || 'white'}
+                        borderColor={houses.find(h => h.value === groupHouse)?.color || 'gray.500'}
+                      >
+                        {houses.map(house => (
+                          <option key={house.value} value={house.value}>
+                            {house.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    <FormControl className="admin-form-group">
+                      <FormLabel className="admin-form-label">Assessment Criteria</FormLabel>
+                      <Select 
+                        value={criteriaType} 
+                        onChange={(e) => setCriteriaType(e.target.value)}
+                        className="admin-form-input"
+                      >
+                        {criteriaTypes.map(criteria => (
+                          <option key={criteria.value} value={criteria.value}>
+                            {criteria.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    <FormControl className="admin-form-group">
+                      <FormLabel className="admin-form-label">Performance Level</FormLabel>
+                      <RadioGroup value={performanceLevel} onChange={setPerformanceLevel}>
+                        <Stack direction="column" spacing={2} className="admin-radio-group">
+                          {performanceLevels.map(level => (
+                            <Box 
+                              key={level.value} 
+                              className={`admin-radio-item ${performanceLevel === level.value ? 'checked' : ''}`}
+                            >
+                              <Radio 
+                                value={level.value}
+                                colorScheme={level.points > 0 ? "green" : "red"}
+                              >
+                                <HStack>
+                                  <Text fontWeight="medium">{level.label}</Text>
+                                  <Badge 
+                                    colorScheme={level.points > 0 ? "green" : "red"}
+                                    className={`admin-badge ${level.points > 0 ? 'success' : 'danger'}`}
+                                  >
+                                    {level.points > 0 ? `+${level.points}` : level.points}
+                                  </Badge>
+                                </HStack>
+                              </Radio>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </RadioGroup>
+                    </FormControl>
+                    
+                    <FormControl className="admin-form-group">
+                      <FormLabel className="admin-form-label">Additional Details (Optional)</FormLabel>
+                      <Textarea 
+                        value={details} 
+                        onChange={(e) => setDetails(e.target.value)} 
+                        placeholder="Enter any additional details about this assessment"
+                        className="admin-form-textarea"
+                      />
+                    </FormControl>
+                    
+                    <Button 
+                      onClick={handleGroupCriteriaSubmit}
+                      isLoading={loading}
+                      className="admin-button info"
+                      width="100%"
+                      mt={2}
+                    >
+                      Submit Assessment
+                    </Button>
+                  </VStack>
+                </Box>
+              </TabPanel>
+              
+              <TabPanel className="admin-tab-content active">
+                <Box className="admin-panel">
+                  <VStack spacing={6} align="stretch">
+                    <Box className="admin-control-bar">
+                      <Text className="info-text">Average magic points across all users in each Hogwarts house</Text>
+                      <Button 
+                        onClick={calculateHouseAverages}
+                        isLoading={loading}
+                        className="admin-button primary"
+                        size="sm"
+                      >
+                        Refresh Data
+                      </Button>
+                    </Box>
+                    
+                    {loading ? (
+                      <Flex justify="center" py={10} className="admin-loading">
+                        <div className="admin-loading-spinner"></div>
+                      </Flex>
+                    ) : (
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5} className="admin-stats-grid">
+                        {houses.map(house => (
+                          <Box
+                            key={house.value}
+                            className={`house-points-card ${house.value}`}
+                            style={{
+                              background: `linear-gradient(135deg, ${house.bgColor}, ${house.bgColor}CC)`,
+                              color: house.textColor
                             }}
                           >
-                            <HStack>
-                              <Text fontWeight="medium">{level.label}</Text>
-                              <Badge 
-                                colorScheme={level.points > 0 ? "green" : "red"}
-                                fontSize="sm"
-                                px={2}
-                                py={1}
-                                borderRadius="full"
-                                fontWeight="bold"
-                              >
-                                {level.points > 0 ? `+${level.points}` : level.points}
-                              </Badge>
-                            </HStack>
-                          </Radio>
-                        ))}
-                      </Stack>
-                    </RadioGroup>
-                  </FormControl>
-                  
-                  <FormControl>
-                    <FormLabel>Additional Details (Optional)</FormLabel>
-                    <Textarea 
-                      value={details} 
-                      onChange={(e) => setDetails(e.target.value)} 
-                      placeholder="Enter any additional details"
-                      className="inequality-input-field"
-                    />
-                  </FormControl>
-                  
-                  <Button 
-                    colorScheme="blue" 
-                    onClick={handleGroupCriteriaSubmit}
-                    isLoading={loading}
-                    className="spellcast-button"
-                  >
-                    Submit Assessment
-                  </Button>
-                </VStack>
-              </Box>
-            </TabPanel>
-            
-            {/* House Average Points Tab (Activity 2) */}
-            <TabPanel>
-              <Box className="wizard-panel" p={4} borderRadius="md">
-                <VStack spacing={6} align="stretch">
-                  <Heading size="md" textAlign="center">House Average Points</Heading>
-                  <Text fontSize="sm" opacity={0.8} textAlign="center">
-                    Average magic points across all users in each Hogwarts house
-                  </Text>
-                  
-                  <Button 
-                    size="sm" 
-                    colorScheme="blue" 
-                    onClick={calculateHouseAverages}
-                    isLoading={loading}
-                    alignSelf="center"
-                    mb={2}
-                  >
-                    Refresh Data
-                  </Button>
-                  
-                  {loading ? (
-                    <Flex justify="center" py={10}>
-                      <Spinner size="xl" color="purple.500" />
-                    </Flex>
-                  ) : (
-                    <Box>
-                      {houses.map(house => (
-                        <Box
-                          key={house.value}
-                          bg={house.bgColor}
-                          color={house.textColor}
-                          borderRadius="md"
-                          p={4}
-                          mb={3}
-                          boxShadow="md"
-                          position="relative"
-                          overflow="hidden"
-                        >
-                          <Flex justify="space-between" align="center">
-                            <HStack>
-                              <Heading size="md">{house.label}</Heading>
-                              <Badge colorScheme={house.value === 'gryffindor' ? 'red' : 
-                                              house.value === 'slytherin' ? 'green' :
-                                              house.value === 'ravenclaw' ? 'blue' : 'yellow'}
-                                    px={2}
-                                    py={1}
-                              >
-                                {houseStats[house.value]?.users || 0} students
-                              </Badge>
-                            </HStack>
-                            
-                            <Box 
-                              p={3} 
-                              borderRadius="full" 
-                              bg={house.textColor} 
-                              color={house.bgColor}
-                              fontWeight="bold"
-                              fontSize="xl"
-                            >
-                              {houseAverages[house.value] || 0}
+                            <Box className="admin-card-body">
+                              <Flex justify="space-between" align="center">
+                                <VStack align="start" spacing={0}>
+                                  <Heading size="md">{house.label}</Heading>
+                                  <Badge 
+                                    className="house-badge"
+                                    style={{
+                                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                                      color: house.textColor
+                                    }}
+                                  >
+                                    {houseStats[house.value]?.users || 0} students
+                                  </Badge>
+                                </VStack>
+                                
+                                <Box 
+                                  p={3} 
+                                  borderRadius="full" 
+                                  bg={`${house.textColor}DD`}
+                                  color={house.bgColor}
+                                  fontWeight="bold"
+                                  fontSize="2xl"
+                                  className="point-badge"
+                                >
+                                  {houseAverages[house.value] || 0}
+                                </Box>
+                              </Flex>
+                              
+                              <Text mt={4} fontSize="sm" opacity={0.9}>
+                                Average points per student
+                              </Text>
                             </Box>
-                          </Flex>
-                          
-                          <Text mt={2} opacity={0.9} fontSize="sm">
-                            Average points per student in {house.label}
-                          </Text>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
-                </VStack>
-              </Box>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+                          </Box>
+                        ))}
+                      </SimpleGrid>
+                    )}
+                  </VStack>
+                </Box>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </Box>
       </VStack>
     </Box>
   );

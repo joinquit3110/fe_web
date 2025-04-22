@@ -6,13 +6,13 @@ import {
   Box, Table, Thead, Tbody, Tr, Th, Td, Checkbox, 
   Select, Button, Heading, VStack, HStack, Badge, 
   Text, useToast, Divider, Flex, Spinner,
-  Menu, MenuButton, MenuList, MenuItem, IconButton,
-  useBreakpointValue, Card, CardBody, Grid, 
+  Menu, MenuButton, MenuList, MenuItem,
+  useBreakpointValue, Card, CardBody, 
   Stack, SimpleGrid, useDisclosure, Modal,
   ModalOverlay, ModalContent, ModalHeader,
-  ModalBody, ModalCloseButton
+  ModalBody, ModalCloseButton, Tooltip
 } from '@chakra-ui/react';
-import '../styles/Admin.css'; // Import admin styles
+import '../styles/Admin.css';
 
 const AdminUserManagement = () => {
   const { 
@@ -26,15 +26,16 @@ const AdminUserManagement = () => {
     selectAllUsers,
     resetPointsForUsers,
     resetAttemptsForUsers,
-    forceSyncForUsers
+    forceSyncForUsers,
+    isAdmin
   } = useAdmin();
   
   const { logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [refreshInterval, setRefreshInterval] = useState(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
 
-  // Houses options
   const houses = [
     { value: 'gryffindor', label: 'Gryffindor', color: 'red.500', bgColor: '#740001', textColor: '#FFC500' },
     { value: 'slytherin', label: 'Slytherin', color: 'green.500', bgColor: '#1A472A', textColor: '#AAAAAA' },
@@ -44,17 +45,14 @@ const AdminUserManagement = () => {
     { value: 'admin', label: 'Admin', color: 'purple.500', bgColor: '#4B0082', textColor: '#FFFFFF' }
   ];
 
-  // Check if mobile view should be used
   const isMobile = useBreakpointValue({ base: true, md: false });
   const [selectedUserId, setSelectedUserId] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
 
-  // Fetch users once on component mount instead of auto-refresh
   useEffect(() => {
-    // Load users once when component mounts
     fetchUsers();
     
-    // Remove auto-refresh - it was causing problems
     return () => {
       if (refreshInterval) {
         clearInterval(refreshInterval);
@@ -62,35 +60,32 @@ const AdminUserManagement = () => {
     };
   }, [fetchUsers]);
 
-  // Handle house change with better error handling and validation
-  const handleHouseChange = async (userId, house) => {
-    if (!userId) {
-      toast({
-        title: 'Error',
-        description: 'Cannot update: User ID is missing',
-        status: 'error',
-        duration: 3000,
-      });
-      return;
+  useEffect(() => {
+    if (autoRefreshEnabled) {
+      const interval = setInterval(() => {
+        fetchUsers();
+      }, 30000);
+      setRefreshInterval(interval);
+      return () => clearInterval(interval);
+    } else if (refreshInterval) {
+      clearInterval(refreshInterval);
+      setRefreshInterval(null);
     }
-    
-    console.log(`Attempting to assign ${house} to user ${userId}`);
-    
+  }, [autoRefreshEnabled, fetchUsers]);
+
+  const handleHouseChange = async (userId, house) => {
     try {
       const success = await assignHouse(userId, house);
       
       if (success) {
         toast({
           title: 'House updated',
-          description: `Successfully assigned to ${house}`,
+          description: `Successfully assigned user to ${house}`,
           status: 'success',
           duration: 2000,
+          isClosable: true,
+          position: 'top-right'
         });
-        
-        // Manually update UI to reflect the change immediately
-        const updatedUsers = users.map(user => 
-          user.id === userId ? { ...user, house: house } : user
-        );
       }
     } catch (err) {
       toast({
@@ -98,21 +93,40 @@ const AdminUserManagement = () => {
         description: err.message || 'Failed to update house',
         status: 'error',
         duration: 3000,
+        isClosable: true,
+        position: 'top-right'
       });
     }
   };
 
-  // Handle reset points
+  const goToHousePoints = () => {
+    navigate('/admin/house-points');
+  };
+
   const handleResetPoints = async () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: 'No students selected',
+        description: 'Please select students first',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+    
     try {
-      const success = await resetPointsForUsers();
+      const success = await resetPointsForUsers(selectedUsers);
       
       if (success) {
         toast({
           title: 'Points reset',
-          description: `Reset points for ${selectedUsers.length} users`,
+          description: `Successfully reset points for ${selectedUsers.length} students`,
           status: 'success',
           duration: 2000,
+          isClosable: true,
+          position: 'top-right'
         });
       }
     } catch (err) {
@@ -121,21 +135,36 @@ const AdminUserManagement = () => {
         description: err.message || 'Failed to reset points',
         status: 'error',
         duration: 3000,
+        isClosable: true,
+        position: 'top-right'
       });
     }
   };
 
-  // Handle reset attempts
   const handleResetAttempts = async () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: 'No students selected',
+        description: 'Please select students first',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+    
     try {
-      const success = await resetAttemptsForUsers();
+      const success = await resetAttemptsForUsers(selectedUsers);
       
       if (success) {
         toast({
           title: 'Attempts reset',
-          description: `Reset attempts for ${selectedUsers.length} users`,
+          description: `Successfully reset attempts for ${selectedUsers.length} students`,
           status: 'success',
           duration: 2000,
+          isClosable: true,
+          position: 'top-right'
         });
       }
     } catch (err) {
@@ -144,45 +173,50 @@ const AdminUserManagement = () => {
         description: err.message || 'Failed to reset attempts',
         status: 'error',
         duration: 3000,
+        isClosable: true,
+        position: 'top-right'
       });
     }
   };
-
-  // Handle force sync
+  
   const handleForceSync = async () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: 'No students selected',
+        description: 'Please select students first',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+    
     try {
-      const success = await forceSyncForUsers();
+      const success = await forceSyncForUsers(selectedUsers);
       
       if (success) {
         toast({
-          title: 'Sync completed',
-          description: `Synced data for ${selectedUsers.length} users`,
+          title: 'Force sync complete',
+          description: `Successfully synchronized ${selectedUsers.length} students`,
           status: 'success',
           duration: 2000,
+          isClosable: true,
+          position: 'top-right'
         });
       }
     } catch (err) {
       toast({
         title: 'Error',
-        description: err.message || 'Failed to sync',
+        description: err.message || 'Failed to force sync',
         status: 'error',
         duration: 3000,
+        isClosable: true,
+        position: 'top-right'
       });
     }
   };
 
-  // Navigate to house points page
-  const goToHousePoints = () => {
-    navigate('/admin/house-points');
-  };
-
-  // Function to open user actions modal
-  const handleUserAction = (userId) => {
-    setSelectedUserId(userId);
-    onOpen();
-  };
-
-  // Helper function to render house badge/selector
   const renderHouseBadge = (user) => {
     const house = houses.find(h => h.value === user.house) || 
       { value: 'unknown', label: 'Unknown', bgColor: 'gray.700', textColor: 'white', color: 'gray.500' };
@@ -196,10 +230,10 @@ const AdminUserManagement = () => {
           fontWeight="bold"
           borderWidth="2px"
           borderColor={house.color}
-          _hover={{ borderColor: 'white' }}
           width={{ base: "130px", md: "160px" }}
           size={isMobile ? "sm" : "md"}
           fontSize={{ base: "xs", md: "sm" }}
+          className={`house-badge ${house.value}`}
         >
           {house.label}
         </MenuButton>
@@ -207,6 +241,7 @@ const AdminUserManagement = () => {
           zIndex={10} 
           maxH="300px" 
           overflowY="auto"
+          className="admin-menu-list"
         >
           {houses.map(house => (
             <MenuItem 
@@ -217,6 +252,7 @@ const AdminUserManagement = () => {
               color={house.textColor}
               _hover={{ bg: `${house.bgColor}`, opacity: 0.8 }}
               fontWeight="bold"
+              className="admin-menu-item"
             >
               {house.label}
             </MenuItem>
@@ -226,7 +262,6 @@ const AdminUserManagement = () => {
     );
   };
 
-  // Function to handle bulk house assignment
   const handleBulkHouseChange = async (house) => {
     if (selectedUsers.length === 0) {
       toast({
@@ -234,6 +269,8 @@ const AdminUserManagement = () => {
         description: 'Please select students first',
         status: 'warning',
         duration: 3000,
+        isClosable: true,
+        position: 'top-right'
       });
       return;
     }
@@ -241,7 +278,6 @@ const AdminUserManagement = () => {
     try {
       let successCount = 0;
       
-      // Update each user one by one
       for (const userId of selectedUsers) {
         const success = await assignHouse(userId, house);
         if (success) successCount++;
@@ -252,9 +288,10 @@ const AdminUserManagement = () => {
         description: `Successfully assigned ${successCount} students to ${house}`,
         status: 'success',
         duration: 2000,
+        isClosable: true,
+        position: 'top-right'
       });
       
-      // Refresh users data
       fetchUsers();
       
     } catch (err) {
@@ -263,13 +300,13 @@ const AdminUserManagement = () => {
         description: err.message || 'Failed to update houses',
         status: 'error',
         duration: 3000,
+        isClosable: true,
+        position: 'top-right'
       });
     }
   };
 
-  // Function to trigger test notifications
   const triggerTestNotifications = () => {
-    // Set the flag to trigger test notifications in NotificationDisplay
     localStorage.setItem('testNotifications', 'true');
     
     toast({
@@ -277,95 +314,151 @@ const AdminUserManagement = () => {
       description: 'Test notifications have been triggered',
       status: 'info',
       duration: 2000,
+      isClosable: true,
+      position: 'top-right'
     });
     
-    // Force refresh to trigger the useEffect in NotificationDisplay
     window.location.reload();
   };
 
+  const handleUserAction = (userId) => {
+    setSelectedUserId(userId);
+    onOpen();
+  };
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedUsers = React.useMemo(() => {
+    if (!sortConfig.key) return users;
+    
+    return [...users].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+      
+      if (sortConfig.key === 'magicPoints') {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      }
+      
+      if (aValue < bValue) {
+        return sortConfig.direction === 'ascending' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [users, sortConfig]);
+  
+  if (!isAdmin) {
+    return null;
+  }
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return '↕️';
+    return sortConfig.direction === 'ascending' ? '↑' : '↓';
+  };
+
   return (
-    <Box className="admin-user-management" p={{ base: 2, md: 4 }}>
+    <Box className="admin-container">
       <VStack spacing={4} align="stretch">
-        {/* Header section, always visible but responsive */}
         <Stack 
           direction={{ base: "column", md: "row" }} 
           justify="space-between"
           spacing={{ base: 3, md: 0 }}
+          className="admin-header"
         >
           <Heading 
-            size={{ base: "md", md: "lg" }} 
-            className="highlight admin-title"
+            className="admin-title"
             textAlign={{ base: "center", md: "left" }}
           >
             Hogwarts Student Registry
           </Heading>
           <Stack 
-            direction={{ base: "row", md: "row" }} 
+            direction={{ base: "row" }} 
             justify={{ base: "center", md: "flex-end" }}
             spacing={2}
             wrap="wrap"
+            className="admin-nav"
           >
-            <Badge colorScheme="purple" fontSize={{ base: "xs", md: "md" }} p={2}>Admin Console</Badge>
+            <Badge className="admin-badge">Admin Console</Badge>
             <Button 
-              colorScheme="purple" 
-              size={{ base: "xs", md: "sm" }} 
               onClick={goToHousePoints}
+              className="admin-button primary"
             >
               House Points
             </Button>
             <Button 
-              colorScheme="red" 
-              size={{ base: "xs", md: "sm" }} 
               onClick={logout}
+              className="admin-button danger"
             >
               Logout
             </Button>
           </Stack>
         </Stack>
         
-        <Divider />
+        <Divider className="admin-divider" />
         
-        {/* Debug tools - only visible to admins */}
-        <Flex direction="row" justify="flex-end" my={2}>
-          <Button 
-            size="xs" 
-            colorScheme="cyan" 
-            onClick={triggerTestNotifications}
-            title="Trigger test notifications with all fields"
-          >
-            Test Notifications
-          </Button>
+        <Flex direction="row" justify="space-between" align="center" my={2} className="admin-tool-bar">
+          <Box>
+            <Tooltip label={autoRefreshEnabled ? "Disable auto refresh" : "Enable auto refresh (30s)"} placement="top">
+              <Button 
+                onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                className={`admin-button ${autoRefreshEnabled ? 'success' : 'secondary'}`}
+                size="sm"
+              >
+                {autoRefreshEnabled ? 'Auto Refresh: ON' : 'Auto Refresh: OFF'}
+              </Button>
+            </Tooltip>
+          </Box>
+          <Box>
+            <Tooltip label="Trigger test notifications for debugging" placement="top">
+              <Button 
+                onClick={triggerTestNotifications}
+                className="admin-button info"
+                size="sm"
+              >
+                Test Notifications
+              </Button>
+            </Tooltip>
+          </Box>
         </Flex>
         
         {error && (
-          <Box className="message-box error">
-            <Text className="message-content">{error}</Text>
+          <Box className="admin-message-box error">
+            <Text>{error}</Text>
+            <Button 
+              onClick={fetchUsers} 
+              className="admin-button primary"
+              size="sm"
+              ml={2}
+            >
+              Try Again
+            </Button>
           </Box>
         )}
         
-        {/* Control bar, responsive layout */}
-        <Stack 
-          direction={{ base: "column", md: "row" }} 
-          justify="space-between" 
-          align={{ base: "center", md: "center" }}
-          spacing={3}
-          className="admin-control-bar"
-        >
-          <Text fontSize={{ base: "sm", md: "md" }}>
-            <strong>{selectedUsers.length}</strong> students selected
+        <Box className="admin-control-bar">
+          <Text className="admin-text">
+            <strong className="admin-highlight">{selectedUsers.length}</strong> students selected
           </Text>
           
-          {selectedUsers.length > 0 && (
+          {selectedUsers.length > 0 ? (
             <Menu placement="bottom-end" strategy="fixed" closeOnSelect={true}>
               <MenuButton
                 as={Button}
-                colorScheme="yellow"
-                size={{ base: "xs", md: "sm" }}
-                mr={2}
+                className="admin-button secondary"
+                size="sm"
               >
                 Assign House
               </MenuButton>
-              <MenuList zIndex={10} maxH="300px" overflowY="auto">
+              <MenuList zIndex={10} maxH="300px" overflowY="auto" className="admin-menu-list">
                 {houses.map(house => (
                   <MenuItem 
                     key={house.value}
@@ -375,123 +468,155 @@ const AdminUserManagement = () => {
                     color={house.textColor}
                     _hover={{ bg: `${house.bgColor}`, opacity: 0.8 }}
                     fontWeight="bold"
+                    className="admin-menu-item"
                   >
                     Assign to {house.label}
                   </MenuItem>
                 ))}
               </MenuList>
             </Menu>
+          ) : (
+            <Button 
+              className="admin-button secondary"
+              size="sm"
+              isDisabled={true}
+            >
+              Assign House
+            </Button>
           )}
           
-          <Flex 
-            className="admin-actions" 
-            wrap="wrap" 
-            justify={{ base: "center", md: "flex-end" }}
-            gap={2}
-          >
-            <Button 
-              colorScheme="blue" 
-              size={{ base: "xs", md: "sm" }} 
-              onClick={handleResetPoints}
-              isDisabled={selectedUsers.length === 0}
-            >
-              Reset Points
-            </Button>
-            <Button 
-              colorScheme="green" 
-              size={{ base: "xs", md: "sm" }} 
-              onClick={handleResetAttempts}
-              isDisabled={selectedUsers.length === 0}
-            >
-              Reset Attempts
-            </Button>
-            <Button 
-              colorScheme="purple" 
-              size={{ base: "xs", md: "sm" }} 
-              onClick={handleForceSync}
-              isDisabled={selectedUsers.length === 0}
-            >
-              Force Sync
-            </Button>
-            <Button 
-              colorScheme="gray" 
-              size={{ base: "xs", md: "sm" }} 
-              onClick={fetchUsers}
-            >
-              Refresh
-            </Button>
-          </Flex>
-        </Stack>
+          <div className="admin-actions">
+            <Tooltip label={selectedUsers.length === 0 ? "Select students first" : "Reset points to 100 for selected students"}>
+              <Button 
+                onClick={handleResetPoints}
+                isDisabled={selectedUsers.length === 0}
+                className="admin-button success"
+                size="sm"
+              >
+                Reset Points
+              </Button>
+            </Tooltip>
+            <Tooltip label={selectedUsers.length === 0 ? "Select students first" : "Reset activity attempts for selected students"}>
+              <Button 
+                onClick={handleResetAttempts}
+                isDisabled={selectedUsers.length === 0}
+                className="admin-button info"
+                size="sm"
+              >
+                Reset Attempts
+              </Button>
+            </Tooltip>
+            <Tooltip label={selectedUsers.length === 0 ? "Select students first" : "Force sync data for selected students"}>
+              <Button 
+                onClick={handleForceSync}
+                isDisabled={selectedUsers.length === 0}
+                className="admin-button secondary"
+                size="sm"
+              >
+                Force Sync
+              </Button>
+            </Tooltip>
+            <Tooltip label="Refresh student data">
+              <Button 
+                onClick={fetchUsers}
+                className="admin-button primary"
+                size="sm"
+              >
+                Refresh
+              </Button>
+            </Tooltip>
+          </div>
+        </Box>
         
-        <Box className="wizard-panel" p={{ base: 2, md: 4 }} borderRadius="md">
-          {/* Desktop view: Table layout */}
+        <Box className="admin-panel">
           {!isMobile && (
-            <Box overflowX="auto" width="100%">
+            <Box className="admin-table-container">
               <Table variant="simple" className="admin-table">
                 <Thead>
-                  <Tr>
-                    <Th width="50px">
+                  <Tr className="admin-table-header">
+                    <Th width="50px" className="admin-th">
                       <Checkbox 
                         isChecked={selectedUsers.length > 0 && selectedUsers.length === users.length} 
                         isIndeterminate={selectedUsers.length > 0 && selectedUsers.length < users.length}
                         onChange={selectAllUsers}
+                        colorScheme="yellow"
+                        className="admin-checkbox"
                       />
                     </Th>
-                    <Th>Wizard Name</Th>
-                    <Th>House</Th>
-                    <Th isNumeric>Points</Th>
-                    <Th>Actions</Th>
+                    <Th className="admin-th sortable" onClick={() => requestSort('username')}>
+                      Wizard Name {getSortIcon('username')}
+                    </Th>
+                    <Th className="admin-th">House</Th>
+                    <Th isNumeric className="admin-th sortable" onClick={() => requestSort('magicPoints')}>
+                      Points {getSortIcon('magicPoints')}
+                    </Th>
+                    <Th className="admin-th">Actions</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {loading ? (
                     <Tr>
-                      <Td colSpan={5} textAlign="center" className="admin-loading">
-                        <Spinner size="lg" color="blue.500" />
+                      <Td colSpan={5} textAlign="center">
+                        <div className="admin-loading">
+                          <div className="admin-loading-spinner"></div>
+                        </div>
                       </Td>
                     </Tr>
-                  ) : users.length === 0 ? (
+                  ) : sortedUsers.length === 0 ? (
                     <Tr>
-                      <Td colSpan={5} textAlign="center">No students found</Td>
+                      <Td colSpan={5} textAlign="center" className="admin-empty-state">No students found</Td>
                     </Tr>
                   ) : (
-                    users.map(user => (
-                      <Tr key={user.id || user._id}>
-                        <Td>
+                    sortedUsers.map(user => (
+                      <Tr key={user.id || user._id} className="admin-table-row">
+                        <Td className="admin-td">
                           <Checkbox 
                             isChecked={selectedUsers.includes(user.id || user._id)}
                             onChange={() => toggleUserSelection(user.id || user._id)}
+                            colorScheme="yellow"
+                            className="admin-checkbox"
                           />
                         </Td>
-                        <Td>{user.username}</Td>
-                        <Td>{renderHouseBadge(user)}</Td>
-                        <Td isNumeric>
+                        <Td className="admin-td">{user.username}</Td>
+                        <Td className="admin-td">{renderHouseBadge(user)}</Td>
+                        <Td isNumeric className="admin-td">
                           <Badge 
                             colorScheme={user.magicPoints >= 100 ? 'green' : user.magicPoints >= 50 ? 'yellow' : 'red'}
-                            fontSize="md"
-                            p={2}
-                            className="admin-badge"
+                            className={`admin-badge ${user.magicPoints >= 100 ? 'success' : user.magicPoints >= 50 ? 'warning' : 'danger'}`}
                           >
-                            {user.magicPoints}
+                            {user.magicPoints || 0}
                           </Badge>
                         </Td>
-                        <Td>
-                          <HStack className="admin-actions">
-                            <Button 
-                              size="sm" 
-                              colorScheme="green"
-                              onClick={() => resetPointsForUsers([user.id || user._id])}
-                            >
-                              Reset Points
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              colorScheme="blue"
-                              onClick={() => resetAttemptsForUsers([user.id || user._id])}
-                            >
-                              Reset Attempts
-                            </Button>
-                          </HStack>
+                        <Td className="admin-td">
+                          <Box className="admin-actions">
+                            <Tooltip label="Reset points to 100">
+                              <Button 
+                                onClick={() => resetPointsForUsers([user.id || user._id])}
+                                className="admin-button success"
+                                size="sm"
+                              >
+                                Reset Points
+                              </Button>
+                            </Tooltip>
+                            <Tooltip label="Reset activity attempts">
+                              <Button 
+                                onClick={() => resetAttemptsForUsers([user.id || user._id])}
+                                className="admin-button info"
+                                size="sm"
+                              >
+                                Reset Attempts
+                              </Button>
+                            </Tooltip>
+                            <Tooltip label="Force data synchronization">
+                              <Button 
+                                onClick={() => forceSyncForUsers([user.id || user._id])}
+                                className="admin-button secondary"
+                                size="sm"
+                              >
+                                Force Sync
+                              </Button>
+                            </Tooltip>
+                          </Box>
                         </Td>
                       </Tr>
                     ))
@@ -501,50 +626,50 @@ const AdminUserManagement = () => {
             </Box>
           )}
           
-          {/* Mobile view: Card layout */}
           {isMobile && (
-            <Box width="100%">
+            <Box width="100%" className="admin-cards-container">
               {loading ? (
-                <Flex justify="center" align="center" minH="200px">
-                  <Spinner size="xl" color="blue.500" />
-                </Flex>
-              ) : users.length === 0 ? (
-                <Text textAlign="center" p={4}>No students found</Text>
+                <div className="admin-loading">
+                  <div className="admin-loading-spinner"></div>
+                </div>
+              ) : sortedUsers.length === 0 ? (
+                <Text textAlign="center" p={4} className="admin-empty-state">No students found</Text>
               ) : (
                 <SimpleGrid columns={1} spacing={4}>
-                  {users.map(user => (
-                    <Card key={user.id || user._id} variant="outline" className="wizard-panel">
-                      <CardBody>
-                        <Stack spacing={3}>
-                          <Flex justify="space-between" align="center">
-                            <Checkbox 
-                              isChecked={selectedUsers.includes(user.id || user._id)}
-                              onChange={() => toggleUserSelection(user.id || user._id)}
-                              mr={2}
-                            />
-                            <Text fontWeight="bold" fontSize="lg">{user.username}</Text>
-                            <Badge 
-                              colorScheme={user.magicPoints >= 100 ? 'green' : user.magicPoints >= 50 ? 'yellow' : 'red'}
-                              fontSize="md"
-                              p={2}
-                            >
-                              {user.magicPoints} pts
-                            </Badge>
-                          </Flex>
-                          
-                          <Flex justify="space-between" align="center">
-                            {renderHouseBadge(user)}
-                            <Button 
-                              size="sm" 
-                              colorScheme="purple"
-                              onClick={() => handleUserAction(user.id || user._id)}
-                            >
-                              Actions
-                            </Button>
-                          </Flex>
-                        </Stack>
-                      </CardBody>
-                    </Card>
+                  {sortedUsers.map(user => (
+                    <Box key={user.id || user._id} className="admin-card">
+                      <Box className="admin-card-header">
+                        <Flex justify="space-between" align="center">
+                          <Checkbox 
+                            isChecked={selectedUsers.includes(user.id || user._id)}
+                            onChange={() => toggleUserSelection(user.id || user._id)}
+                            colorScheme="yellow"
+                            className="admin-checkbox"
+                            mr={2}
+                          />
+                          <Text fontWeight="bold" fontSize="lg" className="admin-card-title">{user.username}</Text>
+                          <Badge 
+                            colorScheme={user.magicPoints >= 100 ? 'green' : user.magicPoints >= 50 ? 'yellow' : 'red'}
+                            className={`admin-badge ${user.magicPoints >= 100 ? 'success' : user.magicPoints >= 50 ? 'warning' : 'danger'}`}
+                          >
+                            {user.magicPoints || 0} pts
+                          </Badge>
+                        </Flex>
+                      </Box>
+                      
+                      <Box className="admin-card-body">
+                        <Flex justify="space-between" align="center">
+                          {renderHouseBadge(user)}
+                          <Button 
+                            onClick={() => handleUserAction(user.id || user._id)}
+                            className="admin-button primary"
+                            size="sm"
+                          >
+                            Actions
+                          </Button>
+                        </Flex>
+                      </Box>
+                    </Box>
                   ))}
                 </SimpleGrid>
               )}
@@ -552,51 +677,47 @@ const AdminUserManagement = () => {
           )}
         </Box>
       </VStack>
-      
-      {/* Mobile User Actions Modal */}
+
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay backdropFilter="blur(10px)" />
-        <ModalContent className="wizard-panel">
-          <ModalHeader>Student Actions</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
+        <ModalContent className="admin-modal">
+          <ModalHeader className="admin-modal-header">Student Actions</ModalHeader>
+          <ModalCloseButton className="admin-modal-close" />
+          <ModalBody pb={6} className="admin-modal-body">
             <VStack spacing={4}>
               <Button 
-                colorScheme="green" 
-                size="md" 
-                width="100%"
                 onClick={() => {
                   if (selectedUserId) {
                     resetPointsForUsers([selectedUserId]);
                     onClose();
                   }
                 }}
+                className="admin-button success"
+                width="100%"
               >
                 Reset Points
               </Button>
               <Button 
-                colorScheme="blue" 
-                size="md" 
-                width="100%"
                 onClick={() => {
                   if (selectedUserId) {
                     resetAttemptsForUsers([selectedUserId]);
                     onClose();
                   }
                 }}
+                className="admin-button info"
+                width="100%"
               >
                 Reset Attempts
               </Button>
               <Button 
-                colorScheme="purple" 
-                size="md" 
-                width="100%"
                 onClick={() => {
                   if (selectedUserId) {
                     forceSyncForUsers([selectedUserId]);
                     onClose();
                   }
                 }}
+                className="admin-button secondary"
+                width="100%"
               >
                 Force Sync
               </Button>
@@ -608,4 +729,4 @@ const AdminUserManagement = () => {
   );
 };
 
-export default AdminUserManagement; 
+export default AdminUserManagement;
