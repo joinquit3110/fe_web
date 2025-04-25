@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdmin } from '../contexts/AdminContext';
 import ReactCrop from 'react-image-crop';
@@ -37,6 +37,8 @@ const UserProfile = ({ user: propUser }) => {
     aspect: 1
   });
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const previewCanvasRef = useRef(null);
   const imageRef = useRef(null);
 
   useEffect(() => {
@@ -124,19 +126,43 @@ const UserProfile = ({ user: propUser }) => {
     }
   };
 
-  const onCropComplete = (crop) => {
-    if (imageRef.current && crop.width && crop.height) {
-      getCroppedImg(imageRef.current, crop);
-    }
-  };
+  const onLoad = useCallback((img) => {
+    imageRef.current = img;
 
-  const getCroppedImg = (image, crop) => {
+    const width = img.width * 0.8;
+    const height = img.height * 0.8;
+    const x = (img.width - width) / 2;
+    const y = (img.height - height) / 2;
+
+    setCrop({
+      unit: 'px',
+      width,
+      height,
+      x,
+      y,
+      aspect: 1
+    });
+
+    return false;
+  }, []);
+
+  const onCropComplete = useCallback((crop, percentCrop) => {
+    setCompletedCrop(crop);
+    if (imageRef.current && crop.width && crop.height) {
+      generateCroppedImage(imageRef.current, crop);
+    }
+  }, []);
+
+  const generateCroppedImage = useCallback((image, crop) => {
+    if (!crop || !image) return;
+
     const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
+    const ctx = canvas.getContext('2d');
+
     canvas.width = crop.width;
     canvas.height = crop.height;
-    const ctx = canvas.getContext('2d');
 
     ctx.drawImage(
       image,
@@ -150,47 +176,85 @@ const UserProfile = ({ user: propUser }) => {
       crop.height
     );
 
-    canvas.toBlob(blob => {
-      if (!blob) return;
-      if (croppedImageUrl) {
-        URL.revokeObjectURL(croppedImageUrl);
-      }
-      const croppedUrl = URL.createObjectURL(blob);
-      setCroppedImageUrl(croppedUrl);
-    }, 'image/jpeg', 0.95);
-  };
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          console.error('Canvas is empty');
+          return;
+        }
+
+        if (croppedImageUrl) {
+          URL.revokeObjectURL(croppedImageUrl);
+        }
+
+        const croppedUrl = URL.createObjectURL(blob);
+        setCroppedImageUrl(croppedUrl);
+      },
+      'image/jpeg',
+      0.95
+    );
+  }, [croppedImageUrl]);
 
   const uploadCroppedAvatar = async () => {
-    if (!croppedImageUrl) return;
+    if (!croppedImageUrl) {
+      setError("Please crop the image first");
+      return;
+    }
 
     try {
+      setSuccess('Uploading image...');
+
       const response = await fetch(croppedImageUrl);
       const blob = await response.blob();
 
-      setSuccess('Uploading image...');
+      const reader = new FileReader();
 
-      const formData = new FormData();
-      formData.append('image', blob, 'avatar.jpg');
+      const base64Promise = new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => {
+          console.error('FileReader error:', error);
+          reject(new Error("Failed to convert image to base64"));
+        };
+      });
+
+      reader.readAsDataURL(blob);
+      const base64Image = await base64Promise;
+
+      const base64Data = base64Image.split(',')[1];
+
+      if (!base64Data) {
+        throw new Error("Failed to process image data");
+      }
 
       const imgbbApiKey = '2a641ab1b775ca9624cce32873427f43';
       const imgbbUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
 
+      const formData = new URLSearchParams();
+      formData.append('image', base64Data);
+
       const imgbbResponse = await fetch(imgbbUrl, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: formData
       });
 
       if (!imgbbResponse.ok) {
+        const errorText = await imgbbResponse.text();
+        console.error('ImgBB API error:', errorText);
         throw new Error(`ImgBB upload failed: ${imgbbResponse.status}`);
       }
 
       const imgbbData = await imgbbResponse.json();
 
       if (!imgbbData.success) {
+        console.error('ImgBB data error:', imgbbData);
         throw new Error('ImgBB upload failed');
       }
 
       const avatarUrl = imgbbData.data.url;
+      console.log('Image uploaded successfully to:', avatarUrl);
 
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
 
@@ -203,11 +267,15 @@ const UserProfile = ({ user: propUser }) => {
       setAvatar(avatarUrl);
       setSuccess('Avatar updated successfully!');
     } catch (err) {
+      console.error('Avatar upload error:', err);
       setError(`Failed to update avatar: ${err.message}`);
     } finally {
       setShowCrop(false);
       setImagePreview(null);
-      setCroppedImageUrl(null);
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl);
+        setCroppedImageUrl(null);
+      }
     }
   };
 
@@ -313,22 +381,37 @@ const UserProfile = ({ user: propUser }) => {
                 <ReactCrop
                   src={imagePreview}
                   crop={crop}
-                  onChange={newCrop => setCrop(newCrop)}
+                  onChange={(c) => setCrop(c)}
                   onComplete={onCropComplete}
+                  onImageLoaded={onLoad}
                   circularCrop
                 >
                   <img
-                    ref={imageRef}
                     src={imagePreview}
                     alt="Avatar preview"
                     style={{ maxWidth: '100%' }}
                   />
                 </ReactCrop>
               </div>
+
+              {croppedImageUrl && (
+                <div className="profile-crop-result">
+                  <p className="profile-section-subtitle">Preview:</p>
+                  <div className="profile-avatar-preview">
+                    <img 
+                      src={croppedImageUrl} 
+                      alt="Cropped preview" 
+                      className="profile-preview-img"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="profile-button-group">
                 <button
                   className="profile-button profile-button-success"
                   onClick={uploadCroppedAvatar}
+                  disabled={!croppedImageUrl}
                 >
                   <i className="material-icons">save</i> Save
                 </button>
