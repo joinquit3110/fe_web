@@ -4,8 +4,8 @@ import { useSocket } from '../context/SocketContext';
 // Import the image assets
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
-// Thay đổi cách import Chakra UI để tránh lỗi constructor
-import * as Chakra from '@chakra-ui/react';
+// Use named imports for Chakra UI
+import { Stack, Fade, Box, Text, Badge, CloseButton, Image, Flex } from '@chakra-ui/react';
 
 // Define N here, at the top level before any possible use
 const N = 3; // Maximum number of notifications to show at once
@@ -553,8 +553,8 @@ const NotificationDisplay = () => {
           // Lưu thời gian thông báo gần nhất
           lastNotificationTime.current = Date.now();
 
-          // Giới hạn số lượng thông báo hiển thị cùng lúc
-          return [notifWithId, ...prev].slice(0, 3);
+          // Giới hạn số lượng thông báo hiển thị cùng lúc using N
+          return [notifWithId, ...prev].slice(0, N);
         });
       });
 
@@ -603,9 +603,6 @@ const NotificationDisplay = () => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
 
   if (activeNotifications.length === 0) return null;
-
-  // Sử dụng Chakra từ namespace thay vì import trực tiếp
-  const { Stack, Fade, Box, Text, Badge, CloseButton, Image, Flex } = Chakra;
 
   return (
     <Stack
