@@ -339,6 +339,27 @@
   animation: float-logo 4s ease-in-out infinite;
 }
 
+/* Animation for logo placeholder */
+@keyframes pulse-placeholder {
+  0%, 100% { 
+    opacity: 0.8; 
+    transform: scale(1);
+    text-shadow: 0 0 10px rgba(240, 199, 94, 0.6);
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.1);
+    text-shadow: 0 0 20px rgba(240, 199, 94, 0.9), 0 0 40px rgba(240, 199, 94, 0.4);
+  }
+}
+
+/* Optimized logo loading */
+.hogwarts-logo {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 /* Custom form field styling */
 .wizard-input-label {
   font-family: 'Cinzel', serif;
@@ -398,12 +419,27 @@
   .hogwarts-title {
     font-size: 1.3rem !important;
   }
+  
+  /* Xóa đường gạch ngang ở mobile */
+  .hogwarts-title::after {
+    display: none;
+  }
+  
   .floating-element {
     display: none !important;
   }
   .enroll-button, .spellcast-button {
     font-size: 1rem !important;
     padding: 0.5rem 1rem !important;
+  }
+  
+  /* Căn chỉnh lại các icon */
+  .hogwarts-header {
+    position: relative;
+  }
+  
+  .hogwarts-logo {
+    margin-bottom: 10px !important;
   }
 }
 

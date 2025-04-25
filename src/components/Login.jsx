@@ -41,12 +41,18 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Khi component mount, kiểm tra localStorage để tự động điền username nếu đã lưu
+  // Khi component mount, kiểm tra localStorage để tự động điền username và password nếu đã lưu
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
+    const savedPassword = localStorage.getItem('rememberedPassword');
     if (savedUsername) {
       setEmail(savedUsername);
       setRememberMe(true);
+      
+      // Nếu có mật khẩu được lưu, điền luôn
+      if (savedPassword) {
+        setPassword(savedPassword);
+      }
     }
   }, []);
 
@@ -146,11 +152,13 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
-    // Lưu username nếu chọn ghi nhớ
+    // Lưu username và password nếu chọn ghi nhớ
     if (rememberMe) {
       localStorage.setItem('rememberedUsername', email);
+      localStorage.setItem('rememberedPassword', password);
     } else {
       localStorage.removeItem('rememberedUsername');
+      localStorage.removeItem('rememberedPassword');
     }
     
     try {
@@ -424,12 +432,42 @@ const Login = () => {
             width="120px"
             height="auto"
             mb={3}
+            loading="eager"
+            priority={true}
             className="hogwarts-logo animated-logo"
             style={{ 
               filter: 'drop-shadow(0 0 16px #f0c75e)',
               animation: 'float-logo 3s infinite ease-in-out'
             }}
+            onLoad={() => {
+              // Xóa placeholder khi ảnh đã tải xong
+              const placeholderEl = document.querySelector('.hogwarts-logo-placeholder');
+              if (placeholderEl) {
+                placeholderEl.style.display = 'none';
+              }
+            }}
           />
+          {/* Placeholder cho logo khi đang tải */}
+          <Box 
+            className="hogwarts-logo-placeholder"
+            width="120px"
+            height="120px"
+            position="absolute"
+            top="0"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            color="#f0c75e"
+            fontFamily="'MedievalSharp', serif"
+            fontSize="24px"
+            fontWeight="bold"
+            textAlign="center"
+            sx={{
+              animation: 'pulse-placeholder 2s infinite'
+            }}
+          >
+            H
+          </Box>
           <Box position="relative" display="flex" alignItems="center" justifyContent="center">
             <Heading
               as="h1"
@@ -548,7 +586,7 @@ const Login = () => {
                     letterSpacing: '0.5px'
                   }}
                 >
-                  Remember my wizard name
+                  Remember my wizard credentials
                 </label>
               </FormControl>
               

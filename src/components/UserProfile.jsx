@@ -376,6 +376,10 @@ const UserProfile = ({ user: propUser }) => {
             '--house-border': colors.border,
           }}
         >
+          <div className="profile-menu-close" onClick={toggleMenu}>
+            <i className="material-icons">close</i>
+          </div>
+
           {showCrop ? (
             <div className="profile-crop-container">
               <h3 className="profile-section-title">Crop Avatar</h3>
