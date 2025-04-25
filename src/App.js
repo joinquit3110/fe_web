@@ -234,6 +234,9 @@ const AppContent = () => {
 
   return (
     <div className="app">
+      {/* Render NotificationDisplay here so it's visible across all routes */}
+      <NotificationDisplay />
+      
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -249,9 +252,6 @@ const AppContent = () => {
               <div className="hogwarts-app">
                 {/* UserProfile component */}
                 <UserProfile user={user || (window.location.hostname === 'localhost' ? localUser : null)} />
-                
-                {/* Notification display */}
-                <NotificationDisplay />
                 
                 <header className="hogwarts-header">
                   <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>

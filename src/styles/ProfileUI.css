@@ -145,6 +145,8 @@
   padding: 15px;
   animation: menu-fade-in 0.3s ease;
   backdrop-filter: blur(8px);
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 @keyframes menu-fade-in {
@@ -572,17 +574,19 @@
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.2);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
 
-/* Responsive styles */
+/* Responsive styles - Cải thiện hiển thị trên thiết bị di động */
 @media (max-width: 575px) {
   .profile-menu {
     width: calc(100vw - 30px);
-    right: 0;
-    max-height: 85vh;
+    max-width: calc(100vw - 30px); /* Đảm bảo menu không bị tràn khỏi màn hình */
+    right: -15px; /* Căn chỉnh lại để menu hiển thị đẹp hơn */
+    max-height: 80vh; /* Giới hạn chiều cao tối đa trên mobile */
     overflow-y: auto;
+    padding: 12px; /* Giảm padding để có thêm không gian */
   }
   
   .profile-avatar-large {
@@ -591,17 +595,54 @@
   }
   
   .profile-avatar-large-initials {
-    font-size: 30px;
+    font-size: 28px;
+  }
+  
+  .profile-tabs {
+    flex-wrap: nowrap; /* Đảm bảo các tab không bị xuống dòng */
+  }
+  
+  .profile-tab {
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  
+  /* Fix cho ReactCrop trên mobile */
+  .ReactCrop {
+    max-width: 100%;
+    touch-action: none; /* Ngăn zoom trình duyệt khi tương tác */
+  }
+  
+  .profile-button {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  
+  .profile-button .material-icons {
+    font-size: 14px;
+  }
+  
+  /* Cải thiện khoảng cách giữa các nút trong button group */
+  .profile-button-group {
+    gap: 6px;
+  }
+}
+
+/* Cải thiện layout cho màn hình tablet */
+@media (min-width: 576px) and (max-width: 768px) {
+  .profile-menu {
+    width: 320px;
+    right: -10px; /* Căn chỉnh lại để menu hiển thị đẹp hơn */
+    max-height: 80vh;
   }
 }
 
 /* Fixed position layout fix for all screen sizes */
-@media (min-width: 776px) {
+@media (min-width: 769px) {
   .profile-menu {
     width: 320px;
     right: 0;
     max-height: 85vh;
-    overflow-y: auto;
   }
 }
 

@@ -21,6 +21,14 @@ export const SocketProvider = ({ children }) => {
   
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
+  
+  // Buffer để lưu trữ thông báo khi offline
+  const offlineBuffer = useRef([]);
+  
+  // Sử dụng useRef để lưu trữ giá trị không gây re-render
+  const connectionAttempts = useRef(0);
+  const reconnectionTimer = useRef(null);
+  const lastActivity = useRef(Date.now());
 
   // Add admin checking functionality
   const isAdminUser = useRef(false);
@@ -46,12 +54,55 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       recentNotifications.current = new Set();
-    }, 60000); // Clear every minute
+    }, 30000); // Giảm thời gian từ 60000ms xuống 30000ms để dọn dẹp nhanh hơn
     
     return () => clearInterval(cleanupInterval);
   }, []);
+  
+  // Thêm listener cho kết nối internet
+  useEffect(() => {
+    const handleOnlineStatus = () => {
+      if (navigator.onLine) {
+        console.log('[SOCKET] Browser is online');
+        // Thử kết nối lại socket nếu không còn kết nối
+        if (socket && !isConnected) {
+          socket.connect();
+        }
+        // Xử lý buffer khi có kết nối trở lại
+        processOfflineBuffer();
+      } else {
+        console.log('[SOCKET] Browser is offline');
+        setConnectionQuality('disconnected');
+      }
+    };
+    
+    window.addEventListener('online', handleOnlineStatus);
+    window.addEventListener('offline', handleOnlineStatus);
+    
+    return () => {
+      window.removeEventListener('online', handleOnlineStatus);
+      window.removeEventListener('offline', handleOnlineStatus);
+    };
+  }, [socket, isConnected]);
+  
+  // Hàm xử lý buffer offline
+  const processOfflineBuffer = useCallback(() => {
+    if (offlineBuffer.current.length > 0 && socket && isConnected) {
+      console.log(`[SOCKET] Processing offline buffer: ${offlineBuffer.current.length} items`);
+      
+      // Xử lý từng item trong buffer
+      offlineBuffer.current.forEach(item => {
+        if (item.type === 'emit') {
+          socket.emit(item.event, item.data);
+        }
+      });
+      
+      // Xóa buffer
+      offlineBuffer.current = [];
+    }
+  }, [socket, isConnected]);
 
-  // Initialize socket on authentication state change
+  // Initialize socket on authentication state change with improved connection settings
   useEffect(() => {
     // Only initialize socket if user is authenticated
     if (!isAuthenticated) {
@@ -68,13 +119,16 @@ export const SocketProvider = ({ children }) => {
     
     // Create new socket instance with optimized connection settings
     const socketInstance = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket', 'polling'], // Ưu tiên websocket trước
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 500,         // Reduced from 1000ms
-      reconnectionDelayMax: 3000,     // Reduced from 5000ms
-      timeout: 5000,                  // Reduced from 10000ms
-      forceNew: true                  // Force a new connection to avoid sharing
+      reconnectionAttempts: 15,             // Tăng số lần thử lại
+      reconnectionDelay: 300,               // Giảm delay ban đầu
+      reconnectionDelayMax: 2000,           // Giảm delay tối đa
+      timeout: 3000,                        // Giảm timeout
+      forceNew: true,                       // Force kết nối mới
+      autoConnect: true,                    // Tự động kết nối
+      upgrade: true,                        // Cho phép upgrade kết nối
+      withCredentials: true                 // Hỗ trợ xác thực khi cần
     });
     
     // Set up event handlers
@@ -82,51 +136,91 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Connected to server');
       setIsConnected(true);
       setConnectionQuality('good');
+      connectionAttempts.current = 0;
       
       // Authenticate with user ID and house
       if (user) {
         socketInstance.emit('authenticate', {
           userId: user.id || user._id,
           username: user.username,
-          house: user.house
+          house: user.house,
+          timestamp: Date.now() // Thêm timestamp để tránh cache
         });
         console.log(`[SOCKET] Authenticated as ${user.username}, house: ${user.house || 'unassigned'}`);
       }
+      
+      // Xử lý buffer khi kết nối thành công
+      processOfflineBuffer();
     });
     
     socketInstance.on('connect_error', (error) => {
       console.error('[SOCKET] Connection error:', error);
       setIsConnected(false);
-      setConnectionQuality('disconnected');
+      setConnectionQuality('poor');
+      
+      // Tăng thời gian thử kết nối lại theo cấp số nhân
+      connectionAttempts.current += 1;
+      const delay = Math.min(1000 * Math.pow(1.5, connectionAttempts.current - 1), 10000);
+      
+      // Xóa timer cũ nếu có
+      if (reconnectionTimer.current) {
+        clearTimeout(reconnectionTimer.current);
+      }
+      
+      // Đặt timer mới
+      reconnectionTimer.current = setTimeout(() => {
+        if (navigator.onLine && !socketInstance.connected) {
+          console.log(`[SOCKET] Attempting reconnection #${connectionAttempts.current}`);
+          socketInstance.connect();
+        }
+      }, delay);
     });
     
     socketInstance.on('disconnect', (reason) => {
       console.log('[SOCKET] Disconnected:', reason);
       setIsConnected(false);
-      setConnectionQuality('disconnected');
+      
+      // Chỉ đặt quality là disconnected nếu là client disconnect
+      if (reason === 'io client disconnect') {
+        setConnectionQuality('disconnected');
+      } else {
+        setConnectionQuality('poor');
+        
+        // Thử kết nối lại nhanh nếu là lỗi mạng
+        if (reason === 'transport close' || reason === 'transport error') {
+          setTimeout(() => {
+            if (navigator.onLine) {
+              console.log('[SOCKET] Quick reconnect attempt after transport issue');
+              socketInstance.connect();
+            }
+          }, 500);
+        }
+      }
     });
     
     socketInstance.on('reconnect', (attempt) => {
       console.log(`[SOCKET] Reconnected after ${attempt} attempts`);
       setIsConnected(true);
       setConnectionQuality('good');
+      connectionAttempts.current = 0;
       
       // Re-authenticate on reconnect
       if (user) {
         socketInstance.emit('authenticate', {
           userId: user.id || user._id,
           username: user.username,
-          house: user.house
+          house: user.house,
+          timestamp: Date.now() // Thêm timestamp để tránh cache
         });
       }
       
-      // Request a sync after reconnection
+      // Request a sync after reconnection - sử dụng setTimeout để đảm bảo server xử lý authenticate trước
       setTimeout(() => {
         if (socketInstance.connected) {
           console.log('[SOCKET] Requesting sync after reconnection');
-          socketInstance.emit('request_sync');
+          socketInstance.emit('request_sync', { fullSync: true });
         }
-      }, 1000);
+      }, 300);
     });
 
     socketInstance.on('reconnect_error', (error) => {
@@ -138,6 +232,10 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Failed to reconnect');
       setIsConnected(false);
       setConnectionQuality('disconnected');
+      
+      // Sử dụng polling nếu websocket không thành công
+      console.log('[SOCKET] Falling back to polling transport');
+      socketInstance.io.opts.transports = ['polling', 'websocket'];
     });
     
     // Handle connection status updates
@@ -145,8 +243,18 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Connection status update:', data);
       if (data.connected) {
         setIsConnected(true);
-        setConnectionQuality('good');
+        setConnectionQuality(data.quality || 'good');
       }
+    });
+    
+    // Thêm xử lý ping-pong để đo delay
+    socketInstance.on('pong', (latency) => {
+      // latency là thời gian trễ tính bằng ms
+      const connectionQual = latency < 100 ? 'excellent' : 
+                            latency < 300 ? 'good' : 
+                            latency < 600 ? 'fair' : 'poor';
+      setConnectionQuality(connectionQual);
+      console.log(`[SOCKET] Latency: ${latency}ms, quality: ${connectionQual}`);
     });
 
     // Set the socket instance
@@ -155,27 +263,58 @@ export const SocketProvider = ({ children }) => {
     // Cleanup on unmount
     return () => {
       console.log('[SOCKET] Cleaning up socket connection');
+      if (reconnectionTimer.current) {
+        clearTimeout(reconnectionTimer.current);
+      }
       if (socketInstance) {
         socketInstance.disconnect();
         setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, processOfflineBuffer]);
   
-  // Implement heartbeat mechanism
+  // Implement heartbeat mechanism with latency check
   useEffect(() => {
     if (!socket || !isConnected) return;
     
-    // Send heartbeats to the server
+    // Gửi heartbeat và kiểm tra độ trễ
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
-        socket.emit('heartbeat');
-        setLastHeartbeat(new Date());
+        // Ghi nhận thời gian gửi
+        const start = Date.now();
+        
+        // Gửi heartbeat và nhận pong từ server
+        socket.emit('heartbeat', {}, () => {
+          // Callback này được gọi khi server phản hồi
+          const latency = Date.now() - start;
+          const connectionQual = latency < 100 ? 'excellent' : 
+                                latency < 300 ? 'good' : 
+                                latency < 600 ? 'fair' : 'poor';
+          setConnectionQuality(connectionQual);
+          setLastHeartbeat(new Date());
+          lastActivity.current = Date.now();
+        });
       }
-    }, 30000); // Send heartbeat every 30 seconds
+    }, 20000); // Giảm từ 30000ms xuống 20000ms (20s)
+    
+    // Thêm ping định kỳ để đo độ trễ
+    const pingInterval = setInterval(() => {
+      if (socket.connected) {
+        const start = Date.now();
+        socket.emit('ping_server', {}, () => {
+          const latency = Date.now() - start;
+          const connectionQual = latency < 100 ? 'excellent' : 
+                                latency < 300 ? 'good' : 
+                                latency < 600 ? 'fair' : 'poor';
+          setConnectionQuality(connectionQual);
+          lastActivity.current = Date.now();
+        });
+      }
+    }, 8000); // Thực hiện ping mỗi 8s
     
     return () => {
       clearInterval(heartbeatInterval);
+      clearInterval(pingInterval);
     };
   }, [socket, isConnected]);
   
@@ -186,12 +325,13 @@ export const SocketProvider = ({ children }) => {
       socket.emit('change_house', {
         userId: user.id || user._id,
         oldHouse: user.previousHouse !== user.house ? user.previousHouse : null,
-        newHouse: user.house
+        newHouse: user.house,
+        timestamp: Date.now() // Thêm timestamp để đảm bảo thực hiện ngay
       });
     }
   }, [socket, isConnected, user?.house]);
 
-  // Enhanced real-time notification processor
+  // Enhanced real-time notification processor with priority handling
   useEffect(() => {
     if (!socket) return;
 
@@ -199,6 +339,12 @@ export const SocketProvider = ({ children }) => {
     socket.on('sync_update', (data) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
+      lastActivity.current = Date.now();
+      
+      // Các thông báo quan trọng được xử lý ưu tiên
+      const isPriorityUpdate = data.type === 'user_update' || 
+                              data.type === 'force_sync' || 
+                              data.priority === 'high';
       
       // Enhanced user update handling with immediate effect
       if (data.type === 'user_update' && data.data?.updatedFields) {
@@ -209,37 +355,46 @@ export const SocketProvider = ({ children }) => {
           console.log(`[SOCKET] House updated from server: ${updatedFields.house}`);
           
           try {
-            setUser(prevUser => {
-              if (!prevUser) return prevUser;
-              
-              const updatedUser = {
-                ...prevUser,
-                previousHouse: prevUser.house,
-                house: updatedFields.house
-              };
-              
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-              
-              window.dispatchEvent(new CustomEvent('userHouseChanged', {
-                detail: { house: updatedFields.house, immediate: true }
-              }));
-              
-              return updatedUser;
-            });
+            // Cập nhật user ngay lập tức, không cần đợi re-render
+            const prevHouse = user.house;
+            const updatedUser = {
+              ...user,
+              previousHouse: prevHouse,
+              house: updatedFields.house
+            };
+            
+            // Lưu vào localStorage trước để đảm bảo dữ liệu được lưu khi refresh
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            
+            // Sau đó cập nhật state để UI cập nhật
+            setUser(updatedUser);
+            
+            // Phát sự kiện để các component khác cũng cập nhật
+            window.dispatchEvent(new CustomEvent('userHouseChanged', {
+              detail: { 
+                house: updatedFields.house, 
+                previous: prevHouse,
+                immediate: true,
+                timestamp: Date.now()
+              }
+            }));
           } catch (error) {
             console.error('[SOCKET] Error updating user house:', error);
           }
           
-          // Add notification about house change
-          setNotifications(prev => [
-            {
-              id: Date.now(),
-              type: 'info',
-              message: `Your house has been updated to ${updatedFields.house}`,
-              timestamp: new Date()
-            },
-            ...prev.slice(0, 9)
-          ]);
+          // Add notification about house change - dùng requestAnimationFrame để đồng bộ với render cycle
+          requestAnimationFrame(() => {
+            setNotifications(prev => [
+              {
+                id: Date.now(),
+                type: 'info',
+                message: `Your house has been updated to ${updatedFields.house}`,
+                timestamp: new Date(),
+                priority: 'high' // Đánh dấu ưu tiên cao
+              },
+              ...prev.slice(0, 9)
+            ]);
+          });
         }
         
         // If magic points were updated, handle with high priority
@@ -253,69 +408,86 @@ export const SocketProvider = ({ children }) => {
           if (!isNaN(newPoints)) {
             console.log(`[SOCKET] Magic points updated from server: ${newPoints} (change: ${diff}, isReset: ${isReset})`);
             
-            // Add immediate notification about points change
-            setNotifications(prev => [
-              {
-                id: Date.now(),
-                type: isReset ? 'warning' : (diff >= 0 ? 'success' : 'warning'),
-                message: isReset 
-                  ? `Your magic points have been RESET to 100 by admin!`
-                  : (diff !== 0 
-                  ? `Your magic points have been ${changeDirection} ${Math.abs(diff)}`
-                    : `Your magic points have been updated to ${newPoints}`),
-                timestamp: new Date(),
-                pointsChange: diff
-              },
-              ...prev.slice(0, 9)
-            ]);
+            // Lưu vào localStorage trước
+            localStorage.setItem('magicPoints', newPoints.toString());
             
-            // Dispatch high priority event
-            window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
-              detail: { 
-                points: newPoints,
-                source: 'serverSync',
-                immediate: true,
-                isReset: isReset
-              }
-            }));
-            
-            // Update user object with new points immediately
-            setUser(prevUser => {
-              if (!prevUser) return prevUser;
-              
+            // Update user object với magicPoints mới
+            if (user && setUser) {
               const updatedUser = {
-                ...prevUser,
+                ...user,
                 magicPoints: newPoints
               };
               
               localStorage.setItem('user', JSON.stringify(updatedUser));
-              localStorage.setItem('magicPoints', newPoints.toString());
-              
-              return updatedUser;
+              setUser(updatedUser);
+            }
+            
+            // Kích hoạt sự kiện ngay lập tức
+            window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
+              detail: { 
+                points: newPoints,
+                previousPoints: prevPoints,
+                source: 'serverSync',
+                immediate: true,
+                isReset: isReset,
+                timestamp: Date.now()
+              }
+            }));
+            
+            // Add notification - dùng requestAnimationFrame để cải thiện performance
+            requestAnimationFrame(() => {
+              setNotifications(prev => [
+                {
+                  id: Date.now(),
+                  type: isReset ? 'warning' : (diff >= 0 ? 'success' : 'warning'),
+                  message: isReset 
+                    ? `Your magic points have been RESET to 100 by admin!`
+                    : (diff !== 0 
+                    ? `Your magic points have been ${changeDirection} ${Math.abs(diff)}`
+                      : `Your magic points have been updated to ${newPoints}`),
+                  timestamp: new Date(),
+                  pointsChange: diff,
+                  priority: 'high'
+                },
+                ...prev.slice(0, 9)
+              ]);
             });
           }
         }
       }
+      
+      // Handle force_sync with priority
+      if (data.type === 'force_sync') {
+        // Kích hoạt sự kiện sync ngay lập tức
+        window.dispatchEvent(new CustomEvent('forceSyncRequested', {
+          detail: {
+            source: 'server',
+            reason: data.message || 'Admin requested sync',
+            timestamp: Date.now()
+          }
+        }));
+      }
     });
     
-    // Optimize house_points_update handling
+    // Optimize house_points_update handling with immediate update
     socket.on('house_points_update', (data) => {
       console.log('[SOCKET] Received house points update:', data);
       setLastMessage({ type: 'house_points_update', data, timestamp: new Date() });
+      lastActivity.current = Date.now();
       
-      // Skip for specific user types
+      // Skip cho các user không liên quan
       if (isAdminUser.current || user?.house === 'muggle' || !user?.house) {
         return;
       }
       
-      // Add house points notification for relevant users
+      // Add house points notification cho user phù hợp
       if (data.house === user?.house) {
         const pointsChange = data.points;
         const isPositive = pointsChange > 0;
         const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
         const dedupeKey = `${data.house}:${pointsChange}:${data.criteria || ''}:${data.level || ''}`;
         
-        // Get data fields with defaults
+        // Lấy dữ liệu kèm theo
         const criteria = data.criteria || null;
         const level = data.level || null;
         const reason = data.reason || 'Admin action';
@@ -325,47 +497,16 @@ export const SocketProvider = ({ children }) => {
           return;
         }
         
-        // Mark as seen for deduplication
+        // Mark as seen
         recentNotifications.current.add(dedupeKey);
         
-        // Format comprehensive message
+        // Format message
         let fullMessage = `House ${data.house} has ${isPositive ? 'gained' : 'lost'} ${Math.abs(pointsChange)} points! New total: ${data.newTotal}`;
         if (criteria) fullMessage += `. Criteria: ${criteria}`;
         if (level) fullMessage += `. Level: ${level}`;
         if (reason && reason !== 'Admin action') fullMessage += `. Reason: ${reason}`;
         
-        // Add notification immediately
-        setNotifications(prev => {
-          // Skip if very similar notification exists
-          const similarExists = prev.some(n => 
-            n.source === 'house_points_update' &&
-            n.pointsChange === pointsChange &&
-            n.criteria === criteria &&
-            n.level === level &&
-            (Date.now() - new Date(n.timestamp).getTime()) < 15000 // Within 15 seconds
-          );
-          
-          if (similarExists) return prev;
-          
-          return [
-            {
-              id: uniqueId,
-              type: isPositive ? 'success' : 'warning',
-              title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
-              message: fullMessage,
-              timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-              pointsChange,
-              reason,
-              criteria,
-              level,
-              source: 'house_points_update',
-              house: data.house
-            },
-            ...prev.slice(0, 9)
-          ];
-        });
-        
-        // Dispatch event for other components
+        // Kích hoạt sự kiện ngay, trước cả khi update UI
         window.dispatchEvent(new CustomEvent('housePointsUpdated', {
           detail: {
             house: data.house,
@@ -375,9 +516,44 @@ export const SocketProvider = ({ children }) => {
             criteria,
             level,
             timestamp: data.timestamp || new Date().toISOString(),
-            uniqueKey: dedupeKey
+            uniqueKey: dedupeKey,
+            immediate: true
           }
         }));
+        
+        // Add notification - dùng requestAnimationFrame để tối ưu hóa render
+        requestAnimationFrame(() => {
+          setNotifications(prev => {
+            // Skip nếu đã có thông báo tương tự
+            const similarExists = prev.some(n => 
+              n.source === 'house_points_update' &&
+              n.pointsChange === pointsChange &&
+              n.criteria === criteria &&
+              n.level === level &&
+              (Date.now() - new Date(n.timestamp).getTime()) < 10000 // Giảm xuống 10 giây
+            );
+            
+            if (similarExists) return prev;
+            
+            return [
+              {
+                id: uniqueId,
+                type: isPositive ? 'success' : 'warning',
+                title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+                message: fullMessage,
+                timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+                pointsChange,
+                reason,
+                criteria,
+                level,
+                source: 'house_points_update',
+                house: data.house,
+                priority: 'high' // Đánh dấu ưu tiên cao
+              },
+              ...prev.slice(0, 9)
+            ];
+          });
+        });
       }
     });
     
@@ -385,44 +561,60 @@ export const SocketProvider = ({ children }) => {
     socket.on('admin_notification', (data) => {
       console.log('[SOCKET] Received admin notification:', data);
       setLastMessage({ type: 'admin_notification', data, timestamp: new Date() });
+      lastActivity.current = Date.now();
       
       // Skip if this notification should skip admins and the current user is an admin
       if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
         return;
       }
       
-      // Add to notifications immediately
-      setNotifications(prev => [
-        {
-          id: Date.now(),
-          type: data.notificationType || 'info',
-          message: data.message,
-          timestamp: new Date()
-        },
-        ...prev.slice(0, 9)
-      ]);
-      
-      // Dispatch event for other components
+      // Kích hoạt event ngay lập tức
       window.dispatchEvent(new CustomEvent('adminNotification', {
-        detail: data
+        detail: {
+          ...data,
+          received: Date.now()
+        }
       }));
+      
+      // Add notification sử dụng requestAnimationFrame
+      requestAnimationFrame(() => {
+        setNotifications(prev => [
+          {
+            id: Date.now(),
+            type: data.notificationType || 'info',
+            message: data.message,
+            timestamp: new Date(),
+            priority: data.priority || 'medium'
+          },
+          ...prev.slice(0, 9)
+        ]);
+      });
     });
     
     // Handle global announcements
     socket.on('global_announcement', (data) => {
       console.log('[SOCKET] Received global announcement:', data);
       setLastMessage({ type: 'global_announcement', data, timestamp: new Date() });
+      lastActivity.current = Date.now();
       
-      // Add to notifications with special styling
-      setNotifications(prev => [
-        {
-          id: Date.now(), 
-          type: 'announcement',
-          message: `ANNOUNCEMENT: ${data.message}`,
-          timestamp: new Date()
-        },
-        ...prev.slice(0, 9)
-      ]);
+      // Kích hoạt event
+      window.dispatchEvent(new CustomEvent('globalAnnouncement', {
+        detail: data
+      }));
+      
+      // Add announcement - dùng requestAnimationFrame
+      requestAnimationFrame(() => {
+        setNotifications(prev => [
+          {
+            id: Date.now(), 
+            type: 'announcement',
+            message: `ANNOUNCEMENT: ${data.message}`,
+            timestamp: new Date(),
+            priority: 'high'
+          },
+          ...prev.slice(0, 9)
+        ]);
+      });
     });
 
     return () => {
@@ -431,27 +623,49 @@ export const SocketProvider = ({ children }) => {
       socket.off('house_points_update');
       socket.off('admin_notification');
       socket.off('global_announcement');
+      socket.off('pong');
     };
   }, [socket, user, setUser]);
 
-  // Method to send a message to the server
+  // Method to send a message to the server with offline support
   const sendMessage = useCallback((eventName, data) => {
     if (socket && isConnected) {
       socket.emit(eventName, data);
+      lastActivity.current = Date.now();
       return true;
+    } else {
+      // Store in offline buffer when not connected
+      console.log(`[SOCKET] Not connected, storing in offline buffer: ${eventName}`);
+      offlineBuffer.current.push({
+        type: 'emit',
+        event: eventName,
+        data: data,
+        timestamp: Date.now()
+      });
+      return false;
     }
-    return false;
   }, [socket, isConnected]);
 
-  // Method to request an immediate sync from server
+  // Method to request an immediate sync from server with priority
   const requestSync = useCallback(() => {
     if (socket && isConnected) {
       console.log('[SOCKET] Manually requesting data sync');
-      socket.emit('request_sync');
+      socket.emit('request_sync', {
+        timestamp: Date.now(),
+        priority: 'high'
+      });
+      lastActivity.current = Date.now();
       return true;
     }
     
     console.log('[SOCKET] Cannot request sync - not connected');
+    // Store in offline buffer
+    offlineBuffer.current.push({
+      type: 'emit',
+      event: 'request_sync',
+      data: { timestamp: Date.now(), priority: 'high' },
+      timestamp: Date.now()
+    });
     return false;
   }, [socket, isConnected]);
 
@@ -460,7 +674,7 @@ export const SocketProvider = ({ children }) => {
     setNotifications([]);
   }, []);
 
-  // Method to remove a specific notification
+  // Method to remove a specific notification with animation
   const removeNotification = useCallback((notificationId) => {
     setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
   }, []);

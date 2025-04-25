@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -22,13 +22,30 @@ const NotificationDisplay = () => {
     console.warn('Socket context not available:', error.message);
   }
   
+  // Sử dụng useRef để lưu trữ dữ liệu không gây re-render
   const notificationQueue = useRef([]);
   const processingQueue = useRef(false);
   const activeTimeouts = useRef([]);
   const globalDedupeRegistry = useRef(new Map());
+  const lastNotificationTime = useRef(Date.now());
+  
+  // Thêm đếm số lượng thông báo
+  const pendingCount = useRef(0);
+  
+  // Thêm preload images để tránh giật khi hiển thị
+  useEffect(() => {
+    // Preload images
+    const preloadImages = () => {
+      const img1 = new Image();
+      const img2 = new Image();
+      img1.src = increasePointImg;
+      img2.src = decreasePointImg;
+    };
+    preloadImages();
+  }, []);
   
   // Helper function to create a notification hash for deduplication
-  const getNotificationHash = (notification) => {
+  const getNotificationHash = useCallback((notification) => {
     const type = notification.type || 'info';
     const pointsChange = notification.pointsChange ? `pc:${notification.pointsChange}` : '';
     const criteria = notification.criteria ? `cr:${notification.criteria}` : '';
@@ -36,10 +53,10 @@ const NotificationDisplay = () => {
     const msgStart = notification.message ? notification.message.substring(0, 30) : '';
     
     return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}`;
-  };
+  }, []);
   
   // Helper function to standardize criteria text
-  const standardizeCriteria = (criteriaText) => {
+  const standardizeCriteria = useCallback((criteriaText) => {
     if (!criteriaText) return '';
     
     const lowerCriteria = criteriaText.toLowerCase();
@@ -57,10 +74,10 @@ const NotificationDisplay = () => {
     }
     
     return criteriaText;
-  };
+  }, []);
   
   // Helper function to standardize performance level text
-  const standardizeLevel = (levelText) => {
+  const standardizeLevel = useCallback((levelText) => {
     if (!levelText) return '';
     
     const lowerLevel = levelText.toLowerCase();
@@ -72,10 +89,10 @@ const NotificationDisplay = () => {
     if (lowerLevel.includes('poor')) return 'Poor';
     
     return levelText;
-  };
+  }, []);
   
-  // Extract criteria and level
-  const extractCriteriaAndLevel = (notification) => {
+  // Extract criteria and level - tối ưu hóa với useCallback
+  const extractCriteriaAndLevel = useCallback((notification) => {
     let { message, criteria, level } = notification;
     
     if (criteria && level) {
@@ -116,18 +133,18 @@ const NotificationDisplay = () => {
       criteria: criteria ? standardizeCriteria(criteria) : '',
       level: level ? standardizeLevel(level) : ''
     };
-  };
+  }, [standardizeCriteria, standardizeLevel]);
   
-  // Cleanup stale dedupe entries every minute
+  // Cleanup stale dedupe entries at interval ngắn hơn
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
       globalDedupeRegistry.current.forEach((timestamp, key) => {
-        if (now - timestamp > 60000) { // 1 minute (reduced from 2 min)
+        if (now - timestamp > 30000) { // Giảm xuống 30 giây
           globalDedupeRegistry.current.delete(key);
         }
       });
-    }, 30000); // Run cleanup every 30 seconds
+    }, 20000); // Giảm xuống 20 giây
     
     return () => clearInterval(cleanupInterval);
   }, []);
@@ -141,7 +158,7 @@ const NotificationDisplay = () => {
     };
   }, []);
   
-  // Process fallback notifications from localStorage
+  // Process fallback notifications from localStorage ngay khi component mount
   useEffect(() => {
     const checkLocalFallbackNotifications = () => {
       try {
@@ -150,58 +167,153 @@ const NotificationDisplay = () => {
         if (pendingNotifications.length > 0) {
           console.log('[NOTIFICATION] Processing local fallback notifications:', pendingNotifications.length);
           
-          pendingNotifications.forEach(notification => {
+          // Xử lý theo batch để không block thread chính
+          const processNotifications = (index = 0) => {
+            if (index >= pendingNotifications.length) {
+              localStorage.setItem('pendingNotifications', '[]');
+              
+              // Chỉ cần xử lý queue khi tất cả đã được thêm vào
+              if (!processingQueue.current) {
+                requestAnimationFrame(() => processNotificationQueue());
+              }
+              return;
+            }
+            
+            const notification = pendingNotifications[index];
             if (!notificationQueue.current.some(item => item.id === notification.id)) {
               const notificationItem = {
-                id: notification.id,
+                id: notification.id || `local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
                 type: notification.type || 'info',
                 title: notification.title || getNotificationTitle(notification.type || 'info'),
                 message: notification.message,
-                timestamp: new Date(notification.timestamp),
+                timestamp: new Date(notification.timestamp || Date.now()),
                 source: 'local-fallback',
                 duration: getDurationByType(notification.type || 'info'),
                 pointsChange: notification.pointsChange,
                 reason: notification.reason,
                 criteria: notification.criteria || notification.typeDetails?.criteria,
-                level: notification.level || notification.typeDetails?.level
+                level: notification.level || notification.typeDetails?.level,
+                priority: notification.priority || 'medium'
               };
               notificationQueue.current.push(notificationItem);
+              pendingCount.current++;
             }
-          });
+            
+            // Sử dụng requestAnimationFrame để xử lý batch tiếp theo
+            requestAnimationFrame(() => processNotifications(index + 1));
+          };
           
-          localStorage.setItem('pendingNotifications', '[]');
-          
-          if (!processingQueue.current) {
-            processNotificationQueue();
-          }
+          processNotifications();
         }
       } catch (error) {
         console.error('Error processing local fallback notifications:', error);
       }
     };
     
-    // Initial check and set interval (reduced from 3000ms to 2000ms)
+    // Kiểm tra ngay lập tức khi component mount
     checkLocalFallbackNotifications();
-    const interval = setInterval(checkLocalFallbackNotifications, 2000);
+    
+    // Thiết lập interval nhưng với tần suất cao hơn
+    const interval = setInterval(checkLocalFallbackNotifications, 1000);
     
     return () => clearInterval(interval);
   }, []);
-  
-  // Process socket notifications when they change
+
+  // Thêm event listener để theo dõi các sự kiện thông báo trực tiếp
   useEffect(() => {
-    if (socketNotifications.length > 0) {
-      socketNotifications.forEach(notification => {
+    const handleDirectNotification = (event) => {
+      const { type, message, title, pointsChange, reason, criteria, level } = event.detail || {};
+      
+      if (!message) return;
+      
+      // Tạo một thông báo trực tiếp
+      const directNotification = {
+        id: `direct_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        type: type || 'info',
+        title: title || getNotificationTitle(type || 'info'),
+        message: message,
+        timestamp: new Date(),
+        source: 'direct-event',
+        duration: getDurationByType(type || 'info'),
+        pointsChange, reason, criteria, level,
+        priority: 'high',
+        isFresh: true
+      };
+      
+      // Thêm thông báo này vào queue với ưu tiên cao
+      notificationQueue.current.unshift(directNotification);
+      pendingCount.current++;
+      
+      // Xử lý queue ngay
+      if (!processingQueue.current) {
+        requestAnimationFrame(() => processNotificationQueue());
+      }
+    };
+    
+    // Lắng nghe các sự kiện từ window
+    window.addEventListener('showNotification', handleDirectNotification);
+    window.addEventListener('housePointsUpdated', handleDirectNotification);
+    
+    return () => {
+      window.removeEventListener('showNotification', handleDirectNotification);
+      window.removeEventListener('housePointsUpdated', handleDirectNotification);
+    };
+  }, []);
+  
+  // Helper functions cho hiển thị thông báo - dùng useMemo để tối ưu hóa
+  const getNotificationTitle = useMemo(() => (type) => {
+    switch (type) {
+      case 'success': return 'Success!';
+      case 'warning': return 'Warning!';
+      case 'error': return 'Error!';
+      case 'announcement': return 'Announcement';
+      default: return 'Notification';
+    }
+  }, []);
+  
+  const getDurationByType = useMemo(() => (type) => {
+    switch (type) {
+      case 'error': return 12000; // 12 seconds
+      case 'warning': return 10000; // 10 seconds
+      case 'success': return 8000; // 8 seconds
+      case 'announcement': return 15000; // 15 seconds
+      default: return 8000; // 8 seconds
+    }
+  }, []);
+  
+  // Create random ID helper
+  const createId = useCallback(() => 
+    `notification_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, 
+  []);
+  
+  // Process socket notifications when they change - tối ưu hóa hiệu năng
+  useEffect(() => {
+    if (socketNotifications.length === 0) return;
+    
+    // Lấy những thông báo mới từ socketNotifications
+    const newNotifications = socketNotifications.filter(notification => 
+      !notificationQueue.current.some(item => item.id === notification.id)
+    );
+    
+    if (newNotifications.length === 0) return;
+    
+    // Xử lý theo batch để tránh block thread
+    const processNextBatch = (notifications, startIndex = 0, batchSize = 3) => {
+      const endIndex = Math.min(startIndex + batchSize, notifications.length);
+      const currentBatch = notifications.slice(startIndex, endIndex);
+      
+      currentBatch.forEach(notification => {
         // Extract data from notification
         let pointsChange = notification.pointsChange !== undefined ? notification.pointsChange : null;
         let reason = notification.reason || null;
         let criteria = notification.criteria || null;
         let level = notification.level || null;
         
-        // Process message if available
+        // Xử lý message nếu có
         if (notification.message) {
           let message = notification.message.replace(/ by admin/g, '');
           
-          // Extract points change if not already set
+          // Trích xuất thông tin từ message nếu cần
           if (pointsChange === null) {
             if (message.includes('increased by') || message.includes('decreased by')) {
               const match = message.match(/(increased|decreased) by (\d+)/);
@@ -212,7 +324,7 @@ const NotificationDisplay = () => {
               }
             }
             
-            // Try alternative formats
+            // Dùng các biểu thức khác
             if (pointsChange === null) {
               const plusMatch = message.match(/\+(\d+) points/);
               const minusMatch = message.match(/\-(\d+) points/);
@@ -226,7 +338,7 @@ const NotificationDisplay = () => {
             }
           }
           
-          // Extract reason, criteria and level
+          // Trích xuất reason, criteria và level nếu cần
           if (!reason) {
             const reasonMatch = message.match(/[Rr]eason:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Level:)/);
             if (reasonMatch) reason = reasonMatch[1].trim();
@@ -241,7 +353,7 @@ const NotificationDisplay = () => {
           notification.message = message;
         }
         
-        // Create notification item with all data
+        // Tạo notification item với đủ data
         const notificationItem = {
           id: notification.id,
           type: notification.type,
@@ -253,74 +365,57 @@ const NotificationDisplay = () => {
           pointsChange,
           reason,
           criteria,
-          level
+          level,
+          priority: notification.priority || 'medium',
+          isFresh: (Date.now() - new Date(notification.timestamp || Date.now()).getTime()) < 5000
         };
         
-        // Add to queue if not already present
-        if (!notificationQueue.current.some(item => item.id === notification.id)) {
-          notificationQueue.current.push(notificationItem);
-        }
+        // Thêm vào queue
+        notificationQueue.current.push(notificationItem);
+        pendingCount.current++;
       });
       
-      // Process queue with minimal delay (30ms)
-      if (!processingQueue.current) {
-        const delayTimeoutId = setTimeout(() => {
-          processNotificationQueue();
-          activeTimeouts.current = activeTimeouts.current.filter(id => id !== delayTimeoutId);
-        }, 30);
-        
-        activeTimeouts.current.push(delayTimeoutId);
+      // Nếu còn batch tiếp theo, xử lý tiếp
+      if (endIndex < notifications.length) {
+        setTimeout(() => {
+          processNextBatch(notifications, endIndex, batchSize);
+        }, 0);
+      } else {
+        // Đã xử lý tất cả, bắt đầu hiển thị
+        if (!processingQueue.current && notificationQueue.current.length > 0) {
+          requestAnimationFrame(() => processNotificationQueue());
+        }
       }
-    }
-  }, [socketNotifications]);
+    };
+    
+    // Bắt đầu xử lý batch đầu tiên
+    processNextBatch(newNotifications);
+    
+  }, [socketNotifications, extractCriteriaAndLevel, getNotificationTitle, getDurationByType]);
   
-  // Helper functions for notification display
-  const getNotificationTitle = (type) => {
-    switch (type) {
-      case 'success': return 'Success!';
-      case 'warning': return 'Warning!';
-      case 'error': return 'Error!';
-      case 'announcement': return 'Announcement';
-      default: return 'Notification';
-    }
-  };
-  
-  const getDurationByType = (type) => {
-    switch (type) {
-      case 'error': return 12000; // 12 seconds
-      case 'warning': return 10000; // 10 seconds
-      case 'success': return 8000; // 8 seconds
-      case 'announcement': return 15000; // 15 seconds
-      default: return 8000; // 8 seconds
-    }
-  };
-  
-  // Create random ID helper
-  const createId = () => Math.random().toString(36).substring(2, 15);
-  
-  // Process notification queue with improved efficiency
-  const processNotificationQueue = () => {
+  // Process notification queue with improved efficiency and priority
+  const processNotificationQueue = useCallback(() => {
     if (notificationQueue.current.length === 0 || processingQueue.current) {
       return;
     }
     
     processingQueue.current = true;
+    pendingCount.current = notificationQueue.current.length;
     
     // Filter irrelevant notifications for user
     notificationQueue.current = notificationQueue.current.filter(notification => {
-      // Skip point notifications for admin/muggle/unassigned users
+      // Skip point notifications cho các loại user không liên quan
       if (user?.house === 'admin' || user?.house === 'muggle' || !user?.house) {
         if (notification.pointsChange || 
             (notification.message && (
-              notification.message.includes('points') || 
-              notification.message.includes('Points') ||
+              notification.message.toLowerCase().includes('points') || 
               notification.message.toLowerCase().includes('house')
             ))) {
           return false;
         }
       }
       
-      // Filter out "points updated to" notifications
+      // Lọc các thông báo "points updated to"
       if (notification.message && (
           notification.message.includes('magic points have been updated to') ||
           notification.message.includes('magic points have been increased by') || 
@@ -332,7 +427,7 @@ const NotificationDisplay = () => {
       return true;
     });
 
-    // Standardize data and mark fresh notifications
+    // Chuẩn hóa dữ liệu và đánh dấu thông báo mới
     notificationQueue.current.forEach(notification => {
       if (notification.criteria || notification.level) {
         const extracted = extractCriteriaAndLevel(notification);
@@ -344,26 +439,47 @@ const NotificationDisplay = () => {
         notification.timestamp.getTime() : 
         notification.timestamp ? new Date(notification.timestamp).getTime() : Date.now();
       
-      notification.isFresh = Date.now() - timestamp < 10000; // 10 seconds
+      notification.isFresh = Date.now() - timestamp < 5000; // Giảm còn 5 giây
     });
     
-    // Sort by timestamp (newest first)
+    // Sắp xếp theo độ ưu tiên và thời gian - ưu tiên thông báo quan trọng hơn
     notificationQueue.current.sort((a, b) => {
+      // So sánh priority trước
+      const priorityOrder = {
+        'high': 3,
+        'medium': 2,
+        'low': 1
+      };
+      
+      const aPriority = priorityOrder[a.priority] || 2;
+      const bPriority = priorityOrder[b.priority] || 2;
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority;
+      }
+      
+      // So sánh "fresh" tiếp theo
+      if (a.isFresh !== b.isFresh) {
+        return a.isFresh ? -1 : 1;
+      }
+      
+      // Cuối cùng là theo timestamp
       const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : Date.now();
       const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : Date.now();
       return timeB - timeA;
     });
     
-    // Deduplicate notifications
+    // Loại bỏ thông báo trùng lặp
     const dedupeGroups = new Map();
     
     notificationQueue.current.forEach(notification => {
       const hash = getNotificationHash(notification);
       
       if (!notification.isFresh && globalDedupeRegistry.current.has(hash)) {
-        return; // Skip recently seen notification
+        return; // Bỏ qua thông báo đã thấy gần đây
       }
       
+      // Tạo key cho nhóm loại bỏ trùng lặp
       const key = notification.isFresh ? 
         `${notification.type}:${notification.pointsChange || ''}:${Date.now()}` : 
         `${notification.type}:${notification.pointsChange || ''}:${notification.criteria || ''}`;
@@ -375,7 +491,7 @@ const NotificationDisplay = () => {
       dedupeGroups.get(key).push(notification);
     });
     
-    // Take only the newest notification from each group
+    // Lấy thông báo mới nhất từ mỗi nhóm
     const uniqueNotifications = [];
     dedupeGroups.forEach((group) => {
       uniqueNotifications.push(group[0]);
@@ -383,16 +499,18 @@ const NotificationDisplay = () => {
     
     notificationQueue.current = uniqueNotifications;
     
-    // Process a notification
+    // Xử lý một thông báo
     const notification = notificationQueue.current.shift();
+    pendingCount.current = notificationQueue.current.length;
+    
     if (notification) {
-      // Add to dedupe registry
+      // Thêm vào registry để tránh trùng lặp trong tương lai
       const hash = getNotificationHash(notification);
       if (!notification.isFresh) {
         globalDedupeRegistry.current.set(hash, Date.now());
       }
       
-      // Set appropriate title
+      // Đặt tiêu đề phù hợp nếu cần
       if (notification.pointsChange) {
         if (notification.pointsChange > 0 && (!notification.title || !notification.title.includes('POINTS'))) {
           notification.title = 'POINTS AWARDED!';
@@ -401,7 +519,7 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Ensure valid timestamp
+      // Đảm bảo timestamp hợp lệ
       if (!notification.timestamp) {
         notification.timestamp = new Date();
       } else if (!(notification.timestamp instanceof Date)) {
@@ -415,21 +533,28 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Generate ID and display notification
+      // Tạo ID nếu chưa có
       const notifId = notification.id || createId();
       
-      setActiveNotifications(prev => {
-        const notifWithId = { ...notification, id: notifId };
-        
-        // Skip exact duplicates
-        if (prev.some(n => n.id === notifId)) {
-          return prev;
-        }
-        
-        return [notifWithId, ...prev].slice(0, 5); // Keep max 5 active notifications
+      // Dùng requestAnimationFrame để thêm thông báo mà không block thread
+      requestAnimationFrame(() => {
+        setActiveNotifications(prev => {
+          const notifWithId = { ...notification, id: notifId };
+          
+          // Bỏ qua các thông báo trùng lặp chính xác
+          if (prev.some(n => n.id === notifId)) {
+            return prev;
+          }
+          
+          // Lưu thời gian thông báo gần nhất
+          lastNotificationTime.current = Date.now();
+          
+          // Giới hạn số lượng thông báo hiển thị cùng lúc
+          return [notifWithId, ...prev].slice(0, 3);
+        });
       });
       
-      // Remove from SocketContext to prevent reprocessing
+      // Xóa khỏi SocketContext để tránh xử lý lại
       if (notification.source === 'socket') {
         try {
           removeNotification(notification.id);
@@ -438,12 +563,12 @@ const NotificationDisplay = () => {
         }
       }
       
-      // Set auto-dismiss timeout
+      // Thiết lập timeout tự động đóng thông báo
       let duration = notification.duration || getDurationByType(notification.type) || 7000;
       
-      // Reduce duration if there are more notifications waiting
-      if (notificationQueue.current.length > 2) duration = Math.min(duration, 5000);
-      if (notificationQueue.current.length > 4) duration = Math.min(duration, 3000);
+      // Giảm thời gian nếu có nhiều thông báo đang chờ
+      if (pendingCount.current > 2) duration = Math.min(duration, 5000);
+      if (pendingCount.current > 4) duration = Math.min(duration, 3000);
       
       const timeoutId = setTimeout(() => {
         setActiveNotifications(prev => prev.filter(item => item.id !== notifId));
@@ -452,23 +577,23 @@ const NotificationDisplay = () => {
       
       activeTimeouts.current.push(timeoutId);
       
-      // Process next notification after short delay (75ms)
+      // Xử lý thông báo tiếp theo với delay ngắn hơn
       const nextProcessTimeoutId = setTimeout(() => {
         processingQueue.current = false;
         processNotificationQueue();
         activeTimeouts.current = activeTimeouts.current.filter(id => id !== nextProcessTimeoutId);
-      }, 75);
+      }, 50); // Giảm xuống 50ms
       
       activeTimeouts.current.push(nextProcessTimeoutId);
     } else {
       processingQueue.current = false;
     }
-  };
+  }, [user?.house, extractCriteriaAndLevel, getNotificationHash, createId, getDurationByType]);
 
   // Handle manual close
-  const handleClose = (id) => {
+  const handleClose = useCallback((id) => {
     setActiveNotifications(prev => prev.filter(item => item.id !== id));
-  };
+  }, []);
   
   // Responsive check
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
@@ -491,7 +616,7 @@ const NotificationDisplay = () => {
       px={isMobile ? 1 : 0}
     >
       {activeNotifications.map(notification => (
-        <Fade key={notification.id} in={true}>
+        <Fade key={notification.id} in={true} unmountOnExit>
           <Box
             padding="0"
             borderRadius="12px"
@@ -552,6 +677,7 @@ const NotificationDisplay = () => {
                 py={1}
                 borderRadius="full"
                 fontWeight="bold"
+                className={notification.priority === 'high' ? 'high-priority-badge' : ''}
               >
                 {notification.title}
               </Badge>
@@ -827,7 +953,7 @@ const NotificationDisplay = () => {
         </Fade>
       ))}
       
-      {/* CSS for animations */}
+      {/* CSS for animations with optimized performance */}
       <style jsx global>{`
         @keyframes pop-in {
           0% { transform: scale(0.95); opacity: 0; }
@@ -835,8 +961,9 @@ const NotificationDisplay = () => {
         }
         
         .notification-panel {
-          animation: pop-in 0.3s ease-out;
+          animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           transform-origin: center center;
+          will-change: transform, opacity;
         }
         
         @keyframes points-pulse {
@@ -846,11 +973,13 @@ const NotificationDisplay = () => {
         
         .points-text-animation {
           animation: points-pulse 1.5s ease-in-out infinite;
+          will-change: transform;
         }
         
         .point-glow-positive {
           box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
           animation: glow-positive 2s ease-in-out infinite;
+          will-change: box-shadow;
         }
         
         @keyframes glow-positive {
@@ -861,6 +990,7 @@ const NotificationDisplay = () => {
         .point-glow-negative {
           box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
           animation: glow-negative 2s ease-in-out infinite;
+          will-change: box-shadow;
         }
         
         @keyframes glow-negative {
@@ -872,6 +1002,7 @@ const NotificationDisplay = () => {
           position: relative;
           transform-origin: center center;
           animation: container-float 3s ease-in-out infinite;
+          will-change: transform;
         }
         
         @keyframes container-float {
@@ -882,6 +1013,7 @@ const NotificationDisplay = () => {
         .increase-animation {
           filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
           animation: increase-image-animation 3s ease-in-out infinite;
+          will-change: filter, transform;
         }
         
         @keyframes increase-image-animation {
@@ -893,6 +1025,7 @@ const NotificationDisplay = () => {
         .decrease-animation {
           filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
           animation: decrease-image-animation 3s ease-in-out infinite;
+          will-change: filter, transform;
         }
         
         @keyframes decrease-image-animation {
@@ -900,9 +1033,18 @@ const NotificationDisplay = () => {
           50% { filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1)); transform: rotate(-2deg) scale(1.1); }
           100% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
         }
+        
+        .high-priority-badge {
+          animation: pulse-badge 2s infinite;
+        }
+        
+        @keyframes pulse-badge {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+          50% { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0); }
+        }
       `}</style>
     </Stack>
   );
 };
 
-export default NotificationDisplay;
+export default React.memo(NotificationDisplay);
