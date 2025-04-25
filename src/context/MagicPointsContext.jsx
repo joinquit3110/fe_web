@@ -892,43 +892,18 @@ export const MagicPointsProvider = ({ children }) => {
           localStorage.removeItem('pendingOperations');
           setPendingChanges(false);
           
-          // If it's a reset or significant change, show more prominent feedback
-          if (isReset) {
-            console.log('[POINTS] Points have been reset to 100 by admin');
-            
-            // Create a more visible notification for resets
-            try {
-              const resetNotification = document.createElement('div');
-              resetNotification.className = 'admin-reset-notification';
-              resetNotification.style.position = 'fixed';
-              resetNotification.style.top = '50%';
-              resetNotification.style.left = '50%';
-              resetNotification.style.transform = 'translate(-50%, -50%)';
-              resetNotification.style.background = 'rgba(220, 53, 69, 0.9)';
-              resetNotification.style.color = 'white';
-              resetNotification.style.padding = '20px 30px';
-              resetNotification.style.borderRadius = '8px';
-              resetNotification.style.zIndex = '9999';
-              resetNotification.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
-              resetNotification.style.fontSize = '18px';
-              resetNotification.style.fontWeight = 'bold';
-              resetNotification.style.textAlign = 'center';
-              resetNotification.innerHTML = `
-                <div>Your magic points have been RESET to 100 by admin!</div>
-                <div style="font-size: 14px; margin-top: 8px; opacity: 0.8;">All operations have been synchronized.</div>
-              `;
-              
-              document.body.appendChild(resetNotification);
-              
-              // Remove after 5 seconds
-              setTimeout(() => {
-                if (resetNotification.parentNode) {
-                  resetNotification.parentNode.removeChild(resetNotification);
-                }
-              }, 5000);
-            } catch (error) {
-              console.error('[POINTS] Error showing reset notification:', error);
-            }
+          // Create a test notification for debugging
+          if (isSignificantChange) {
+            window.dispatchEvent(new CustomEvent('showNotification', {
+              detail: {
+                type: isReset ? 'warning' : 'success',
+                message: isReset ? 'Your points have been reset to 100 by admin!' : 
+                  `Your magic points have been ${points > magicPoints ? 'increased' : 'decreased'} by ${Math.abs(points - magicPoints)}`,
+                title: isReset ? 'POINTS RESET!' : 'POINTS UPDATED!',
+                priority: 'high',
+                pointsChange: points - magicPoints
+              }
+            }));
           }
           
           // Dispatch an event to ensure UI updates without requiring a refresh

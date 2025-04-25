@@ -43,6 +43,11 @@ const NotificationDisplay = () => {
     const socketContext = useSocket();
     socketNotifications = socketContext?.notifications || [];
     removeNotification = socketContext?.removeNotification || (() => {});
+    
+    // DEBUG: Log received notifications
+    if (socketNotifications.length > 0) {
+      console.log('[NOTIFICATION] Current socket notifications:', socketNotifications.length);
+    }
   } catch (error) {
     console.warn('Socket context not available:', error.message);
   }
