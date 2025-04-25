@@ -5,7 +5,7 @@ import { useSocket } from '../context/SocketContext';
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
 // Use named imports for Chakra UI
-import { Stack, Fade, Box, Text, Badge, CloseButton, Image, Flex } from '@chakra-ui/react';
+import { Stack, Fade, Box, Text, Badge, CloseButton, Image as ChakraImage, Flex } from '@chakra-ui/react';
 
 // Define N here, at the top level before any possible use
 const N = 3; // Maximum number of notifications to show at once
@@ -61,8 +61,9 @@ const NotificationDisplay = () => {
   useEffect(() => {
     // Preload images
     const preloadImages = () => {
-      const img1 = new Image();
-      const img2 = new Image();
+      // Use the native browser Image constructor
+      const img1 = new window.Image(); 
+      const img2 = new window.Image();
       img1.src = increasePointImg;
       img2.src = decreasePointImg;
     };
@@ -718,7 +719,7 @@ const NotificationDisplay = () => {
                     height="200px"
                     className="image-container"
                   >
-                    <Image 
+                    <ChakraImage 
                       src={notification.pointsChange > 0 ? increasePointImg : decreasePointImg}
                       alt={notification.pointsChange > 0 ? 'Points increased' : 'Points decreased'}
                       className={notification.pointsChange > 0 ? 'increase-animation' : 'decrease-animation'}
