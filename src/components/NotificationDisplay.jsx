@@ -11,6 +11,9 @@ const NotificationDisplay = () => {
   const [activeNotifications, setActiveNotifications] = useState([]);
   const { user } = useAuth();
   
+  // Define N here, at the top level before any possible use
+  const N = 3; // Maximum number of notifications to show at once
+  
   // Get socket notifications directly from the SocketContext
   let socketNotifications = [];
   let removeNotification = () => {};
@@ -32,9 +35,6 @@ const NotificationDisplay = () => {
   
   // Thêm đếm số lượng thông báo
   const pendingCount = useRef(0);
-  
-  // Define N here, before it is used
-  const N = 3; // Maximum number of notifications to show at once
   
   // Thêm preload images để tránh giật khi hiển thị
   useEffect(() => {
