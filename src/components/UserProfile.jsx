@@ -41,92 +41,9 @@ const UserProfile = ({ user: propUser }) => {
   const previewCanvasRef = useRef(null);
   const imageRef = useRef(null);
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target) &&
-          buttonRef.current && !buttonRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-      if (croppedImageUrl) {
-        URL.revokeObjectURL(croppedImageUrl);
-      }
-    };
-  }, [imagePreview, croppedImageUrl]);
-
-  useEffect(() => {
-    if (user) {
-      setForm({
-        ...form,
-        fullName: user.fullName || '',
-        school: user.school || '',
-        grade: user.grade || ''
-      });
-      setAvatar(user.avatar || null);
-    }
-  }, [user]);
-
-  if (!user) return null;
-
-  const toggleMenu = () => {
-    setShowMenu(!showMenu);
-    setError('');
-    setSuccess('');
-    if (!showMenu) {
-      setShowCrop(false);
-      setCroppedImageUrl(null);
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-  };
-
-  const getInitials = (name) => {
-    return name ? name.charAt(0).toUpperCase() : 'W';
-  };
-
-  const getHouseClass = (username) => {
-    if (user && user.house) {
-      return user.house.toLowerCase();
-    }
-
-    if (!username) return 'gryffindor';
-
-    const sum = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const houses = ['gryffindor', 'slytherin', 'ravenclaw', 'hufflepuff'];
-    return houses[sum % houses.length];
-  };
-
-  const userHouse = getHouseClass(user.username);
-
-  const handleAvatarClick = () => {
-    if (showCrop) return;
-    fileInputRef.current?.click();
-  };
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-      setShowCrop(true);
-    }
-  };
-
+  // Define all useCallback hooks at the top level
   const onLoad = useCallback((img) => {
+    if (!img) return false;
     imageRef.current = img;
 
     const width = img.width * 0.8;
@@ -194,6 +111,91 @@ const UserProfile = ({ user: propUser }) => {
       0.95
     );
   }, [croppedImageUrl]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target) &&
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl);
+      }
+    };
+  }, [imagePreview, croppedImageUrl]);
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        ...form,
+        fullName: user.fullName || '',
+        school: user.school || '',
+        grade: user.grade || ''
+      });
+      setAvatar(user.avatar || null);
+    }
+  }, [user, form]);
+
+  if (!user) return null;
+
+  const toggleMenu = () => {
+    setShowMenu(!showMenu);
+    setError('');
+    setSuccess('');
+    if (!showMenu) {
+      setShowCrop(false);
+      setCroppedImageUrl(null);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  const getInitials = (name) => {
+    return name ? name.charAt(0).toUpperCase() : 'W';
+  };
+
+  const getHouseClass = (username) => {
+    if (user && user.house) {
+      return user.house.toLowerCase();
+    }
+
+    if (!username) return 'gryffindor';
+
+    const sum = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const houses = ['gryffindor', 'slytherin', 'ravenclaw', 'hufflepuff'];
+    return houses[sum % houses.length];
+  };
+
+  const userHouse = getHouseClass(user.username);
+
+  const handleAvatarClick = () => {
+    if (showCrop) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setShowCrop(true);
+    }
+  };
 
   const uploadCroppedAvatar = async () => {
     if (!croppedImageUrl) {
