@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
 // Import the image assets
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
+// Thay đổi cách import Chakra UI để tránh lỗi constructor
+import * as Chakra from '@chakra-ui/react';
 
 const NotificationDisplay = () => {
   const [activeNotifications, setActiveNotifications] = useState([]);
@@ -599,6 +600,9 @@ const NotificationDisplay = () => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
 
   if (activeNotifications.length === 0) return null;
+  
+  // Sử dụng Chakra từ namespace thay vì import trực tiếp
+  const { Stack, Fade, Box, Text, Badge, CloseButton, Image, Flex } = Chakra;
   
   return (
     <Stack
