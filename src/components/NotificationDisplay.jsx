@@ -33,7 +33,7 @@ const NotificationDisplay = () => {
   // Thêm đếm số lượng thông báo
   const pendingCount = useRef(0);
   
-  // Define N here to fix the ReferenceError
+  // Define N here, before it is used
   const N = 3; // Maximum number of notifications to show at once
   
   // Thêm preload images để tránh giật khi hiển thị
