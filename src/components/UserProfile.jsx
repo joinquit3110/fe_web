@@ -14,7 +14,6 @@ const UserProfile = ({ user: propUser }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 575);
 
   const user = propUser || contextUser;
 
@@ -39,17 +38,6 @@ const UserProfile = ({ user: propUser }) => {
   });
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const imageRef = useRef(null);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 575);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -278,21 +266,11 @@ const UserProfile = ({ user: propUser }) => {
       muggle: { bg: '#6B6B6B', text: '#FFFFFF', border: '#888888' },
       admin: { bg: '#4B0082', text: '#FFFFFF', border: '#800080' }
     };
+
     return houses[userHouse] || houses.gryffindor;
   };
 
   const colors = getHouseColors();
-
-  const getMenuPosition = () => {
-    if (isMobile) {
-      return {
-        right: '-15px'
-      };
-    }
-    return {
-      right: '0'
-    };
-  };
 
   return (
     <div className="profile-container-fixed">
@@ -300,7 +278,6 @@ const UserProfile = ({ user: propUser }) => {
         ref={buttonRef}
         className={`profile-avatar-button ${userHouse}`}
         onClick={toggleMenu}
-        aria-label="Toggle profile menu"
       >
         {avatar ? (
           <img
@@ -327,7 +304,6 @@ const UserProfile = ({ user: propUser }) => {
             '--house-bg': colors.bg,
             '--house-text': colors.text,
             '--house-border': colors.border,
-            ...getMenuPosition()
           }}
         >
           {showCrop ? (
