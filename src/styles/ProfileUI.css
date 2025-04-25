@@ -145,6 +145,9 @@
   padding: 15px;
   animation: menu-fade-in 0.3s ease;
   backdrop-filter: blur(8px);
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+  transform-origin: top right;
 }
 
 @keyframes menu-fade-in {
@@ -580,9 +583,10 @@
 @media (max-width: 575px) {
   .profile-menu {
     width: calc(100vw - 30px);
-    right: 0;
+    right: -5px;
     max-height: 85vh;
     overflow-y: auto;
+    transform-origin: top right;
   }
   
   .profile-avatar-large {
@@ -592,6 +596,53 @@
   
   .profile-avatar-large-initials {
     font-size: 30px;
+  }
+
+  .profile-button-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .profile-tab {
+    font-size: 13px;
+  }
+}
+
+/* Mobile optimization for very small screens */
+@media (max-width: 360px) {
+  .profile-container-fixed {
+    right: 10px;
+    top: 10px;
+  }
+
+  .profile-menu {
+    right: -10px;
+    width: calc(100vw - 20px);
+    padding: 12px 10px;
+    font-size: 0.9em;
+  }
+
+  .profile-avatar-large {
+    width: 60px;
+    height: 60px;
+  }
+
+  .profile-username {
+    font-size: 16px;
+  }
+
+  .profile-house-badge-large {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .profile-avatar-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .profile-avatar-initials {
+    font-size: 18px;
   }
 }
 
