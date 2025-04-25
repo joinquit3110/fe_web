@@ -609,7 +609,7 @@
 }
 
 /* Mobile optimization for very small screens */
-@media (max-width: 360px) {
+@media (max-width: 400px) {
   .profile-container-fixed {
     right: 10px;
     top: 10px;
@@ -620,6 +620,7 @@
     width: calc(100vw - 20px);
     padding: 12px 10px;
     font-size: 0.9em;
+    transform: translateX(5px);
   }
 
   .profile-avatar-large {
@@ -643,6 +644,21 @@
 
   .profile-avatar-initials {
     font-size: 18px;
+  }
+}
+
+/* Mobile optimization for ultra-small screens */
+@media (max-width: 320px) {
+  .profile-container-fixed {
+    right: 5px;
+    top: 5px;
+  }
+
+  .profile-menu {
+    right: -5px;
+    width: calc(100vw - 10px);
+    padding: 10px 8px;
+    transform: translateX(0);
   }
 }
 
