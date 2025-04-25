@@ -68,8 +68,8 @@ export const SocketProvider = ({ children }) => {
         if (socket && !isConnected) {
           socket.connect();
         }
-        // Xử lý buffer khi có kết nối trở lại
-        processOfflineBuffer();
+        // Use stable ref function directly to avoid dependency issues
+        processOfflineBufferRef.current(socket, isConnected);
       } else {
         console.log('[SOCKET] Browser is offline');
         setConnectionQuality('disconnected');
@@ -85,33 +85,63 @@ export const SocketProvider = ({ children }) => {
     };
   }, [socket, isConnected]);
   
-  // Hàm xử lý buffer offline
-  const processOfflineBuffer = useCallback(() => {
-    if (offlineBuffer.current.length > 0 && socket && isConnected) {
+  // Hàm xử lý buffer offline - memoize with useRef to avoid recreation on render
+  const processOfflineBufferRef = useRef((currentSocket, isCurrentlyConnected) => {
+    if (offlineBuffer.current.length > 0 && currentSocket && isCurrentlyConnected) {
       console.log(`[SOCKET] Processing offline buffer: ${offlineBuffer.current.length} items`);
       
       // Xử lý từng item trong buffer
       offlineBuffer.current.forEach(item => {
         if (item.type === 'emit') {
-          socket.emit(item.event, item.data);
+          currentSocket.emit(item.event, item.data);
         }
       });
       
       // Xóa buffer
       offlineBuffer.current = [];
     }
+  });
+
+  // Update the implementation whenever socket/isConnected changes
+  useEffect(() => {
+    processOfflineBufferRef.current = (currentSocket, isCurrentlyConnected) => {
+      if (offlineBuffer.current.length > 0 && currentSocket && isCurrentlyConnected) {
+        console.log(`[SOCKET] Processing offline buffer: ${offlineBuffer.current.length} items`);
+        
+        // Xử lý từng item trong buffer
+        offlineBuffer.current.forEach(item => {
+          if (item.type === 'emit') {
+            currentSocket.emit(item.event, item.data);
+          }
+        });
+        
+        // Xóa buffer
+        offlineBuffer.current = [];
+      }
+    };
+  }, []);
+  
+  // Wrapper function to call the ref
+  const processOfflineBuffer = useCallback(() => {
+    processOfflineBufferRef.current(socket, isConnected);
   }, [socket, isConnected]);
 
   // Initialize socket on authentication state change with improved connection settings
   useEffect(() => {
     // Only initialize socket if user is authenticated
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
         setIsConnected(false);
         setConnectionQuality('disconnected');
       }
+      return;
+    }
+    
+    // Prevent multiple socket initializations for the same user
+    if (socket) {
+      console.log('[SOCKET] Socket already initialized, skipping');
       return;
     }
     
@@ -271,7 +301,8 @@ export const SocketProvider = ({ children }) => {
         setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user, processOfflineBuffer]);
+  // Only depend on authentication status and user ID, not the entire user object
+  }, [isAuthenticated, user?.id || user?._id]);
   
   // Implement heartbeat mechanism with latency check
   useEffect(() => {
