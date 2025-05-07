@@ -145,22 +145,6 @@ const Leaderboard = () => {
                   zIndex: index === 0 ? 2 : 1
                 }}
               >
-                {index === 0 && (
-                  <Badge 
-                    position="absolute"
-                    top="-10px"
-                    right="-10px"
-                    borderRadius="full"
-                    bg="gold"
-                    color="black"
-                    p={2}
-                    fontWeight="bold"
-                    fontSize="lg"
-                    boxShadow="0 0 20px gold"
-                  >
-                    🏆 House Champion
-                  </Badge>
-                )}
                 <Flex direction="column" align="center" justify="center" h="100%">
                   <img 
                     src={house.logo} 

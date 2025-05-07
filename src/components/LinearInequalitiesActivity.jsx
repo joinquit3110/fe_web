@@ -994,75 +994,73 @@ const Dnd = ({ taskId, title, wrongAnswers, children, onSubmission }) => {
           </Text>
         </Box>
       )}
-      <Flex justify="space-between" mb="4">
-        <button
+      <Flex justify="center" align="center" gap={6} mb="4">
+        <Button
           onClick={handleReset}
           className="wizard-button reset-button"
+          leftIcon={<span style={{fontSize: '20px'}}>💨</span>}
           style={{
-            background: "linear-gradient(to bottom, #aa3333 0%, #7a1111 100%)",
-            color: "var(--text-primary)",
+            background: "linear-gradient(90deg, #aa3333 0%, #7a1111 100%)",
+            color: "#fff",
             border: "none",
-            padding: "10px 20px",
-            borderRadius: "12px",
-            fontSize: "15px",
+            padding: "12px 32px",
+            borderRadius: "16px",
+            fontSize: "17px",
             fontWeight: "bold",
             cursor: "pointer",
             position: "relative",
             overflow: "hidden",
             fontFamily: "'Cinzel', serif",
-            boxShadow: "0 4px 8px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.2)",
+            boxShadow: "0 4px 16px rgba(170,51,51,0.3), 0 0 10px #fff2",
             transition: "all 0.3s ease",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "10px",
+            letterSpacing: "1px",
+            textShadow: "0 1px 2px #000, 0 0 8px #fff3",
+            minWidth: "160px"
+          }}
+          _hover={{
+            background: "linear-gradient(90deg, #b92d27 0%, #902a27 100%)",
+            boxShadow: "0 6px 20px #b92d27aa, 0 0 12px #fff4"
           }}
         >
-          <span style={{
-            display: "inline-block",
-            width: "18px",
-            height: "18px",
-            backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z\" fill=\"%23ffffff\"/></svg>')",
-            backgroundSize: "contain",
-            backgroundRepeat: "no-repeat",
-            position: "relative",
-          }}></span>
-          <span style={{ position: "relative", zIndex: 2 }}>Evanesco</span>
-        </button>
-        <button
+          Evanesco
+        </Button>
+        <Button
           onClick={handleSubmit}
           className="wizard-button submit-button"
+          leftIcon={<span style={{fontSize: '20px'}}>👁️</span>}
           disabled={isSubmitted}
           style={{
-            background: "linear-gradient(to bottom, #2e7d32 0%, #1b5e20 100%)",
-            color: "var(--text-primary)",
+            background: "linear-gradient(90deg, #1a472a 0%, #2e7d32 100%)",
+            color: "#F0C75E",
             border: "none",
-            padding: "10px 20px",
-            borderRadius: "12px", 
-            fontSize: "15px", 
+            padding: "12px 32px",
+            borderRadius: "16px",
+            fontSize: "17px",
             fontWeight: "bold",
             cursor: isSubmitted ? "default" : "pointer",
             position: "relative",
             overflow: "hidden",
             fontFamily: "'Cinzel', serif",
-            boxShadow: "0 4px 8px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.2)",
+            boxShadow: "0 4px 16px rgba(26,71,42,0.3), 0 0 10px #fff2",
             transition: "all 0.3s ease",
-            opacity: isSubmitted ? 0.7 : 1,
             display: "flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "10px",
+            letterSpacing: "1px",
+            textShadow: "0 1px 2px #000, 0 0 8px #fff3",
+            minWidth: "160px",
+            opacity: isSubmitted ? 0.7 : 1
+          }}
+          _hover={{
+            background: "linear-gradient(90deg, #2e7d32 0%, #1a472a 100%)",
+            boxShadow: "0 6px 20px #2e7d32aa, 0 0 12px #fff4"
           }}
         >
-          <span style={{
-            display: "inline-block",
-            width: "18px",
-            height: "18px",
-            backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z\" fill=\"%23ffffff\"/></svg>')",
-            backgroundSize: "contain",
-            backgroundRepeat: "no-repeat",
-            position: "relative",
-          }}></span>
-          <span style={{ position: "relative", zIndex: 2 }}>Revelio</span>
-        </button>
+          Revelio
+        </Button>
       </Flex>
       <Box 
         p="5" 
