@@ -305,11 +305,13 @@ export const SocketProvider = ({ children }) => {
               message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}`,
               timestamp: new Date(),
               pointsChange: pointsDiff,
-              reason: reason || 'System update',
+              reason: reason && reason !== 'System update' ? reason : 'Point update',
               criteria: criteria,
               level: level,
               house: user.house
             };
+            
+            console.log('[SOCKET] Created point update notification:', notification);
             
             addNotification(notification);
           }
@@ -319,21 +321,32 @@ export const SocketProvider = ({ children }) => {
 
     const handleHousePointsUpdate = (data) => {
       console.log('[SOCKET] Received house_points_update:', data);
-      if (isAdminUser.current || user?.house === 'muggle' || !user?.house) return;
+      console.log('[SOCKET] house_points_update fields:', {
+        house: data.house,
+        points: data.points, 
+        reason: data.reason,
+        criteria: data.criteria,
+        level: data.level,
+        timestamp: data.timestamp
+      });
       
-      if (data.house === user?.house) {
-        // Log detailed data to verify criteria and level
-        console.log('[SOCKET] Creating notification with data:', {
-          house: data.house,
-          points: data.points,
-          reason: data.reason,
-          criteria: data.criteria,
-          level: data.level,
-          timestamp: data.timestamp
-        });
-        
-        const notification = createHousePointsNotification(data);
-        addNotification(notification);
+      if (!user || user.house !== data.house) return;
+      
+      console.log('[SOCKET] Creating notification with data:', data);
+      
+      // Create a standardized notification
+      const notification = createHousePointsNotification(data);
+      console.log('[SOCKET] Created notification object:', notification);
+      
+      // Show notification via notification system
+      addNotification(notification);
+      
+      // Also update local points if needed
+      if (typeof data.newTotal === 'number' && setHousePoints) {
+        setHousePoints(prev => ({
+          ...prev,
+          [data.house]: data.newTotal
+        }));
       }
     };
 
@@ -373,7 +386,7 @@ export const SocketProvider = ({ children }) => {
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
-  }, [socket, user, isAdminUser.current, addNotification]);
+  }, [socket, user, isAdminUser.current, addNotification, setHousePoints]);
 
   // Helper to create house points notification
   const createHousePointsNotification = (data) => {
@@ -381,19 +394,38 @@ export const SocketProvider = ({ children }) => {
     const isPositive = pointsChange > 0;
     const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
     
-    return {
+    console.log('[SOCKET] Creating house points notification with data:', data);
+    
+    // Ensure we keep the original reason from admin
+    const notificationReason = data.reason && data.reason.trim() !== '' 
+      ? data.reason 
+      : 'House points update';
+    
+    // Determine if this is a house assessment notification (has both criteria and level)
+    const isAssessment = data.criteria && data.level;
+    
+    // Only include criteria and level for house assessment notifications
+    const notification = {
       id: uniqueId,
       type: isPositive ? 'success' : 'warning',
       title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
       message: formatHousePointsMessage(data),
       timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
       pointsChange,
-      reason: data.reason,
-      criteria: data.criteria,
-      level: data.level,
+      reason: notificationReason,
       source: 'house_points_update',
       house: data.house
     };
+    
+    // Only add criteria and level if this is a house assessment notification
+    if (isAssessment) {
+      notification.criteria = data.criteria;
+      notification.level = data.level;
+    }
+    
+    console.log('[SOCKET] Final notification object:', notification);
+    
+    return notification;
   };
 
   // Helper to format house points message

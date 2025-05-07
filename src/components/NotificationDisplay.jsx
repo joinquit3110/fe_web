@@ -7,6 +7,8 @@ import '../styles/notification.css';
 // Import the image assets
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
+// Import the NotificationDetails component
+import NotificationDetails from './NotificationDetails';
 
 // Helper function to standardize criteria text
 const standardizeCriteria = (criteria) => {
@@ -176,6 +178,13 @@ const NotificationDisplay = () => {
   useEffect(() => {
     const handleHousePointsUpdate = (event) => {
       console.log('[NOTIFICATION] Received house-points-update event:', event.detail);
+      console.log('[NOTIFICATION] Detail fields:', {
+        house: event.detail.house,
+        points: event.detail.points,
+        reason: event.detail.reason,
+        criteria: event.detail.criteria,
+        level: event.detail.level
+      });
       
       const { house, points, reason, criteria, level, timestamp } = event.detail;
       if (!user || user.house !== house) return;
@@ -195,6 +204,8 @@ const NotificationDisplay = () => {
         level,
         house: house
       };
+      
+      console.log('[NOTIFICATION] Created notification item:', notificationItem);
       
       notificationQueue.current.push(notificationItem);
       
@@ -252,6 +263,8 @@ const NotificationDisplay = () => {
   useEffect(() => {
     if (socketNotifications.length === 0) return;
     
+    console.log('[NOTIFICATION] Processing socket notifications:', socketNotifications);
+    
     socketNotifications.forEach(notification => {
       if (!notificationQueue.current.some(item => item.id === notification.id)) {
         const notificationItem = {
@@ -267,6 +280,8 @@ const NotificationDisplay = () => {
           criteria: notification.criteria,
           level: notification.level
         };
+        
+        console.log('[NOTIFICATION] Created socket notification item:', notificationItem);
         
         notificationQueue.current.push(notificationItem);
       }
@@ -509,7 +524,7 @@ const NotificationContent = memo(({ notification, onClose }) => {
         {/* Message with styling */}
         <NotificationMessage notification={notification} />
         
-        {/* Details section */}
+        {/* Details section using the external component */}
         <NotificationDetails notification={notification} />
         
         {/* Timestamp */}
@@ -592,215 +607,110 @@ const PointChangeVisualization = memo(({ pointsChange, increasePointImg, decreas
 ));
 
 // Separate message component
-const NotificationMessage = memo(({ notification }) => (
-  <Box 
-    bg="rgba(255,255,255,0.15)" 
-    p={4} 
-    borderRadius="md" 
-    backdropFilter="blur(5px)"
-    boxShadow="0 4px 8px rgba(0,0,0,0.1)"
-    mb={3}
-    className="message-parchment"
-    borderLeft="4px solid"
-    borderColor={
-      notification.type === 'success' ? 'rgba(46, 204, 113, 0.8)' :
-      notification.type === 'warning' || notification.type === 'error' ? 'rgba(231, 76, 60, 0.8)' :
-      notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.8)' :
-      'rgba(52, 152, 219, 0.8)'
-    }
-  >
-    <Text 
-      fontSize="md" 
-      fontWeight="semibold"
-      fontFamily="'Cinzel', serif"
-      letterSpacing="0.5px"
-      color="white"
-      textShadow="0 1px 2px rgba(0,0,0,0.5)"
-      lineHeight="1.5"
-    >
-      {notification.pointsChange && (
-        <>
-          <Text as="span">
-            {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded to' : 'deducted from'} {notification.house || 'unknown'}
-          </Text>
-          
-          {notification.reason && (
-            <Text 
-              as="span" 
-              color={notification.pointsChange > 0 ? "yellow.300" : "orange.300"}
-              fontWeight="bold"
-            >
-              : {notification.reason}
-            </Text>
-          )}
-        </>
-      )}
-      
-      {!notification.pointsChange && notification.message}
-    </Text>
-  </Box>
-));
+const NotificationMessage = memo(({ notification }) => {
+  console.log('[NOTIFICATION_MESSAGE] Rendering notification:', {
+    pointsChange: notification.pointsChange,
+    reason: notification.reason,
+    criteria: notification.criteria,
+    level: notification.level,
+    type: notification.type
+  });
+  
+  // Determine if this is a regular house point or house assessment notification
+  const isAssessment = notification.criteria && notification.level;
+  
+  // Check if reason is valid for display (not a default system message)
+  const hasValidReason = notification.reason && 
+                       notification.reason !== 'System update' && 
+                       notification.reason !== 'House points update' && 
+                       notification.reason !== 'Point update' &&
+                       notification.reason !== 'Admin action';
 
-// Separate details component
-const NotificationDetails = memo(({ notification }) => (
-  <Box 
-    borderRadius="md"
-    overflow="hidden"
-    className="details-scroll"
-    border="1px solid rgba(255,255,255,0.3)"
-    boxShadow="0 5px 15px rgba(0,0,0,0.2)"
-    mb={3}
-  >
-    {/* Reason section */}
-    {notification.reason && (
-      <Box 
-        p={4}
-        borderBottom={notification.criteria || notification.level || notification.additionalDetails ? "1px solid rgba(255,255,255,0.2)" : "none"}
-        bg="rgba(0,0,0,0.18)"
-        position="relative"
-        _hover={{bg: "rgba(0,0,0,0.25)"}}
-        transition="all 0.2s"
+  return (
+    <Box 
+      bg="rgba(255,255,255,0.15)" 
+      p={4} 
+      borderRadius="md" 
+      backdropFilter="blur(5px)"
+      boxShadow="0 4px 8px rgba(0,0,0,0.1)"
+      mb={3}
+      className="message-parchment"
+      borderLeft="4px solid"
+      borderColor={
+        notification.type === 'success' ? 'rgba(46, 204, 113, 0.8)' :
+        notification.type === 'warning' || notification.type === 'error' ? 'rgba(231, 76, 60, 0.8)' :
+        notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.8)' :
+        'rgba(52, 152, 219, 0.8)'
+      }
+    >
+      <Text 
+        fontSize="md" 
+        fontWeight="semibold"
+        fontFamily="'Cinzel', serif"
+        letterSpacing="0.5px"
+        color="white"
+        textShadow="0 1px 2px rgba(0,0,0,0.5)"
+        lineHeight="1.5"
       >
-        <Flex alignItems="flex-start">
-          <Box 
-            width="32px" 
-            height="32px" 
-            borderRadius="50%" 
-            bg={notification.type === 'success' ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"} 
-            border="2px solid rgba(255,255,255,0.4)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            mr={3}
-            mt="2px"
-            boxShadow="0 2px 5px rgba(0,0,0,0.2)"
-          >
-            <Text fontSize="lg" fontWeight="bold" color="#f0c75e">📝</Text>
-          </Box>
-          <Box flex="1">
-            <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Reason</Text>
-            <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{notification.reason}</Text>
-          </Box>
-        </Flex>
-      </Box>
-    )}
-    
-    {/* Criteria section */}
-    {notification.criteria && (
-      <Box 
-        p={4}
-        borderBottom={notification.level || notification.additionalDetails ? "1px solid rgba(255,255,255,0.2)" : "none"}
-        bg="rgba(0,0,0,0.15)"
-        position="relative"
-        _hover={{bg: "rgba(0,0,0,0.2)"}}
-        transition="all 0.2s"
-      >
-        <Flex alignItems="flex-start">
-          <Box 
-            width="32px" 
-            height="32px" 
-            borderRadius="50%" 
-            bg={notification.type === 'success' ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"} 
-            border="2px solid rgba(255,255,255,0.4)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            mr={3}
-            mt="2px"
-            boxShadow="0 2px 5px rgba(0,0,0,0.2)"
-          >
-            <Text fontSize="lg" fontWeight="bold" color="#f0c75e">🎯</Text>
-          </Box>
-          <Box flex="1">
-            <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Criteria</Text>
-            <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{standardizeCriteria(notification.criteria)}</Text>
-          </Box>
-        </Flex>
-      </Box>
-    )}
-    
-    {/* Level section */}
-    {notification.level && (
-      <Box 
-        p={4}
-        borderBottom={notification.additionalDetails ? "1px solid rgba(255,255,255,0.2)" : "none"}
-        bg="rgba(0,0,0,0.2)"
-        position="relative"
-        _hover={{bg: "rgba(0,0,0,0.25)"}}
-        transition="all 0.2s"
-      >
-        <Flex alignItems="flex-start">
-          <Box 
-            width="32px" 
-            height="32px" 
-            borderRadius="50%" 
-            bg={notification.type === 'success' ? "rgba(46, 204, 113, 0.3)" : "rgba(231, 76, 60, 0.3)"} 
-            border="2px solid rgba(255,255,255,0.4)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            mr={3}
-            mt="2px"
-            boxShadow="0 2px 5px rgba(0,0,0,0.2)"
-          >
-            <Text fontSize="lg" fontWeight="bold" color="#f0c75e">📈</Text>
-          </Box>
-          <Box flex="1">
-            <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Level</Text>
-            <Text 
-              fontSize="md" 
-              fontWeight="medium" 
-              lineHeight="1.4"
-              p={2}
-              bg={
-                notification.level.toLowerCase().includes('excellent') ? 'rgba(46, 204, 113, 0.2)' :
-                notification.level.toLowerCase().includes('good') ? 'rgba(52, 152, 219, 0.2)' :
-                notification.level.toLowerCase().includes('satisfactory') ? 'rgba(241, 196, 15, 0.2)' :
-                notification.level.toLowerCase().includes('poor') ? 'rgba(231, 76, 60, 0.2)' :
-                'rgba(0,0,0,0.1)'
-              }
-              borderRadius="md"
-              display="inline-block"
-            >
-              {standardizeLevel(notification.level)}
+        {notification.pointsChange && (
+          <>
+            {/* Main message showing points change */}
+            <Text as="span">
+              {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded to' : 'deducted from'} {notification.house || 'unknown'}
+              {isAssessment && ` (${standardizeCriteria(notification.criteria)})`}
             </Text>
-          </Box>
-        </Flex>
-      </Box>
-    )}
-    {/* Additional Details section */}
-    {notification.additionalDetails && (
-      <Box 
-        p={4}
-        bg="rgba(0,0,0,0.13)"
-        position="relative"
-        _hover={{bg: "rgba(0,0,0,0.18)"}}
-        transition="all 0.2s"
-      >
-        <Flex alignItems="flex-start">
-          <Box 
-            width="32px" 
-            height="32px" 
-            borderRadius="50%" 
-            bg="rgba(240, 199, 94, 0.25)"
-            border="2px solid rgba(255,255,255,0.4)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            mr={3}
-            mt="2px"
-            boxShadow="0 2px 5px rgba(0,0,0,0.2)"
-          >
-            <Text fontSize="lg" fontWeight="bold" color="#f0c75e">🗒️</Text>
-          </Box>
-          <Box flex="1">
-            <Text fontSize="sm" fontWeight="bold" mb="4px" letterSpacing="1px" textTransform="uppercase">Additional Details</Text>
-            <Text fontSize="md" fontWeight="medium" lineHeight="1.4">{notification.additionalDetails}</Text>
-          </Box>
-        </Flex>
-      </Box>
-    )}
-  </Box>
-));
+            
+            {/* Only show reason if admin provided one (not system default) */}
+            {hasValidReason && (
+              <Text 
+                as="span" 
+                color={notification.pointsChange > 0 ? "yellow.300" : "orange.300"}
+                fontWeight="bold"
+                display="block"
+                mt={1}
+              >
+                Reason: {notification.reason}
+              </Text>
+            )}
+            
+            {/* Only show criteria details for assessment notifications */}
+            {isAssessment && notification.criteria && (
+              <Text 
+                as="span" 
+                color="cyan.200"
+                fontWeight="bold"
+                display="block"
+                mt={1}
+              >
+                Criteria: {standardizeCriteria(notification.criteria)}
+              </Text>
+            )}
+            
+            {/* Only show level details for assessment notifications */}
+            {isAssessment && notification.level && (
+              <Text 
+                as="span" 
+                color={
+                  notification.level.toLowerCase().includes('excellent') ? 'green.300' :
+                  notification.level.toLowerCase().includes('good') ? 'blue.300' :
+                  notification.level.toLowerCase().includes('satisfactory') ? 'yellow.300' :
+                  notification.level.toLowerCase().includes('poor') ? 'red.300' :
+                  'gray.300'
+                }
+                fontWeight="bold"
+                display="block"
+                mt={1}
+              >
+                Level: {standardizeLevel(notification.level)}
+              </Text>
+            )}
+          </>
+        )}
+        
+        {!notification.pointsChange && notification.message}
+      </Text>
+    </Box>
+  );
+});
 
 export default NotificationDisplay;
