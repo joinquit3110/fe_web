@@ -260,10 +260,59 @@ const NotificationDisplay = () => {
   }, []);
   
   // Optimize socket notification processing
+  const processSocketNotifications = useCallback((newNotifications) => {
+    if (!newNotifications || newNotifications.length === 0) return;
+    
+    console.log('[NOTIFICATION] Processing socket notifications:', newNotifications);
+    
+    // Keep track of point update notification ids to avoid duplicates
+    const pointUpdateIds = new Set();
+    
+    const processedNotifications = newNotifications.map(notification => {
+      // Create a unique identifier based on content for deduplication
+      const notificationKey = `${notification.type}_${notification.title}_${notification.message}`;
+      
+      // Check if this is a point update notification
+      const isPointUpdate = notification.id && notification.id.includes('points_update');
+      
+      // If we've already seen this point update notification, skip it
+      if (isPointUpdate) {
+        if (pointUpdateIds.has(notificationKey)) {
+          console.log('[NOTIFICATION] Skipping duplicate point update:', notification);
+          return null;
+        }
+        pointUpdateIds.add(notificationKey);
+      }
+      
+      // Create socket notification with additional properties
+      const socketNotification = {
+        ...notification,
+        id: notification.id || `socket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        source: 'socket',
+        read: false,
+        visible: true,
+        created: notification.timestamp || new Date()
+      };
+      
+      console.log('[NOTIFICATION] Created socket notification item:', socketNotification);
+      return socketNotification;
+    }).filter(Boolean); // Remove null entries (duplicates)
+    
+    // Only update state if we have valid notifications
+    if (processedNotifications.length > 0) {
+      notificationQueue.current.push(...processedNotifications);
+      
+      if (!processingQueue.current) {
+        animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
+      }
+    }
+  }, []);
+  
+  // Optimize socket notification processing with useEffect hook
   useEffect(() => {
     if (socketNotifications.length === 0) return;
     
-    // Use the new processSocketNotifications function
+    // Use the processSocketNotifications function
     processSocketNotifications(socketNotifications);
   }, [socketNotifications, processSocketNotifications]);
   
