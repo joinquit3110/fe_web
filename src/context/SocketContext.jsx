@@ -17,6 +17,7 @@ export const SocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
+  const [housePoints, setHousePoints] = useState({}); // Add housePoints state
   const { user, isAuthenticated, setUser } = useAuth();
   
   // Track recent notification keys to prevent duplicates
@@ -554,6 +555,7 @@ export const SocketProvider = ({ children }) => {
         lastMessage,
         notifications,
         lastHeartbeat,
+        housePoints,
         sendMessage,
         requestSync,
         clearNotifications,
