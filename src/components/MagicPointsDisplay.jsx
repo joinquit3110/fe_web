@@ -253,50 +253,96 @@ const MagicPointsDisplay = () => {
       
       setPrevPoints(magicPoints);
     }
-    
-    return () => {
-      if (pointChangeTimeoutRef.current) {
-        clearTimeout(pointChangeTimeoutRef.current);
-      }
-    };
   }, [magicPoints, prevPoints]);
-
-  // Listen for special real-time updates from server
+  
+  // Listen for direct socket updates to sync display with server value 
   useEffect(() => {
-    const handleMagicPointsUIUpdate = (event) => {
-      if (event.detail?.source === 'adminReset' || event.detail?.isSignificantChange) {
-        // Show special animation for admin resets or significant changes
-        try {
-          const pointsDisplay = document.querySelector('.magic-points-indicator');
-          if (pointsDisplay) {
-            // Add special effect class
-            const isReset = event.detail.source === 'adminReset';
-            pointsDisplay.classList.add(isReset ? 'admin-reset' : 'admin-update');
-            
-            // Shake effect for resets
-            if (isReset) {
-              pointsDisplay.style.animation = 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both, magical-glow 2s infinite';
+    const handleDirectPointsUpdate = (event) => {
+      console.log('[POINTS_DISPLAY] Received direct points update event:', event.detail);
+      
+      // If we receive a direct update from the server with a different points value
+      if (event.detail?.points !== undefined) {
+        const newPoints = parseInt(event.detail.points, 10);
+        if (!isNaN(newPoints)) {
+          console.log(`[POINTS_DISPLAY] Updating points display from ${magicPoints} to ${newPoints}`);
+          
+          // Calculate point difference for animation
+          const pointDiff = newPoints - magicPoints;
+          if (pointDiff !== 0) {
+            // Clear previous timeout if still running
+            if (pointChangeTimeoutRef.current) {
+              clearTimeout(pointChangeTimeoutRef.current);
             }
             
-            // Remove after animation completes
-            setTimeout(() => {
-              pointsDisplay.classList.remove(isReset ? 'admin-reset' : 'admin-update');
-              if (isReset) {
-                pointsDisplay.style.animation = 'magical-glow 2s infinite';
+            setPointChangeAmount(pointDiff);
+            setShowPointChange(true);
+            
+            // Add special visual effect for big changes
+            const isMajorChange = Math.abs(pointDiff) >= 20;
+            const isReset = newPoints === 100 && magicPoints !== 100;
+            
+            if (isMajorChange || isReset) {
+              try {
+                const pointsDisplay = document.querySelector('.magic-points-indicator');
+                if (pointsDisplay) {
+                  // Reset animation
+                  pointsDisplay.style.animation = 'none';
+                  void pointsDisplay.offsetWidth; // Trigger reflow
+                  
+                  // Apply appropriate animation
+                  if (isReset) {
+                    pointsDisplay.classList.add('reset-pulse');
+                    setTimeout(() => pointsDisplay.classList.remove('reset-pulse'), 3000);
+                  } else if (pointDiff > 0) {
+                    pointsDisplay.classList.add('major-increase');
+                    setTimeout(() => pointsDisplay.classList.remove('major-increase'), 3000);
+                  } else {
+                    pointsDisplay.classList.add('major-decrease');
+                    setTimeout(() => pointsDisplay.classList.remove('major-decrease'), 3000);
+                  }
+                }
+              } catch (error) {
+                console.error('[POINTS_DISPLAY] Animation error:', error);
               }
-            }, 3000);
+            }
+            
+            // Hide after animation completes
+            pointChangeTimeoutRef.current = setTimeout(() => {
+              setShowPointChange(false);
+            }, 1500);
           }
-        } catch (error) {
-          console.error('Error creating reset visual effects:', error);
+          
+          // Update the previous points to match the new value
+          setPrevPoints(newPoints);
         }
       }
     };
     
-    window.addEventListener('magicPointsUIUpdate', handleMagicPointsUIUpdate);
+    // Listen for all possible point update events
+    window.addEventListener('magicPointsUpdated', handleDirectPointsUpdate);
+    window.addEventListener('serverSyncCompleted', handleDirectPointsUpdate);
+    window.addEventListener('magicPointsUIUpdate', handleDirectPointsUpdate);
+    
+    // Listen for house points updates (these affect user's house total)
+    window.addEventListener('house-points-update', (event) => {
+      console.log('[POINTS_DISPLAY] Received house-points-update event:', event.detail);
+      
+      // This might not update local points directly, but we should refresh
+      // our display to stay in sync with the latest server value
+      setTimeout(() => {
+        if (typeof logCurrentPoints === 'function') {
+          logCurrentPoints();
+        }
+      }, 500);
+    });
+    
     return () => {
-      window.removeEventListener('magicPointsUIUpdate', handleMagicPointsUIUpdate);
+      window.removeEventListener('magicPointsUpdated', handleDirectPointsUpdate);
+      window.removeEventListener('serverSyncCompleted', handleDirectPointsUpdate);
+      window.removeEventListener('magicPointsUIUpdate', handleDirectPointsUpdate);
+      window.removeEventListener('house-points-update', handleDirectPointsUpdate);
     };
-  }, []);
+  }, [magicPoints, logCurrentPoints]);
 
   // Format the last synced time
   const formatLastSynced = () => {

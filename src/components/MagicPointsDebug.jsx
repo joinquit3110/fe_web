@@ -46,6 +46,35 @@ const MagicPointsDebug = () => {
     setDebugData(data);
   }, [debugPointsState]);
   
+  // Listen for magic points updates from socket events
+  useEffect(() => {
+    const handlePointsUpdate = (event) => {
+      console.log('[DEBUG] Received magicPointsUpdated event:', event.detail);
+      
+      // Directly update debugData with the new points value from the event
+      if (event.detail?.points !== undefined) {
+        setDebugData(prevData => ({
+          ...prevData,
+          magicPoints: event.detail.points
+        }));
+      } else {
+        // Fallback to fetching the full state
+        const data = debugPointsState(true); // Silent mode for automatic updates
+        setDebugData(data);
+      }
+    };
+    
+    window.addEventListener('magicPointsUpdated', handlePointsUpdate);
+    window.addEventListener('serverSyncCompleted', handlePointsUpdate);
+    window.addEventListener('magicPointsUIUpdate', handlePointsUpdate);
+    
+    return () => {
+      window.removeEventListener('magicPointsUpdated', handlePointsUpdate);
+      window.removeEventListener('serverSyncCompleted', handlePointsUpdate);
+      window.removeEventListener('magicPointsUIUpdate', handlePointsUpdate);
+    };
+  }, [debugPointsState]);
+  
   // Refresh debug data every 2 seconds (silently)
   useEffect(() => {
     if (showDebug) {

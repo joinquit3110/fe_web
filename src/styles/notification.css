@@ -1,0 +1,159 @@
+/* Notification Effects */
+.notification-container {
+  position: relative;
+  filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.5));
+  padding: 4px;
+  pointer-events: auto;
+  transform-origin: center top;
+}
+
+/* Type-specific styling */
+.notification-container.success .magical-notification {
+  background: linear-gradient(to bottom, rgba(32, 40, 80, 0.92), rgba(20, 25, 60, 0.95));
+  border: 2px solid rgba(40, 167, 69, 0.7);
+}
+
+.notification-container.warning .magical-notification {
+  background: linear-gradient(to bottom, rgba(50, 30, 40, 0.92), rgba(40, 20, 30, 0.95));
+  border: 2px solid rgba(255, 193, 7, 0.7);
+}
+
+.notification-container.announcement .magical-notification {
+  background: linear-gradient(to bottom, rgba(40, 40, 90, 0.92), rgba(30, 30, 70, 0.95));
+  border: 2px solid rgba(13, 110, 253, 0.7);
+}
+
+/* Magical Glow Effect */
+.magical-notification {
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  animation: magical-pulse 3s infinite;
+}
+
+@keyframes magical-pulse {
+  0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
+  100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+}
+
+/* Notification Glow Bar */
+.notification-glow-bar {
+  animation: glow-bar-animation 2s infinite;
+}
+
+@keyframes glow-bar-animation {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Notification Title Animation */
+.notification-title {
+  animation: title-glow 1.5s infinite;
+}
+
+@keyframes title-glow {
+  0% { text-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
+  50% { text-shadow: 0 0 10px rgba(255, 215, 0, 0.9), 0 0 15px rgba(255, 215, 0, 0.4); }
+  100% { text-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
+}
+
+/* Icon Animation */
+.notification-icon-container {
+  position: relative;
+  animation: icon-float 3s ease-in-out infinite;
+}
+
+@keyframes icon-float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+.notification-icon {
+  animation: icon-shine 3s infinite;
+}
+
+@keyframes icon-shine {
+  0% { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+  100% { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)); }
+}
+
+/* Magical Sparkles */
+.magical-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.sparkle-1 {
+  top: 15%;
+  right: 10%;
+  animation: sparkle-float 3s ease-in-out infinite, sparkle-fade 3s infinite 0.5s;
+}
+
+.sparkle-2 {
+  bottom: 20%;
+  right: 30%;
+  animation: sparkle-float 4s ease-in-out infinite, sparkle-fade 4s infinite 1s;
+}
+
+.sparkle-3 {
+  bottom: 30%;
+  left: 10%;
+  animation: sparkle-float 5s ease-in-out infinite, sparkle-fade 5s infinite 1.5s;
+}
+
+@keyframes sparkle-float {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(5px, -5px); }
+  66% { transform: translate(-5px, 5px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes sparkle-fade {
+  0% { opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .magical-notification {
+    max-width: 95vw;
+  }
+  
+  .notification-icon-container {
+    margin-right: 10px;
+  }
+  
+  .notification-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Special effects for house points notifications */
+.notification-container.success .notification-title,
+.notification-container.warning .notification-title {
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+}
+
+.notification-reason {
+  opacity: 0.8;
+  animation: reason-appear 0.5s forwards 0.5s;
+  transform: translateY(5px);
+}
+
+@keyframes reason-appear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+} 

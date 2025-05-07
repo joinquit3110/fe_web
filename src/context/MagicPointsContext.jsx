@@ -786,13 +786,55 @@ export const MagicPointsProvider = ({ children }) => {
           }
         } else if (data.type === 'user_update') {
           // Direct user update (e.g., house change, points change)
-          console.log('[POINTS] Received user update:', data.data);
+          console.log('[POINTS] Received user update:', data);
+
+          // Check if this is a magic points update message
+          if (data.message && data.message.includes('magic points')) {
+            console.log('[POINTS] Detected magic points update message:', data.message);
+            
+            // Parse points value from message
+            const pointsMatch = data.message.match(/updated to (\d+)/);
+            if (pointsMatch && pointsMatch[1]) {
+              const newPoints = parseInt(pointsMatch[1], 10);
+              if (!isNaN(newPoints)) {
+                console.log(`[POINTS] Updating points from server message to: ${newPoints} (previous: ${magicPoints})`);
+                setMagicPoints(newPoints);
+                localStorage.setItem('magicPoints', newPoints.toString());
+                localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+                
+                // Clear any pending operations since the server is now the source of truth
+                setPendingOperations([]);
+                localStorage.removeItem('pendingOperations');
+                setPendingChanges(false);
+                
+                // Dispatch event for UI components to refresh
+                const syncEvent = new CustomEvent('serverSyncCompleted', {
+                  detail: { 
+                    source: 'pointsUpdate',
+                    timestamp: new Date().toISOString(),
+                    points: newPoints
+                  }
+                });
+                window.dispatchEvent(syncEvent);
+                
+                // Also update debug menu display
+                const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+                  detail: { 
+                    points: newPoints,
+                    source: 'serverUpdate',
+                    timestamp: new Date().toISOString()
+                  }
+                });
+                window.dispatchEvent(uiUpdateEvent);
+              }
+            }
+          }
           
-          // If magic points were updated, reflect that change immediately
+          // If magic points were updated in the updatedFields, reflect that change immediately
           if (data.data?.updatedFields?.magicPoints !== undefined) {
             const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
             if (!isNaN(newPoints)) {
-              console.log(`[POINTS] Updating points from server to: ${newPoints}`);
+              console.log(`[POINTS] Updating points from server updatedFields to: ${newPoints} (previous: ${magicPoints})`);
               setMagicPoints(newPoints);
               localStorage.setItem('magicPoints', newPoints.toString());
               localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
@@ -806,10 +848,21 @@ export const MagicPointsProvider = ({ children }) => {
               const syncEvent = new CustomEvent('serverSyncCompleted', {
                 detail: { 
                   source: 'pointsUpdate',
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
+                  points: newPoints
                 }
               });
               window.dispatchEvent(syncEvent);
+              
+              // Also update debug menu display
+              const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+                detail: { 
+                  points: newPoints,
+                  source: 'serverUpdate',
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(uiUpdateEvent);
             }
           }
           
@@ -827,34 +880,34 @@ export const MagicPointsProvider = ({ children }) => {
             });
             window.dispatchEvent(syncEvent);
           }
-        }
-      } else if (event.detail?.type === 'global_update') {
-        // Handle global updates that affect all users
-        console.log('[POINTS] Received global update:', event.detail.data);
-        
-        // For certain types of updates, always check server for changes
-        if (['user_house_changed', 'house_points_bulk_update'].includes(event.detail.data.type)) {
-          // Stagger the sync to prevent server overload
-          const randomDelay = Math.floor(Math.random() * 2000) + 500; // 0.5-2.5 seconds
-          setTimeout(() => {
-            if (checkServerPointsRef.current) {
-              checkServerPointsRef.current();
-            }
-          }, randomDelay);
-        }
-      } else if (event.detail?.type === 'house_update') {
-        // Handle house-specific updates
-        console.log('[POINTS] Received house update:', event.detail.data);
-        
-        // Check for points updates from the server for all house members
-        if (['house_points_changed', 'member_points_changed'].includes(event.detail.data.type)) {
-          // Stagger the sync to prevent server overload
-          const randomDelay = Math.floor(Math.random() * 1500) + 500; // 0.5-2 seconds
-          setTimeout(() => {
-            if (checkServerPointsRef.current) {
-              checkServerPointsRef.current();
-            }
-          }, randomDelay);
+        } else if (event.detail?.type === 'global_update') {
+          // Handle global updates that affect all users
+          console.log('[POINTS] Received global update:', event.detail.data);
+          
+          // For certain types of updates, always check server for changes
+          if (['user_house_changed', 'house_points_bulk_update'].includes(event.detail.data.type)) {
+            // Stagger the sync to prevent server overload
+            const randomDelay = Math.floor(Math.random() * 2000) + 500; // 0.5-2.5 seconds
+            setTimeout(() => {
+              if (checkServerPointsRef.current) {
+                checkServerPointsRef.current();
+              }
+            }, randomDelay);
+          }
+        } else if (event.detail?.type === 'house_update') {
+          // Handle house-specific updates
+          console.log('[POINTS] Received house update:', event.detail.data);
+          
+          // Check for points updates from the server for all house members
+          if (['house_points_changed', 'member_points_changed'].includes(event.detail.data.type)) {
+            // Stagger the sync to prevent server overload
+            const randomDelay = Math.floor(Math.random() * 1500) + 500; // 0.5-2 seconds
+            setTimeout(() => {
+              if (checkServerPointsRef.current) {
+                checkServerPointsRef.current();
+              }
+            }, randomDelay);
+          }
         }
       }
     };

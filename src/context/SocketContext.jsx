@@ -454,10 +454,31 @@ export const SocketProvider = ({ children }) => {
   // Helper to handle magic points updates
   const handleMagicPointsUpdate = (updatedFields) => {
     if (user && setUser) {
+      const oldPoints = user.magicPoints || 0;
+      const newPoints = updatedFields.magicPoints;
+      
+      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
+      
+      // Update the user object
       setUser(prev => ({
         ...prev,
-        magicPoints: updatedFields.magicPoints
+        magicPoints: newPoints
       }));
+      
+      // Also notify the MagicPointsContext via a custom event
+      if (typeof window !== 'undefined') {
+        const pointsEvent = new CustomEvent('magicPointsUpdated', {
+          detail: {
+            points: newPoints,
+            source: 'serverSync',
+            immediate: true,
+            oldPoints: oldPoints,
+            timestamp: new Date().toISOString()
+          }
+        });
+        console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
+        window.dispatchEvent(pointsEvent);
+      }
     }
   };
 

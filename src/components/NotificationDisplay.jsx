@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex } from '@chakra-ui/react';
+import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import '../styles/notification.css';
 // Import the image assets
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
