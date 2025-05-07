@@ -5,6 +5,10 @@ import {
 } from '@chakra-ui/react';
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
+import slytherinLogo from '../asset/Slytherin.png';
+import ravenclawLogo from '../asset/Ravenclaw.png';
+import gryffindorLogo from '../asset/Gryffindor.png';
+import hufflepuffLogo from '../asset/Hufflepuff.png';
 
 const Leaderboard = () => {
   const { users, fetchUsers } = useAdmin();
@@ -17,12 +21,12 @@ const Leaderboard = () => {
     hufflepuff: { points: 0, users: 0 }
   });
 
-  // House definitions
+  // House definitions with logo
   const houses = [
-    { value: 'gryffindor', label: 'Gryffindor', color: 'red.500', bgColor: '#740001', textColor: '#FFC500' },
-    { value: 'slytherin', label: 'Slytherin', color: 'green.500', bgColor: '#1A472A', textColor: '#AAAAAA' },
-    { value: 'ravenclaw', label: 'Ravenclaw', color: 'blue.500', bgColor: '#0E1A40', textColor: '#946B2D' },
-    { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000' }
+    { value: 'gryffindor', label: 'Gryffindor', color: 'red.500', bgColor: '#740001', textColor: '#FFC500', logo: gryffindorLogo },
+    { value: 'slytherin', label: 'Slytherin', color: 'green.500', bgColor: '#1A472A', textColor: '#AAAAAA', logo: slytherinLogo },
+    { value: 'ravenclaw', label: 'Ravenclaw', color: 'blue.500', bgColor: '#0E1A40', textColor: '#946B2D', logo: ravenclawLogo },
+    { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000', logo: hufflepuffLogo }
   ];
 
   useEffect(() => {
@@ -105,7 +109,7 @@ const Leaderboard = () => {
             padding: "0 30px",
             position: "relative"
           }}>
-            Hogwarts House Leaderboard
+            Hogwarts House Cup Leaderboard
             <span style={{
               position: "absolute",
               bottom: "-5px",
@@ -123,7 +127,7 @@ const Leaderboard = () => {
             <Spinner size="xl" color="var(--secondary-color)" thickness="4px" />
           </Flex>
         ) : (
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5} className="admin-stats-grid">
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={7} className="admin-stats-grid">
             {sortedHouses.map((house, index) => (
               <Box
                 key={house.value}
@@ -131,7 +135,14 @@ const Leaderboard = () => {
                 style={{
                   background: `linear-gradient(135deg, ${house.bgColor}, ${house.bgColor}CC)`,
                   color: house.textColor,
-                  position: 'relative'
+                  position: 'relative',
+                  boxShadow: index === 0 ? '0 0 30px 8px gold, 0 0 10px 2px #fff' : '0 2px 12px rgba(0,0,0,0.3)',
+                  border: index === 0 ? '3px solid gold' : '2px solid #fff',
+                  borderRadius: '18px',
+                  overflow: 'hidden',
+                  minHeight: '220px',
+                  marginTop: index === 0 ? '-10px' : '0',
+                  zIndex: index === 0 ? 2 : 1
                 }}
               >
                 {index === 0 && (
@@ -144,40 +155,63 @@ const Leaderboard = () => {
                     color="black"
                     p={2}
                     fontWeight="bold"
-                    boxShadow="0 0 15px gold"
+                    fontSize="lg"
+                    boxShadow="0 0 20px gold"
                   >
-                    #1
+                    🏆 House Champion
                   </Badge>
                 )}
-                <Box className="admin-card-body">
-                  <Flex justify="space-between" align="center">
-                    <VStack align="start" spacing={0}>
-                      <Heading size="md">{house.label}</Heading>
-                      <Badge 
-                        className="house-badge"
-                        style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.2)",
-                          color: house.textColor
-                        }}
-                      >
-                        {houseStats[house.value]?.users || 0} students
-                      </Badge>
-                    </VStack>
-                    
-                    <Box 
-                      p={3} 
-                      borderRadius="full" 
-                      bg={`${house.textColor}DD`}
-                      color={house.bgColor}
-                      fontWeight="bold"
-                      fontSize="2xl"
-                      className="point-badge"
-                    >
-                      {houseStats[house.value]?.points || 0}
-                    </Box>
-                  </Flex>
-                  
-                  <HStack mt={4} justify="space-between">
+                <Flex direction="column" align="center" justify="center" h="100%">
+                  <img 
+                    src={house.logo} 
+                    alt={`${house.label} crest`} 
+                    style={{
+                      width: '90px',
+                      height: 'auto',
+                      marginTop: '18px',
+                      marginBottom: '8px',
+                      filter: index === 0 ? 'drop-shadow(0 0 16px gold)' : 'drop-shadow(0 0 8px #fff)',
+                      transition: 'filter 0.3s',
+                      zIndex: 2
+                    }}
+                  />
+                  <Heading size="lg" mt={2} mb={1} style={{
+                    fontFamily: 'Cinzel, serif',
+                    letterSpacing: '2px',
+                    color: house.textColor,
+                    textShadow: index === 0 ? '0 0 10px gold' : '0 0 6px #fff',
+                    fontWeight: 700
+                  }}>{house.label}</Heading>
+                  <Badge 
+                    className="house-badge"
+                    style={{
+                      backgroundColor: "rgba(255, 255, 255, 0.18)",
+                      color: house.textColor,
+                      fontSize: '1rem',
+                      marginBottom: '6px',
+                      marginTop: '2px',
+                      border: '1.5px solid #fff',
+                      borderRadius: '12px',
+                      padding: '4px 16px',
+                      fontWeight: 600
+                    }}
+                  >
+                    {houseStats[house.value]?.users || 0} students
+                  </Badge>
+                  <Box 
+                    p={3} 
+                    borderRadius="full" 
+                    bg={index === 0 ? 'gold' : `${house.textColor}DD`}
+                    color={index === 0 ? house.bgColor : house.bgColor}
+                    fontWeight="bold"
+                    fontSize="2.5rem"
+                    className="point-badge"
+                    boxShadow={index === 0 ? '0 0 20px gold' : '0 0 8px #fff'}
+                    mt={2}
+                  >
+                    {houseStats[house.value]?.points || 0}
+                  </Box>
+                  <HStack mt={4} justify="space-between" w="100%">
                     <Text fontSize="sm" opacity={0.9}>
                       Average points per student
                     </Text>
@@ -185,7 +219,7 @@ const Leaderboard = () => {
                       Rank: #{index + 1}
                     </Text>
                   </HStack>
-                </Box>
+                </Flex>
               </Box>
             ))}
           </SimpleGrid>

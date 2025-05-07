@@ -13,7 +13,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
   };
 
   return (
-    <div className="tab-navigation" style={{ fontSize: '0.6em' }}>
+    <div className="tab-navigation">
       <button 
         className={`tab-button ${activeTab === 'activity1' ? 'active' : ''}`}
         onClick={() => handleTabClick('activity1')}

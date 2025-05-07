@@ -394,6 +394,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
   const [showInputValidation, setShowInputValidation] = useState(false); // Add state to control validation color display
   const [showSpellInput, setShowSpellInput] = useState(false); // Display spell input box
   const [spellInput, setSpellInput] = useState(''); // Input for spell
+  const [persistedPoints, setPersistedPoints] = useState(new Map());
 
   const originMemo = useMemo(() => ({
     x: canvasWidth / 2,
@@ -1599,9 +1600,8 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Optimize the findValidIntersections function to prevent lag
   const findValidIntersections = useCallback(() => {
-    // Use a functional update to avoid dependency on intersectionPoints
     setIntersectionPoints(prevPoints => {
-    const newPoints = [];
+      const newPoints = [];
       
       // Create a map for quick lookup of existing points
       const existingPointsMap = new Map();
@@ -1612,63 +1612,65 @@ const CoordinatePlane = forwardRef((props, ref) => {
       
       // Process each pair of inequalities only once
       const processedPairs = new Set();
-    
-    inequalities.forEach((eq1, i) => {
-        inequalities.slice(i + 1).forEach((eq2, j) => {
-          // Generate a unique key for this pair
-          const pairKey = `${eq1.label}-${eq2.label}`;
       
-          // Skip if we've already processed this pair
+      inequalities.forEach((eq1, i) => {
+        inequalities.slice(i + 1).forEach((eq2, j) => {
+          const pairKey = `${eq1.label}-${eq2.label}`;
+          
           if (processedPairs.has(pairKey)) return;
           processedPairs.add(pairKey);
-        
-          // Calculate intersection
-        const pt = computeIntersection(eq1, eq2);
+          
+          const pt = computeIntersection(eq1, eq2);
           
           if (pt) {
-          // Check if point is in the non-solution region of another inequality
-          const isInNonSolutionRegion = inequalities.some(eq3 => {
-              // Only check with other inequalities
+            const isInNonSolutionRegion = inequalities.some(eq3 => {
               if (eq3 === eq1 || eq3 === eq2) return false;
-              // Check if point is in the solution region of this inequality
-            const isInSolution = checkPointInInequality(eq3, pt);
-            return !isInSolution; // true if point is in the non-solution region
-          });
-  
-            // Only display intersection if it is NOT in the non-solution region
-          if (!isInNonSolutionRegion) {
-              // Use a key to quickly check for existing points
+              const isInSolution = checkPointInInequality(eq3, pt);
+              return !isInSolution;
+            });
+            
+            if (!isInNonSolutionRegion) {
               const key = `${pt.x.toFixed(6)},${pt.y.toFixed(6)}`;
-  
+              
               if (existingPointsMap.has(key)) {
-                // Reuse existing point to preserve status
                 newPoints.push(existingPointsMap.get(key));
-            } else {
-                // Create new point
-              newPoints.push({
-                x: pt.x,
-                y: pt.y,
-                status: POINT_STATUS.UNSOLVED,
-                correct: { x: pt.x, y: pt.y }
-              });
+              } else if (persistedPoints.has(key)) {
+                // Use persisted point if it exists
+                newPoints.push(persistedPoints.get(key));
+              } else {
+                newPoints.push({
+                  x: pt.x,
+                  y: pt.y,
+                  status: POINT_STATUS.UNSOLVED,
+                  correct: { x: pt.x, y: pt.y }
+                });
+              }
             }
           }
+        });
+      });
+      
+      // Update persisted points with any new solved points
+      const newPersistedPoints = new Map(persistedPoints);
+      newPoints.forEach(point => {
+        if (point.status === POINT_STATUS.SOLVED) {
+          const key = `${point.x.toFixed(6)},${point.y.toFixed(6)}`;
+          newPersistedPoints.set(key, point);
         }
       });
-    });
-  
-      // Compare with previous points to avoid unnecessary updates
+      setPersistedPoints(newPersistedPoints);
+      
       if (prevPoints.length === newPoints.length && 
           prevPoints.every((pt, i) => 
             Math.abs(pt.x - newPoints[i].x) < EPSILON && 
             Math.abs(pt.y - newPoints[i].y) < EPSILON && 
             pt.status === newPoints[i].status)) {
-        return prevPoints; // Return previous points to avoid re-render
+        return prevPoints;
       }
       
       return newPoints;
     });
-  }, [inequalities, computeIntersection, checkPointInInequality]);
+  }, [inequalities, computeIntersection, checkPointInInequality, persistedPoints]);
 
   const handleCheckCoordinates = useCallback(() => {
     if (!activePoint) return;
@@ -1818,8 +1820,9 @@ const CoordinatePlane = forwardRef((props, ref) => {
       setActivePoint(null);
       setInputCoords({ x: '', y: '' });
       
-      // Clear intersection points
+      // Clear intersection points and persisted points
       setIntersectionPoints([]);
+      setPersistedPoints(new Map());
       
       // Redraw the canvas
       redraw();

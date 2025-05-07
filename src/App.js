@@ -85,7 +85,7 @@ const AppContent = () => {
   const [activeTab, setActiveTab] = useState('activity1'); // Default to Activity 1 instead of Activity 2
   const [inequalities, setInequalities] = useState([]);
   const [message, setMessage] = useState({ 
-    text: "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality.", 
+    text: "Cast your first spell by entering an inequality!", 
     type: "info" 
   });
   const [hoveredEq, setHoveredEq] = useState(null);

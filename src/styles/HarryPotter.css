@@ -2562,3 +2562,41 @@ canvas {
     overflow-y: auto;
   }
 }
+
+.tab-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-family: 'Cinzel', serif;
+  color: #D3A625;
+  background: transparent;
+  border: 1px solid #D3A625;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tab-button:hover {
+  background: rgba(211, 166, 37, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(211, 166, 37, 0.2);
+}
+
+.tab-button.active {
+  background: #D3A625;
+  color: #000;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(211, 166, 37, 0.3);
+}
