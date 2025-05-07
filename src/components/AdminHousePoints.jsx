@@ -468,14 +468,14 @@ const AdminHousePoints = () => {
                       
                       <VStack spacing={3}>
                         <Button 
-                          onClick={() => handleSubtractPoints(selectedHouse)}
-                          isLoading={buttonLoading[`${selectedHouse}Minus`]}
+                          onClick={() => handleAddPoints(selectedHouse, -10)}
+                          isLoading={buttonLoading[`${selectedHouse}-10`]}
                           leftIcon={<Text as="span">-10</Text>}
-                          isDisabled={buttonLoading[`${selectedHouse}Minus`]}
+                          isDisabled={buttonLoading[`${selectedHouse}-10`]}
                           className="admin-button danger"
                           width="100%"
                         >
-                          Deduct Points
+                          Deduct 10 Points
                         </Button>
                       </VStack>
                     </SimpleGrid>

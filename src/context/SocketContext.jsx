@@ -158,6 +158,11 @@ export const SocketProvider = ({ children }) => {
 
     // Set the socket instance
     setSocket(socketInstance);
+    
+    // Make socket globally accessible for direct component use
+    if (typeof window !== 'undefined') {
+      window.socket = socketInstance;
+    }
 
     // Cleanup on unmount
     return () => {
@@ -272,12 +277,61 @@ export const SocketProvider = ({ children }) => {
       if (data.type === 'user_update' && data.data?.updatedFields) {
         handleUserUpdate(data.data.updatedFields);
       }
+      
+      // Convert sync_update with points change messages to notifications
+      if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
+        console.log('[SOCKET] Converting point update to notification:', data);
+        
+        // Parse points value from message
+        const pointsMatch = data.message.match(/updated to (\d+)/);
+        if (pointsMatch && pointsMatch[1] && user) {
+          const newPoints = parseInt(pointsMatch[1], 10);
+          const oldPoints = user.magicPoints || 0;
+          const pointsDiff = newPoints - oldPoints;
+          
+          if (pointsDiff !== 0) {
+            // Extract potential reason from data
+            const reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
+            
+            // Extract criteria/level if available
+            const criteria = data.criteria || data.data?.criteria || null;
+            const level = data.level || data.data?.level || null;
+            
+            // Create notification for points change
+            const notification = {
+              id: `points_update_${Date.now()}`,
+              type: pointsDiff > 0 ? 'success' : 'warning',
+              title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}`,
+              timestamp: new Date(),
+              pointsChange: pointsDiff,
+              reason: reason || 'System update',
+              criteria: criteria,
+              level: level,
+              house: user.house
+            };
+            
+            addNotification(notification);
+          }
+        }
+      }
     };
 
     const handleHousePointsUpdate = (data) => {
+      console.log('[SOCKET] Received house_points_update:', data);
       if (isAdminUser.current || user?.house === 'muggle' || !user?.house) return;
       
       if (data.house === user?.house) {
+        // Log detailed data to verify criteria and level
+        console.log('[SOCKET] Creating notification with data:', {
+          house: data.house,
+          points: data.points,
+          reason: data.reason,
+          criteria: data.criteria,
+          level: data.level,
+          timestamp: data.timestamp
+        });
+        
         const notification = createHousePointsNotification(data);
         addNotification(notification);
       }
@@ -344,10 +398,34 @@ export const SocketProvider = ({ children }) => {
 
   // Helper to format house points message
   const formatHousePointsMessage = (data) => {
-    let message = `House ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points! New total: ${data.newTotal}`;
-    if (data.criteria) message += `. Criteria: ${data.criteria}`;
-    if (data.level) message += `. Level: ${data.level}`;
-    if (data.reason && data.reason !== 'Admin action') message += `. Reason: ${data.reason}`;
+    // Start with base message
+    let message = `House ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points!`;
+    
+    // Add total if available
+    if (data.newTotal !== undefined) {
+      message += ` New total: ${data.newTotal}`;
+    }
+    
+    // Add reason, criteria, level in a consistent format
+    const details = [];
+    
+    if (data.reason && data.reason !== 'Admin action' && data.reason.trim() !== '') {
+      details.push(`Reason: ${data.reason}`);
+    }
+    
+    if (data.criteria && data.criteria !== null) {
+      details.push(`Criteria: ${data.criteria}`);
+    }
+    
+    if (data.level && data.level !== null) {
+      details.push(`Level: ${data.level}`);
+    }
+    
+    // Join all details with periods
+    if (details.length > 0) {
+      message += `. ${details.join('. ')}`;
+    }
+    
     return message;
   };
 

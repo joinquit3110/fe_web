@@ -170,6 +170,44 @@ const NotificationDisplay = () => {
     return () => clearInterval(interval);
   }, []);
   
+  // Listen for custom house points update events
+  useEffect(() => {
+    const handleHousePointsUpdate = (event) => {
+      console.log('[NOTIFICATION] Received house-points-update event:', event.detail);
+      
+      const { house, points, reason, criteria, level, timestamp } = event.detail;
+      if (!user || user.house !== house) return;
+      
+      // Create a house points notification directly
+      const notificationItem = {
+        id: `house_points_${Date.now()}`,
+        type: points > 0 ? 'success' : 'warning',
+        title: points > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+        message: `${Math.abs(points)} points ${points > 0 ? 'awarded to' : 'deducted from'} ${house}`,
+        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        source: 'custom-event',
+        duration: getDurationByType(points > 0 ? 'success' : 'warning'),
+        pointsChange: points,
+        reason: reason || 'House points update',
+        criteria,
+        level,
+        house: house
+      };
+      
+      notificationQueue.current.push(notificationItem);
+      
+      if (!processingQueue.current) {
+        requestAnimationFrame(processNotificationQueue);
+      }
+    };
+    
+    window.addEventListener('house-points-update', handleHousePointsUpdate);
+    
+    return () => {
+      window.removeEventListener('house-points-update', handleHousePointsUpdate);
+    };
+  }, [user]);
+  
   // Optimize notification queue processing
   const processNotificationQueue = useCallback(() => {
     if (processingQueue.current) return;

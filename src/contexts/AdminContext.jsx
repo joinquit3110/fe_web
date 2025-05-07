@@ -480,6 +480,40 @@ export const AdminProvider = ({ children }) => {
               }
             });
             console.log('House notification sent successfully');
+            
+            // Add direct socket notification using app.locals (if available)
+            try {
+              // Also send a direct socket event if there's an active socket connection
+              if (window.socket && typeof window.socket.emit === 'function') {
+                console.log('Sending house_points_update via socket');
+                window.socket.emit('client_house_notification', {
+                  house,
+                  points: pointsChange,
+                  reason,
+                  criteria: null,
+                  level: null,
+                  newTotal: houseUsers.reduce((total, user) => 
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                });
+              }
+              
+              // Dispatch a custom event for local notification display
+              // This will trigger notification display even if server sockets fail
+              const notificationEvent = new CustomEvent('house-points-update', {
+                detail: {
+                  house,
+                  points: pointsChange,
+                  reason,
+                  criteria: null,
+                  level: null,
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(notificationEvent);
+            } catch (socketError) {
+              console.error('Error with direct socket notification:', socketError);
+              // Socket error shouldn't fail the operation
+            }
           } catch (notifError) {
             // Log notification error but don't throw - this shouldn't stop the function
             console.error('Failed to send notification (non-critical):', notifError);
@@ -721,6 +755,40 @@ export const AdminProvider = ({ children }) => {
               }
             });
             console.log('Group criteria notification sent successfully');
+            
+            // Add direct socket notification using app.locals (if available)
+            try {
+              // Also send a direct socket event if there's an active socket connection
+              if (window.socket && typeof window.socket.emit === 'function') {
+                console.log('Sending group criteria house_points_update via socket');
+                window.socket.emit('client_house_notification', {
+                  house,
+                  points: pointsChange,
+                  reason: userReason,
+                  criteria: criteriaLabel,
+                  level: levelLabel,
+                  newTotal: houseUsers.reduce((total, user) => 
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                });
+              }
+              
+              // Dispatch a custom event for local notification display
+              // This will trigger notification display even if server sockets fail
+              const notificationEvent = new CustomEvent('house-points-update', {
+                detail: {
+                  house,
+                  points: pointsChange,
+                  reason: userReason,
+                  criteria: criteriaLabel,
+                  level: levelLabel,
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(notificationEvent);
+            } catch (socketError) {
+              console.error('Error with direct socket notification:', socketError);
+              // Socket error shouldn't fail the operation
+            }
           } catch (notifError) {
             console.error('Failed to send notification (non-critical):', notifError);
             
