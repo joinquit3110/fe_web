@@ -13,7 +13,7 @@ const AppContent = () => {
   const { user } = useAuth();
   const [inequalities, setInequalities] = useState([]);
   const [message, setMessage] = useState({ 
-    text: "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality.", 
+    text: "Cast your first spell by entering an inequality!", 
     type: "info" 
   });
   const [hoveredEq, setHoveredEq] = useState(null);
@@ -133,7 +133,7 @@ const AppContent = () => {
       
       {/* Message Box - Moved outside the main grid */}
       <div className={`message-box ${message.type}`}>
-        <div className="message-content">{message.text || "Welcome to Hogwarts School of Inequality Magic! Cast your first spell by entering an inequality."}</div>
+        <div className="message-content">{message.text || "Cast your first spell by entering an inequality!"}</div>
       </div>
 
       <div className="hogwarts-content">

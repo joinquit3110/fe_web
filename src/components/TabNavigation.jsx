@@ -13,24 +13,24 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
   };
 
   return (
-    <div className="tab-navigation">
+    <div className="tab-navigation" style={{ fontSize: '0.6em' }}>
       <button 
         className={`tab-button ${activeTab === 'activity1' ? 'active' : ''}`}
         onClick={() => handleTabClick('activity1')}
       >
-        {isAdmin ? 'Transfiguration Chamber' : 'Activity 1'}
+        {isAdmin ? 'Mutatio Chamber' : 'Reparo Gap‑us'}
       </button>
       <button 
         className={`tab-button ${activeTab === 'activity2' ? 'active' : ''}`}
         onClick={() => handleTabClick('activity2')}
       >
-        {isAdmin ? 'Wizardry Console' : 'Activity 2'}
+        {isAdmin ? 'Wizardry Console' : 'Expecto Graph‑tronum!'}
       </button>
       <button 
         className={`tab-button ${activeTab === 'leaderboard' ? 'active' : ''}`}
         onClick={() => handleTabClick('leaderboard')}
       >
-        Leaderboard
+        House Cup
       </button>
     </div>
   );

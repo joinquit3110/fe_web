@@ -17,7 +17,7 @@ const AdminHousePoints = () => {
     updateHousePoints,
     updateGroupCriteriaPoints,
     criteriaPoints,
-    loading,
+    loading: contextLoading,
     error,
     fetchUsers,
     forceSyncForUsers,
@@ -27,6 +27,30 @@ const AdminHousePoints = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  
+  // Individual loading states for each type of button
+  const [buttonLoading, setButtonLoading] = useState({
+    gryffindor10: false,
+    gryffindor20: false,
+    gryffindor50: false,
+    gryffindorMinus: false,
+    slytherin10: false,
+    slytherin20: false,
+    slytherin50: false,
+    slytherinMinus: false,
+    ravenclaw10: false,
+    ravenclaw20: false,
+    ravenclaw50: false,
+    ravenclawMinus: false,
+    hufflepuff10: false,
+    hufflepuff20: false,
+    hufflepuff50: false,
+    hufflepuffMinus: false,
+    customPoints: false
+  });
+
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = localLoading || contextLoading;
   
   const [houseStats, setHouseStats] = useState({
     gryffindor: 0,
@@ -120,119 +144,100 @@ const AdminHousePoints = () => {
     navigate('/admin');
   };
   
-  const handleAddPoints = async () => {
-    const pointReason = reason.trim() ? reason : "Points adjustment";
+  // Function to handle adding points
+  const handleAddPoints = async (house, points) => {
+    // Get button ID for this operation
+    const buttonId = `${house.toLowerCase()}${points}`;
+    
+    // Set just this button to loading state
+    setButtonLoading(prev => ({
+      ...prev,
+      [buttonId]: true
+    }));
     
     try {
-      const success = await updateHousePoints(selectedHouse, 10, pointReason);
-      
-      if (success) {
+      const reason = prompt(`Reason for awarding ${points} points to ${house}?`);
+      if (reason) {
+        await updateHousePoints(house, points, reason);
         toast({
-          title: 'Points Added',
-          description: `10 points awarded to ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
-          status: 'success',
-          duration: 2000,
+          title: "Points Awarded!",
+          description: `${points} points have been added to ${house}.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
         });
-        setReason('');
-        
-        setTimeout(() => {
-          forceSyncAllHouseUsers(selectedHouse);
-        }, 500);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(`Error adding points to ${house}:`, error);
       toast({
-        title: 'Error',
-        description: err.message || 'Failed to add points',
-        status: 'error',
-        duration: 3000,
+        title: "Error",
+        description: `Failed to add points to ${house}: ${error.message || 'Unknown error'}`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
       });
+    } finally {
+      // Reset only this button's loading state
+      setButtonLoading(prev => ({
+        ...prev,
+        [buttonId]: false
+      }));
     }
   };
   
-  const handleDeductPoints = async () => {
-    const pointReason = reason.trim() ? reason : "Points deduction";
+  // Function to handle subtracting points
+  const handleSubtractPoints = async (house) => {
+    // Get button ID for this operation
+    const buttonId = `${house.toLowerCase()}Minus`;
+    
+    // Set just this button to loading state
+    setButtonLoading(prev => ({
+      ...prev,
+      [buttonId]: true
+    }));
     
     try {
-      const success = await updateHousePoints(selectedHouse, -10, pointReason);
+      const pointsStr = prompt(`How many points to deduct from ${house}?`);
+      if (!pointsStr) return;
       
-      if (success) {
+      const points = -Math.abs(parseInt(pointsStr, 10));
+      if (isNaN(points)) {
         toast({
-          title: 'Points Deducted',
-          description: `10 points deducted from ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
-          status: 'success',
-          duration: 2000,
+          title: "Invalid Input",
+          description: "Please enter a valid number.",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
         });
-        setReason('');
-        
-        setTimeout(() => {
-          forceSyncAllHouseUsers(selectedHouse);
-        }, 500);
+        return;
       }
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: err.message || 'Failed to deduct points',
-        status: 'error',
-        duration: 3000,
-      });
-    }
-  };
-  
-  const handleAddCustomPoints = async (amount) => {
-    const pointReason = reason.trim() ? reason : "Points adjustment";
-    
-    try {
-      const success = await updateHousePoints(selectedHouse, amount, pointReason);
       
-      if (success) {
+      const reason = prompt(`Reason for deducting ${Math.abs(points)} points from ${house}?`);
+      if (reason) {
+        await updateHousePoints(house, points, reason);
         toast({
-          title: 'Points Added',
-          description: `${amount} points awarded to ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
-          status: 'success',
-          duration: 2000,
+          title: "Points Deducted!",
+          description: `${Math.abs(points)} points have been deducted from ${house}.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
         });
-        setReason('');
-        
-        setTimeout(() => {
-          forceSyncAllHouseUsers(selectedHouse);
-        }, 500);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(`Error deducting points from ${house}:`, error);
       toast({
-        title: 'Error',
-        description: err.message || `Failed to add ${amount} points`,
-        status: 'error',
-        duration: 3000,
+        title: "Error",
+        description: `Failed to deduct points from ${house}: ${error.message || 'Unknown error'}`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
       });
-    }
-  };
-  
-  const handleDeductCustomPoints = async (amount) => {
-    const pointReason = reason.trim() ? reason : "Points deduction";
-    
-    try {
-      const success = await updateHousePoints(selectedHouse, -amount, pointReason);
-      
-      if (success) {
-        toast({
-          title: 'Points Deducted',
-          description: `${amount} points deducted from ${selectedHouse}${reason.trim() ? `: ${reason}` : ''}`,
-          status: 'success',
-          duration: 2000,
-        });
-        setReason('');
-        
-        setTimeout(() => {
-          forceSyncAllHouseUsers(selectedHouse);
-        }, 500);
-      }
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: err.message || `Failed to deduct ${amount} points`,
-        status: 'error',
-        duration: 3000,
-      });
+    } finally {
+      // Reset only this button's loading state
+      setButtonLoading(prev => ({
+        ...prev,
+        [buttonId]: false
+      }));
     }
   };
   
@@ -265,6 +270,7 @@ const AdminHousePoints = () => {
   };
   
   const handleGroupCriteriaSubmit = async () => {
+    setButtonLoading(prev => ({ ...prev, customPoints: true }));
     try {
       const success = await updateGroupCriteriaPoints(
         groupHouse, 
@@ -296,6 +302,8 @@ const AdminHousePoints = () => {
         status: 'error',
         duration: 3000,
       });
+    } finally {
+      setButtonLoading(prev => ({ ...prev, customPoints: false }));
     }
   };
   
@@ -401,10 +409,10 @@ const AdminHousePoints = () => {
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                       <VStack spacing={3}>
                         <Button 
-                          onClick={handleAddPoints}
-                          isLoading={loading}
+                          onClick={() => handleAddPoints(selectedHouse, 10)}
+                          isLoading={buttonLoading[`${selectedHouse}10`]}
                           leftIcon={<Text as="span">+10</Text>}
-                          isDisabled={loading} 
+                          isDisabled={buttonLoading[`${selectedHouse}10`]} 
                           className="admin-button success"
                           width="100%"
                         >
@@ -412,10 +420,10 @@ const AdminHousePoints = () => {
                         </Button>
                         
                         <Button 
-                          onClick={() => handleAddCustomPoints(20)}
-                          isLoading={loading}
+                          onClick={() => handleAddPoints(selectedHouse, 20)}
+                          isLoading={buttonLoading[`${selectedHouse}20`]}
                           leftIcon={<Text as="span">+20</Text>}
-                          isDisabled={loading} 
+                          isDisabled={buttonLoading[`${selectedHouse}20`]} 
                           className="admin-button success"
                           width="100%"
                         >
@@ -423,10 +431,10 @@ const AdminHousePoints = () => {
                         </Button>
                         
                         <Button 
-                          onClick={() => handleAddCustomPoints(30)}
-                          isLoading={loading}
+                          onClick={() => handleAddPoints(selectedHouse, 30)}
+                          isLoading={buttonLoading[`${selectedHouse}30`]}
                           leftIcon={<Text as="span">+30</Text>}
-                          isDisabled={loading} 
+                          isDisabled={buttonLoading[`${selectedHouse}30`]} 
                           className="admin-button success"
                           width="100%"
                         >
@@ -434,10 +442,10 @@ const AdminHousePoints = () => {
                         </Button>
                         
                         <Button 
-                          onClick={() => handleAddCustomPoints(40)}
-                          isLoading={loading}
+                          onClick={() => handleAddPoints(selectedHouse, 40)}
+                          isLoading={buttonLoading[`${selectedHouse}40`]}
                           leftIcon={<Text as="span">+40</Text>}
-                          isDisabled={loading} 
+                          isDisabled={buttonLoading[`${selectedHouse}40`]} 
                           className="admin-button success"
                           width="100%"
                         >
@@ -447,47 +455,14 @@ const AdminHousePoints = () => {
                       
                       <VStack spacing={3}>
                         <Button 
-                          onClick={handleDeductPoints}
-                          isLoading={loading}
+                          onClick={() => handleSubtractPoints(selectedHouse)}
+                          isLoading={buttonLoading[`${selectedHouse}Minus`]}
                           leftIcon={<Text as="span">-10</Text>}
-                          isDisabled={loading}
+                          isDisabled={buttonLoading[`${selectedHouse}Minus`]}
                           className="admin-button danger"
                           width="100%"
                         >
-                          Deduct 10 Points
-                        </Button>
-                        
-                        <Button 
-                          onClick={() => handleDeductCustomPoints(20)}
-                          isLoading={loading}
-                          leftIcon={<Text as="span">-20</Text>}
-                          isDisabled={loading}
-                          className="admin-button danger"
-                          width="100%"
-                        >
-                          Deduct 20 Points
-                        </Button>
-                        
-                        <Button 
-                          onClick={() => handleDeductCustomPoints(30)}
-                          isLoading={loading}
-                          leftIcon={<Text as="span">-30</Text>}
-                          isDisabled={loading}
-                          className="admin-button danger"
-                          width="100%"
-                        >
-                          Deduct 30 Points
-                        </Button>
-                        
-                        <Button 
-                          onClick={() => handleDeductCustomPoints(40)}
-                          isLoading={loading}
-                          leftIcon={<Text as="span">-40</Text>}
-                          isDisabled={loading}
-                          className="admin-button danger"
-                          width="100%"
-                        >
-                          Deduct 40 Points
+                          Deduct Points
                         </Button>
                       </VStack>
                     </SimpleGrid>
@@ -572,7 +547,7 @@ const AdminHousePoints = () => {
                     
                     <Button 
                       onClick={handleGroupCriteriaSubmit}
-                      isLoading={loading}
+                      isLoading={buttonLoading.customPoints}
                       className="admin-button info"
                       width="100%"
                       mt={2}

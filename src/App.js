@@ -21,6 +21,8 @@ import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import NotificationDisplay from './components/NotificationDisplay';
 import { SocketProvider } from './context/SocketContext';
+// Import the Hogwarts logo image
+import hogwartsLogoImg from './asset/Hogwarts logo.png';
 
 // Fix theme definition - must use proper color format
 const theme = extendTheme({
@@ -255,7 +257,8 @@ const AppContent = () => {
                 <NotificationDisplay />
                 
                 <header className="hogwarts-header">
-                  <h1>Hogwarts School of <span className="highlight">Inequality Magic</span></h1>
+                  <img src={hogwartsLogoImg} alt="Hogwarts Logo" className="hogwarts-logo" />
+                  <h1><span className="magical-text">Hogwarts School of</span> <span className="highlight">Inequality Magic</span></h1>
                 </header>
                 
                 {/* Tab Navigation */}
