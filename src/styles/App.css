@@ -211,7 +211,7 @@ button, input, select, textarea {
   bottom: -10px;
 }
 
-/* Thêm hiệu ứng trang trí cho tiêu đề */
+/* Add decorative effects for the title */
 @keyframes float-left {
   0%, 100% { transform: translate(-5px, -50%); }
   50% { transform: translate(0, -50%); }
@@ -222,13 +222,13 @@ button, input, select, textarea {
   50% { transform: translate(0, -50%); }
 }
 
-/* Thêm hiệu ứng hover cho tiêu đề */
+/* Add hover effect for the title */
 .farm-header h1:hover {
   transform: scale(1.02);
   transition: transform 0.3s ease;
 }
 
-/* Thêm hiệu ứng ánh sáng cho tiêu đề */
+/* Add light effect for the title */
 .farm-header h1 {
   background: linear-gradient(
     to right,
@@ -394,7 +394,7 @@ button, input, select, textarea {
 }
 
 .delete-icon {
-  opacity: 1; /* Luôn hiển thị thùng rác */
+  opacity: 1; /* Always show the trash icon */
   cursor: pointer;
   color: #aa3333;
   margin-left: auto;
@@ -405,13 +405,13 @@ button, input, select, textarea {
   transform: scale(1.1);
 }
 
-/* Hiển thị delete-icon khi inequality được highlight */
+/* Display delete-icon when inequality is highlighted */
 .inequality-item.highlighted .delete-icon,
 .inequality-item.related-intersection .delete-icon {
   transform: scale(1.1);
 }
 
-/* Xóa selector cũ dùng attribute phức tạp */
+/* Remove old selector using complex attribute */
 .inequality-item[style*="rgba(211, 166, 37, 0.4)"] .delete-icon,
 .inequality-item[style*="rgba(46, 125, 50, 0.3)"] .delete-icon {
   transform: scale(1.1);
@@ -470,7 +470,7 @@ button, input, select, textarea {
   gap: 16px;
 }
 
-/* Style cho form group */
+/* Style for form group */
 .form-group {
   position: relative;
   display: flex;
@@ -1202,7 +1202,7 @@ input:-webkit-autofill:active {
     height: auto;
   }
   
-  /* Cải thiện nút trên mobile */
+  /* Improve buttons on mobile */
   .control-panel button,
   .check-button {
     padding: 8px 14px;
@@ -1224,7 +1224,7 @@ input:-webkit-autofill:active {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   }
   
-  /* Input fields đẹp hơn trên mobile */
+  /* Input fields look better on mobile */
   .coordinate-input-form input {
     padding: 8px 12px;
     font-size: 16px;
@@ -1242,7 +1242,7 @@ input:-webkit-autofill:active {
     box-shadow: 0 0 0 2px rgba(211, 166, 37, 0.2);
   }
 
-  /* Hiệu ứng cho input đúng/sai */
+  /* Effects for correct/incorrect input */
   .coordinate-input-form input.correct {
     animation: correct-pulse 1s ease-in-out;
     border-color: #4CAF50;
@@ -1267,7 +1267,7 @@ input:-webkit-autofill:active {
     75% { transform: translateX(4px); }
   }
 
-  /* Cải thiện danh sách bất phương trình */
+  /* Improve inequalities list */
   .inequalities-list {
     padding: 12px;
     border-radius: 8px;
@@ -1302,7 +1302,7 @@ input:-webkit-autofill:active {
     transform: scale(0.98);
   }
 
-  /* Cải thiện icon xóa */
+  /* Improve delete icon */
   .delete-icon {
     padding: 8px;
     font-size: 20px;
@@ -1363,7 +1363,7 @@ input:-webkit-autofill:active {
   to { transform: rotate(360deg); }
 }
 
-/* Thêm CSS cho ô nhập tọa độ */
+/* Add CSS for coordinate input box */
 .coordinate-input-container {
   position: absolute;
   bottom: 16px;
@@ -1459,7 +1459,7 @@ input:-webkit-autofill:active {
   transform: translateY(0);
 }
 
-/* Finite Incantatem button - đảm bảo không bị ghi đè */
+/* Finite Incantatem button - ensure it is not overridden */
 .finite-incantatem-btn {
   background: linear-gradient(135deg, #740001, #450001) !important;
   border-color: #AA3333 !important;
@@ -1476,7 +1476,7 @@ input:-webkit-autofill:active {
   border-color: #FF4444 !important;
 }
 
-/* Ghi đè tất cả các style khác cho spell buttons */
+/* Override all other styles for spell buttons */
 .spell-input-container button:first-child::before {
   content: "💀";
   font-size: 18px;
@@ -1494,7 +1494,7 @@ input:-webkit-autofill:active {
   font-size: 18px;
 }
 
-/* Style cho nút hiển thị mật khẩu */
+/* Style for password toggle button */
 .password-toggle {
   position: absolute;
   right: 12px;
@@ -1527,7 +1527,7 @@ input:-webkit-autofill:active {
   font-size: 24px;
 }
 
-/* Điều chỉnh input khi có toggle button */
+/* Adjust input when toggle button is present */
 .form-group input[type="password"],
 .form-group input[type="text"] {
   padding-right: 45px;

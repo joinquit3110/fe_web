@@ -41,7 +41,7 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Khi component mount, kiểm tra localStorage để tự động điền username và password nếu đã lưu
+  // When component mounts, check localStorage to automatically fill username and password if saved
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
     const savedPassword = localStorage.getItem('rememberedPassword');
@@ -49,7 +49,7 @@ const Login = () => {
       setEmail(savedUsername);
       setRememberMe(true);
       
-      // Nếu có mật khẩu được lưu, điền luôn
+      // If password is saved, fill it in as well
       if (savedPassword) {
         setPassword(savedPassword);
       }
@@ -152,7 +152,7 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
-    // Lưu username và password nếu chọn ghi nhớ
+    // Save username and password if remember me is selected
     if (rememberMe) {
       localStorage.setItem('rememberedUsername', email);
       localStorage.setItem('rememberedPassword', password);
@@ -430,24 +430,27 @@ const Login = () => {
             src={hogwartsLogoImg}
             alt="Hogwarts Logo"
             width="120px"
-            height="auto"
+            height="120px"
             mb={3}
             loading="eager"
             priority={true}
             className="hogwarts-logo animated-logo"
             style={{ 
               filter: 'drop-shadow(0 0 16px #f0c75e)',
-              animation: 'float-logo 3s infinite ease-in-out'
+              animation: 'float-logo 3s infinite ease-in-out',
+              objectFit: 'contain'
             }}
             onLoad={() => {
-              // Xóa placeholder khi ảnh đã tải xong
+              // Remove placeholder when image is loaded
               const placeholderEl = document.querySelector('.hogwarts-logo-placeholder');
               if (placeholderEl) {
                 placeholderEl.style.display = 'none';
               }
+              // Mark logo as loaded to avoid preload errors
+              document.querySelector('link[rel="preload"][as="image"]')?.remove();
             }}
           />
-          {/* Placeholder cho logo khi đang tải */}
+          {/* Placeholder for logo while loading */}
           <Box 
             className="hogwarts-logo-placeholder"
             width="120px"

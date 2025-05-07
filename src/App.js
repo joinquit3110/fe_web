@@ -4,6 +4,7 @@ import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
 import Activity1 from "./components/Activity1";
+import Leaderboard from "./components/Leaderboard";
 import 'katex/dist/katex.min.css';
 import katex from 'katex';
 import './styles/App.css';
@@ -201,7 +202,7 @@ const AppContent = () => {
   const handleDelete = (e, inequality) => {
     e.stopPropagation();
     
-    // Kiểm tra xem nút xóa có thực sự hiển thị không
+    // Check if the delete button is actually displayed
     const target = e.target;
     if (!target || !target.classList.contains('delete-icon')) {
       console.log('Prevented deletion - click not on delete icon');
@@ -217,7 +218,7 @@ const AppContent = () => {
     return `d_${index + 1}`;
   };
   
-  // Tạo mock user cho local development
+  // Create mock user for local development
   const localUser = {
     id: 'mock-user-id',
     username: 'HogwartsWizard',
@@ -264,9 +265,11 @@ const AppContent = () => {
                   {/* Render different content based on active tab */}
                   {activeTab === 'activity1' ? (
                     <Activity1 />
+                  ) : activeTab === 'leaderboard' ? (
+                    <Leaderboard />
                   ) : (
                     <>
-                      {/* Kiểm tra nếu người dùng là admin thì không hiển thị nội dung */}
+                      {/* Check if user is admin then don't display content */}
                       {user && user.isAdmin ? (
                         <div className="admin-message wizard-panel" style={{
                           padding: "30px",

@@ -358,6 +358,55 @@
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
+  filter: drop-shadow(0 0 15px rgba(240, 199, 94, 0.7));
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+/* Sử dụng content-visibility để tối ưu rendering */
+.hogwarts-logo-placeholder {
+  content-visibility: auto;
+  contain: layout style paint;
+}
+
+/* Fix logo animation on mobile */
+@media (max-width: 768px) {
+  .hogwarts-logo {
+    width: 90px !important;
+    height: 90px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .hogwarts-logo-placeholder {
+    width: 90px !important;
+    height: 90px !important;
+  }
+
+  /* Giảm cường độ animation trên mobile để tăng hiệu năng */
+  @keyframes float-logo {
+    0%, 100% { 
+      transform: translateY(0); 
+      filter: drop-shadow(0 0 10px rgba(240, 199, 94, 0.6));
+    }
+    50% { 
+      transform: translateY(-3px); 
+      filter: drop-shadow(0 0 15px rgba(240, 199, 94, 0.8));
+    }
+  }
+}
+
+/* Animation for logo placeholder */
+@keyframes pulse-placeholder {
+  0%, 100% { 
+    opacity: 0.8; 
+    transform: scale(1);
+    text-shadow: 0 0 10px rgba(240, 199, 94, 0.6);
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.1);
+    text-shadow: 0 0 20px rgba(240, 199, 94, 0.9), 0 0 40px rgba(240, 199, 94, 0.4);
+  }
 }
 
 /* Custom form field styling */

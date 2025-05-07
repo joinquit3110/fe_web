@@ -28,7 +28,7 @@ const POINT_STATUS = {
   SOLVED: 'solved'         // Green, fully correct and showing coordinates
 };
 
-// Thêm kiểu điểm theo status
+// Add point style based on status
 const POINT_STYLE = {
   [POINT_STATUS.UNSOLVED]: { color: '#ffffff', borderColor: '#740001', radius: 5 },
   [POINT_STATUS.ACTIVE]: { color: '#FFC107', borderColor: '#FF6F00', radius: 6 },
@@ -72,26 +72,26 @@ const isPointOnLine = (eq, point) => Math.abs(fValue(eq, point)) < EPSILON;
 
 const getBoundaryPoints = eq => {
   const big = 10000;
-  // Thêm kiểm tra nếu b gần bằng 0 thì coi như đường thẳng thẳng đứng
+  // Ensure a is not 0 to avoid division by zero
   if (Math.abs(eq.b) < EPSILON) {
-    // Đảm bảo a khác 0 để tránh chia cho 0
+    // Ensure a is not 0 to avoid division by zero
     if (Math.abs(eq.a) < EPSILON) {
-      // Nếu cả a và b đều gần bằng 0, trả về mặc định để tránh lỗi
+      // If both a and b are close to 0, return default to avoid errors
       return [{ x: -big, y: 0 }, { x: big, y: 0 }];
     }
     const x = -eq.c / eq.a;
-    // Kiểm tra nếu x là NaN hoặc Infinity
+    // Check if x is NaN or Infinity
     if (isNaN(x) || !isFinite(x)) {
       return [{ x: 0, y: -big }, { x: 0, y: big }];
     }
     return [{ x, y: -big }, { x, y: big }];
   }
   
-  // Tính các điểm cho đường thẳng có độ dốc hữu hạn
+  // Calculate points for line with finite slope
   const y1 = -(eq.c + eq.a * (-big)) / eq.b;
   const y2 = -(eq.c + eq.a * big) / eq.b;
   
-  // Kiểm tra nếu các tọa độ là NaN hoặc Infinity
+  // Check if coordinates are NaN or Infinity
   if (isNaN(y1) || !isFinite(y1) || isNaN(y2) || !isFinite(y2)) {
     return [{ x: -big, y: 0 }, { x: big, y: 0 }];
   }
@@ -223,10 +223,10 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
     return;
   }
   
-  // Lấy các điểm boundary
+  // Get boundary points
   const [p1, p2] = getBoundaryPoints(eq);
   
-  // Kiểm tra các tọa độ
+  // Check coordinates
   if (isNaN(p1.x) || !isFinite(p1.x) || isNaN(p1.y) || !isFinite(p1.y) ||
       isNaN(p2.x) || !isFinite(p2.x) || isNaN(p2.y) || !isFinite(p2.y)) {
     console.error('Invalid coordinates for fillHalfPlane:', eq);
@@ -236,7 +236,7 @@ const fillHalfPlane = (ctx, eq, fillColor, toCanvasCoords, alpha = 0.3) => {
   // Calculate midpoint
   const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   
-  // Kiểm tra midpoint
+  // Check midpoint
   if (isNaN(mid.x) || !isFinite(mid.x) || isNaN(mid.y) || !isFinite(mid.y)) {
     console.error('Invalid midpoint for fillHalfPlane:', mid);
     return;
@@ -390,10 +390,10 @@ const CoordinatePlane = forwardRef((props, ref) => {
   const [activeLines, setActiveLines] = useState([]);
   const [points, setPoints] = useState([]);
   const [labelCounter, setLabelCounter] = useState(1); // Counter for inequality labels
-  const [relatedInequalities, setRelatedInequalities] = useState([]); // Bất phương trình liên quan đến giao điểm đang chọn
-  const [showInputValidation, setShowInputValidation] = useState(false); // Thêm state để kiểm soát việc hiển thị màu
-  const [showSpellInput, setShowSpellInput] = useState(false); // Hiển thị khung nhập spell
-  const [spellInput, setSpellInput] = useState(''); // Input cho spell
+  const [relatedInequalities, setRelatedInequalities] = useState([]); // Inequalities related to the selected intersection
+  const [showInputValidation, setShowInputValidation] = useState(false); // Add state to control validation color display
+  const [showSpellInput, setShowSpellInput] = useState(false); // Display spell input box
+  const [spellInput, setSpellInput] = useState(''); // Input for spell
 
   const originMemo = useMemo(() => ({
     x: canvasWidth / 2,
@@ -402,13 +402,13 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Function to convert mathematical coordinates to canvas coordinates
   const toCanvasCoords = useCallback((x, y) => {
-    // Kiểm tra input hợp lệ
+    // Check if input is valid
     if (isNaN(x) || !isFinite(x) || isNaN(y) || !isFinite(y) ||
         isNaN(origin.x) || !isFinite(origin.x) || 
         isNaN(origin.y) || !isFinite(origin.y) ||
         isNaN(zoom) || !isFinite(zoom)) {
       console.error('Invalid coordinates in toCanvasCoords:', { x, y, origin, zoom });
-      return { x: 0, y: 0 }; // Trả về giá trị mặc định an toàn
+      return { x: 0, y: 0 }; // Return safe default value
     }
     
     return {
@@ -419,7 +419,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Function to convert canvas coordinates to mathematical coordinates
   const toMathCoords = useCallback((canvasX, canvasY) => {
-    // Kiểm tra input hợp lệ
+    // Check if input is valid
     if (isNaN(canvasX) || !isFinite(canvasX) || 
         isNaN(canvasY) || !isFinite(canvasY) ||
         isNaN(origin.x) || !isFinite(origin.x) || 
@@ -428,7 +428,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       console.error('Invalid coordinates in toMathCoords:', { 
         canvasX, canvasY, origin, zoom 
       });
-      return { x: 0, y: 0 }; // Trả về giá trị mặc định an toàn
+      return { x: 0, y: 0 }; // Return safe default value
     }
     
     return {
@@ -472,19 +472,19 @@ const CoordinatePlane = forwardRef((props, ref) => {
     };
   }, []);
 
-  // Thêm state cho pinch zoom trên mobile
+  // Add state for pinch zoom on mobile
   const [touchState, setTouchState] = useState({
     initialDistance: 0,
     initialZoom: CANVAS_CONFIG.defaultZoom
   });
 
-  // Xử lý touch start
+  // Handle touch start
   const handleTouchStart = (e) => {
-    e.preventDefault(); // Ngăn các hành vi mặc định như scroll
+    e.preventDefault(); // Prevent default behaviors like scroll
     
     const touches = Array.from(e.touches);
     
-    // Chỉ xử lý pinch zoom với 2 ngón tay
+    // Only handle pinch zoom with 2 fingers
     if (touches.length === 2) {
       setTouchState({
         initialDistance: getDistance(touches[0], touches[1]),
@@ -492,7 +492,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       });
     }
     
-    // Nếu bấm 1 ngón tay, xử lý như mousedown để chọn point hoặc line
+    // If pressing with 1 finger, handle like mousedown to select point or line
     if (touches.length === 1) {
       const rect = canvasRef.current.getBoundingClientRect();
       const x = touches[0].clientX - rect.left;
@@ -501,28 +501,28 @@ const CoordinatePlane = forwardRef((props, ref) => {
     }
   };
 
-  // Xử lý touch move
+  // Handle touch move
   const handleTouchMove = (e) => {
     e.preventDefault();
     
     const touches = Array.from(e.touches);
     
-    // Chỉ hỗ trợ pinch zoom với 2 ngón tay
+    // Only support pinch zoom with 2 fingers
     if (touches.length === 2 && touchState.initialDistance > 0) {
-      // Tính toán khoảng cách mới giữa 2 ngón tay
+      // Calculate new distance between 2 fingers
       const currentDistance = getDistance(touches[0], touches[1]);
       
-      // Tính toán tỷ lệ zoom
+      // Calculate zoom ratio
       const scaleFactor = currentDistance / touchState.initialDistance;
       const newZoom = Math.max(CANVAS_CONFIG.minZoom, Math.min(100, touchState.initialZoom * scaleFactor));
       
-      // Cập nhật zoom
+      // Update zoom
       setZoom(newZoom);
       redraw();
     }
   };
 
-  // Xử lý touch end
+  // Handle touch end
   const handleTouchEnd = (e) => {
     // Reset touch state
     setTouchState({
@@ -531,31 +531,31 @@ const CoordinatePlane = forwardRef((props, ref) => {
     });
   };
 
-  // Hàm tính khoảng cách giữa 2 touch points
+  // Function to calculate distance between 2 touch points
   const getDistance = (touch1, touch2) => {
     const dx = touch1.clientX - touch2.clientX;
     const dy = touch1.clientY - touch2.clientY;
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Sửa lại hàm drawPoint để hiển thị điểm với màu khác nhau theo status
+  // Update drawPoint function to display points with different colors based on status
   const drawPoint = useCallback((ctx, point) => {
     const canvasPoint = toCanvasCoords(point.x, point.y);
     const style = POINT_STYLE[point.status || POINT_STATUS.UNSOLVED];
     
-    // Vẽ đường viền
+    // Draw border
     ctx.beginPath();
     ctx.arc(canvasPoint.x, canvasPoint.y, style.radius + 2, 0, 2 * Math.PI);
     ctx.fillStyle = style.borderColor;
     ctx.fill();
     
-    // Vẽ điểm
+    // Draw point
     ctx.beginPath();
     ctx.arc(canvasPoint.x, canvasPoint.y, style.radius, 0, 2 * Math.PI);
     ctx.fillStyle = style.color;
     ctx.fill();
     
-    // Thêm hiệu ứng phát sáng cho điểm đang active
+    // Add glow effect for active point
     if (point.status === POINT_STATUS.ACTIVE) {
       ctx.beginPath();
       ctx.arc(canvasPoint.x, canvasPoint.y, style.radius + 5, 0, 2 * Math.PI);
@@ -626,7 +626,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
     const cp1 = toCanvasCoords(p1.x, p1.y);
     const cp2 = toCanvasCoords(p2.x, p2.y);
     
-    // Kiểm tra tọa độ có hợp lệ không
+    // Check if coordinates are valid
     if (isNaN(cp1.x) || !isFinite(cp1.x) || isNaN(cp1.y) || !isFinite(cp1.y) ||
         isNaN(cp2.x) || !isFinite(cp2.x) || isNaN(cp2.y) || !isFinite(cp2.y)) {
       console.error('Invalid coordinates for drawing inequality:', ineq);
@@ -893,7 +893,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
     return null;
   }, [toCanvasCoords, relatedInequalities]);
 
-  // Sửa lại hàm checkDuplicateInequality
+  // Fix the checkDuplicateInequality function
   const checkDuplicateInequality = useCallback((newEq, existingEq) => {
     if (!existingEq) return false;
     
@@ -1058,7 +1058,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
     // Clear canvas
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
-    // Kiểm tra các tọa độ origin và canvas width/height
+    // Check coordinates of origin and canvas width/height
     if (isNaN(origin.x) || !isFinite(origin.x) || 
         isNaN(origin.y) || !isFinite(origin.y) ||
         isNaN(canvasWidth) || !isFinite(canvasWidth) ||
@@ -1067,7 +1067,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       console.error('Invalid canvas parameters:', { 
         origin, canvasWidth, canvasHeight, zoom 
       });
-      // Khôi phục giá trị mặc định
+      // Restore default values
       setOrigin({
         x: canvasWidth / 2,
         y: canvasHeight / 2
@@ -1082,7 +1082,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
     // Draw inequalities and collect solution buttons
     let buttons = [];
     inequalities.forEach(eq => {
-      // Kiểm tra đẳng thức có hợp lệ không
+      // Check if inequality is valid
       if (!eq || isNaN(eq.a) || !isFinite(eq.a) || 
           isNaN(eq.b) || !isFinite(eq.b) || 
           isNaN(eq.c) || !isFinite(eq.c)) {
@@ -1100,7 +1100,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
     // Draw intersection points
     intersectionPoints.forEach(pt => {
-      // Kiểm tra điểm có hợp lệ không
+      // Check if point is valid
       if (!pt || isNaN(pt.x) || !isFinite(pt.x) || 
           isNaN(pt.y) || !isFinite(pt.y)) {
         console.error('Invalid intersection point in redraw:', pt);
@@ -1135,7 +1135,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       // If clicking on intersection point, handle it directly here
       if (activePoint && Math.abs(activePoint.x - clickedPoint.x) < EPSILON && 
           Math.abs(activePoint.y - clickedPoint.y) < EPSILON) {
-        // Nếu đang bấm vào giao điểm đã chọn, bỏ chọn nó
+        // If currently clicking on the selected intersection point, deselect it
         setActivePoint(null);
         setRelatedInequalities([]);
         
@@ -1144,7 +1144,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
           setRelatedToIntersection([]);
         }
         
-        // Reset trạng thái giao điểm về UNSOLVED hoặc PARTIAL tùy theo trạng thái trước đó
+        // Reset intersection point status to UNSOLVED or PARTIAL depending on previous status
         setIntersectionPoints(points => points.map(pt => {
           if (Math.abs(pt.x - clickedPoint.x) < EPSILON && 
               Math.abs(pt.y - clickedPoint.y) < EPSILON) {
@@ -1161,7 +1161,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         // If point is already solved, just show it
         setQuizMessage(`This point is at (${clickedPoint.correct.x.toFixed(1)}, ${clickedPoint.correct.y.toFixed(1)})`);
         
-        // Tìm các bất phương trình tạo ra giao điểm này để highlight
+        // Find inequalities that form this intersection to highlight
         const relatedIneqs = [];
         
         // Check all pairs of inequalities
@@ -1189,7 +1189,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         // Update the related inequalities state
         setRelatedInequalities(relatedIneqs);
         
-        // Cập nhật relatedToIntersection ở component cha nếu có
+        // Update relatedToIntersection in parent component if it exists
         if (typeof setRelatedToIntersection === 'function') {
           setRelatedToIntersection(relatedIneqs);
         }
@@ -1233,7 +1233,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         // Update the related inequalities state
         setRelatedInequalities(relatedIneqs);
         
-        // Cập nhật relatedToIntersection ở component cha nếu có
+        // Update relatedToIntersection in parent component if it exists
         if (typeof setRelatedToIntersection === 'function') {
           setRelatedToIntersection(relatedIneqs);
         }
@@ -1291,7 +1291,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         setQuizMessage(`Incorrect! The region you selected for ${clickedButton.eq.label} is not the solution. Try again.`);
       }
       
-      // Đóng UI nhập tọa độ nếu đang mở
+      // Close coordinate input UI if it's open
       if (activePoint) {
         setActivePoint(null);
       }
@@ -1323,7 +1323,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
     });
     
     if (clickedLine) {
-      // Nếu đường thẳng này đã được chọn, thì bỏ chọn nó
+      // If this line is already selected, deselect it
       if (activeInequality && activeInequality.label === clickedLine.label) {
         setHoveredEq(null);
         setActiveInequality(null);
@@ -1346,7 +1346,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         }
       }
       
-      // Đóng UI nhập tọa độ nếu đang mở
+      // Close coordinate input UI if it's open
       if (activePoint) {
         setActivePoint(null);
       }
@@ -1359,7 +1359,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
     const worldX = (x - origin.x) / zoom;
     const worldY = (origin.y - y) / zoom;
     
-    // Đóng UI nhập tọa độ nếu đang mở
+    // Close coordinate input UI if it's open
     if (activePoint) {
       setActivePoint(null);
       
@@ -1372,7 +1372,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       redraw();
     }
     
-    // Nếu đang có điểm giao điểm xanh lá cây được chọn, bỏ chọn nó
+    // If a green intersection point is currently selected, deselect it
     const selectedGreenPoint = intersectionPoints.find(pt => 
       pt.status === POINT_STATUS.SOLVED && 
       Math.abs(pt.x - worldX) < 0.3 && 
@@ -1561,7 +1561,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       // Update the related inequalities state
       setRelatedInequalities(relatedIneqs);
       
-      // Cập nhật relatedToIntersection ở component cha nếu có
+      // Update relatedToIntersection in parent component if it exists
       if (typeof setRelatedToIntersection === 'function') {
         setRelatedToIntersection(relatedIneqs);
       }
@@ -1626,16 +1626,16 @@ const CoordinatePlane = forwardRef((props, ref) => {
         const pt = computeIntersection(eq1, eq2);
           
           if (pt) {
-          // Kiểm tra điểm có nằm trong vùng không phải nghiệm của bất phương trình khác không
+          // Check if point is in the non-solution region of another inequality
           const isInNonSolutionRegion = inequalities.some(eq3 => {
-              // Chỉ kiểm tra với các bất phương trình khác
+              // Only check with other inequalities
               if (eq3 === eq1 || eq3 === eq2) return false;
-              // Kiểm tra xem điểm có nằm trong vùng nghiệm của bất phương trình này không
+              // Check if point is in the solution region of this inequality
             const isInSolution = checkPointInInequality(eq3, pt);
-            return !isInSolution; // true nếu điểm nằm trong vùng KHÔNG phải nghiệm
+            return !isInSolution; // true if point is in the non-solution region
           });
   
-            // Chỉ hiển thị giao điểm nếu nó KHÔNG nằm trong vùng không phải nghiệm
+            // Only display intersection if it is NOT in the non-solution region
           if (!isInNonSolutionRegion) {
               // Use a key to quickly check for existing points
               const key = `${pt.x.toFixed(6)},${pt.y.toFixed(6)}`;
@@ -1678,7 +1678,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
       return;
     }
   
-    // Hiển thị màu validation khi bấm check
+    // Display validation color when clicking check
     setShowInputValidation(true);
 
     const userX = Number(inputCoords.x);
@@ -1709,14 +1709,14 @@ const CoordinatePlane = forwardRef((props, ref) => {
     if (xCorrect && yCorrect) {
       setQuizMessage(`Correct! The intersection of ${relatedLabels} is at (${correctX.toFixed(1)}, ${correctY.toFixed(1)}).`);
       
-      // Biến mất UI ngay lập tức bằng cách set activePoint = null
+      // Immediately close UI by setting activePoint = null
       setActivePoint(null);
       
-      // Giữ highlight cho các bất phương trình liên quan trong một khoảng thời gian
+      // Keep highlight for related inequalities for a short time
       setTimeout(() => {
         setRelatedInequalities([]);
         
-        // Cập nhật relatedToIntersection ở component cha nếu có
+        // Update relatedToIntersection in parent component if it exists
         if (typeof setRelatedToIntersection === 'function') {
           setRelatedToIntersection([]);
         }
@@ -1730,7 +1730,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         handleWrongCoordinateInput('y', pointId);
       }
       
-      // Thông báo chi tiết về lỗi
+      // Detailed error message
       if (!xCorrect && !yCorrect) {
         setQuizMessage(`Both coordinates are incorrect for the intersection of ${relatedLabels}. Try again!`);
       } else if (!xCorrect) {
@@ -1827,40 +1827,40 @@ const CoordinatePlane = forwardRef((props, ref) => {
     highlightInequality
   }));
 
-  // Xử lý khi bấm nút Cast Spell
+  // Handle when the Cast Spell button is clicked
   const handleCastSpell = useCallback(() => {
     if (!spellInput) return;
     
-    // Hiệu ứng khi cast spell
+    // Effect when casting a spell
     setQuizMessage(`Casting spell: "${spellInput}"!`);
     
-    // Hiệu ứng trên canvas
+    // Effect on canvas
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       const width = canvasRef.current.width;
       const height = canvasRef.current.height;
       
-      // Hiệu ứng flash
+      // Flash effect
       ctx.fillStyle = 'rgba(211, 166, 37, 0.2)';
       ctx.fillRect(0, 0, width, height);
       
-      // Sau đó vẽ lại
+      // Then redraw
       setTimeout(() => {
         redraw();
       }, 300);
     }
     
-    // Reset sau khi cast
+    // Reset after casting
     setSpellInput('');
     setShowSpellInput(false);
   }, [spellInput, redraw, setQuizMessage]);
 
-  // Xử lý khi bấm nút Avada Kedavra
+  // Handle when the Avada Kedavra button is clicked
   const handleFiniteIncantatem = useCallback(() => {
-    // Hiệu ứng khi dùng Avada Kedavra
+    // Effect when using Avada Kedavra
     setQuizMessage("Avada Kedavra! All spells have been cancelled.");
     
-    // Reset lại trạng thái
+    // Reset the state
     setActiveInequality(null);
     setActivePoint(null);
     setRelatedInequalities([]);
@@ -1868,23 +1868,23 @@ const CoordinatePlane = forwardRef((props, ref) => {
       setRelatedToIntersection([]);
     }
     
-    // Hiệu ứng trên canvas
+    // Effect on canvas
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       const width = canvasRef.current.width;
       const height = canvasRef.current.height;
       
-      // Hiệu ứng flash đỏ
+      // Red flash effect
       ctx.fillStyle = 'rgba(170, 51, 51, 0.2)';
       ctx.fillRect(0, 0, width, height);
       
-      // Sau đó vẽ lại
+      // Then redraw
       setTimeout(() => {
         redraw();
       }, 300);
     }
     
-    // Đóng UI spell
+    // Close spell UI
     setShowSpellInput(false);
   }, [redraw, setQuizMessage, setActiveInequality, setActivePoint]);
 

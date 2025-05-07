@@ -26,6 +26,12 @@ const TabNavigation = ({ activeTab, setActiveTab }) => {
       >
         {isAdmin ? 'Wizardry Console' : 'Activity 2'}
       </button>
+      <button 
+        className={`tab-button ${activeTab === 'leaderboard' ? 'active' : ''}`}
+        onClick={() => handleTabClick('leaderboard')}
+      >
+        Leaderboard
+      </button>
     </div>
   );
 };
