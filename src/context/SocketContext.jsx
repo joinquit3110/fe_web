@@ -362,6 +362,27 @@ export const SocketProvider = ({ children }) => {
     }
   };
 
+  // Helper to handle house updates
+  const handleHouseUpdate = (newHouse) => {
+    if (user && setUser) {
+      setUser(prev => ({
+        ...prev,
+        house: newHouse,
+        previousHouse: prev.house
+      }));
+    }
+  };
+
+  // Helper to handle magic points updates
+  const handleMagicPointsUpdate = (updatedFields) => {
+    if (user && setUser) {
+      setUser(prev => ({
+        ...prev,
+        magicPoints: updatedFields.magicPoints
+      }));
+    }
+  };
+
   // Method to send a message to the server
   const sendMessage = useCallback((eventName, data) => {
     if (socket && isConnected) {

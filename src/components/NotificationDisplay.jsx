@@ -38,39 +38,21 @@ const NotificationDisplay = () => {
   };
   
   // Helper function to standardize criteria text
-  const standardizeCriteria = (criteriaText) => {
-    if (!criteriaText) return '';
-    
-    const lowerCriteria = criteriaText.toLowerCase();
-    
-    if (lowerCriteria.includes('participation') || lowerCriteria.includes('member')) {
-      return 'Level of participation of group members';
-    }
-    
-    if (lowerCriteria.includes('english') || lowerCriteria.includes('language')) {
-      return 'Level of English usage in the group';
-    }
-    
-    if (lowerCriteria.includes('time') || lowerCriteria.includes('complete') || lowerCriteria.includes('task')) {
-      return 'Time taken by the group to complete tasks';
-    }
-    
-    return criteriaText;
+  const standardizeCriteria = (criteria) => {
+    if (!criteria) return '';
+    return criteria
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
   };
   
-  // Helper function to standardize performance level text
-  const standardizeLevel = (levelText) => {
-    if (!levelText) return '';
-    
-    const lowerLevel = levelText.toLowerCase();
-    
-    if (lowerLevel.includes('excellent')) return 'Excellent';
-    if (lowerLevel.includes('good')) return 'Good';
-    if (lowerLevel.includes('satisfactory')) return 'Satisfactory';
-    if (lowerLevel.includes('poor') && lowerLevel.includes('very')) return 'Very Poor';
-    if (lowerLevel.includes('poor')) return 'Poor';
-    
-    return levelText;
+  // Helper function to standardize level text
+  const standardizeLevel = (level) => {
+    if (!level) return '';
+    return level
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
   };
   
   // Extract criteria and level
