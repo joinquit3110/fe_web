@@ -498,7 +498,8 @@ export const AdminProvider = ({ children }) => {
                   points: pointsChange,
                   reason: pointsReason,
                   newTotal: houseUsers.reduce((total, user) => 
-                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
+                  timestamp: new Date().toISOString()
                 };
                 console.log('[ADMIN] House points socket payload (no criteria/level):', socketData);
                 window.socket.emit('client_house_notification', socketData);

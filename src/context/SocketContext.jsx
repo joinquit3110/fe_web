@@ -405,7 +405,7 @@ export const SocketProvider = ({ children }) => {
     // Determine if this is a house assessment notification (has both criteria and level)
     const isAssessment = data.criteria && data.level;
     
-    // Only include criteria and level for house assessment notifications
+    // Create the base notification object
     const notification = {
       id: uniqueId,
       type: isPositive ? 'success' : 'warning',
@@ -418,9 +418,12 @@ export const SocketProvider = ({ children }) => {
       house: data.house
     };
     
-    // Only add criteria and level if this is a house assessment notification
-    if (isAssessment) {
+    // Always add criteria and level if they exist in the data
+    if (data.criteria) {
       notification.criteria = data.criteria;
+    }
+    
+    if (data.level) {
       notification.level = data.level;
     }
     
@@ -439,18 +442,26 @@ export const SocketProvider = ({ children }) => {
       message += ` New total: ${data.newTotal}`;
     }
     
+    // Ensure criteria and level are clearly identified in the message
+    // but don't add redundant or empty values
+    const hasCriteria = data.criteria && data.criteria.trim() !== '';
+    const hasLevel = data.level && data.level.trim() !== '';
+    const hasReason = data.reason && 
+                      data.reason !== 'Admin action' && 
+                      data.reason.trim() !== '';
+    
     // Add reason, criteria, level in a consistent format
     const details = [];
     
-    if (data.reason && data.reason !== 'Admin action' && data.reason.trim() !== '') {
+    if (hasReason) {
       details.push(`Reason: ${data.reason}`);
     }
     
-    if (data.criteria && data.criteria !== null) {
+    if (hasCriteria) {
       details.push(`Criteria: ${data.criteria}`);
     }
     
-    if (data.level && data.level !== null) {
+    if (hasLevel) {
       details.push(`Level: ${data.level}`);
     }
     

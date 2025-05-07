@@ -21,8 +21,20 @@ const standardizeLevel = (level) => {
 
 // Separate details component
 const NotificationDetails = memo(({ notification }) => {
+  // Log details for debugging
+  console.log('[NOTIFICATION_DETAILS] Data:', {
+    criteria: notification.criteria,
+    level: notification.level,
+    reason: notification.reason
+  });
+  
+  // Check if we have criteria and level data
+  const hasCriteria = notification.criteria && notification.criteria.trim() !== '';
+  const hasLevel = notification.level && notification.level.trim() !== '';
+  
   // Determine if this is a house assessment notification
-  const isAssessment = notification.criteria && notification.level;
+  const isAssessment = hasCriteria || hasLevel;
+  
   const hasReason = notification.reason && 
                     notification.reason !== 'System update' && 
                     notification.reason !== 'House points update' &&
@@ -74,11 +86,11 @@ const NotificationDetails = memo(({ notification }) => {
         </Box>
       )}
       
-      {/* Criteria section - Only for assessment */}
-      {isAssessment && notification.criteria && (
+      {/* Criteria section - Show if criteria exists */}
+      {hasCriteria && (
         <Box 
           p={4}
-          borderBottom={isAssessment && notification.level ? "1px solid rgba(255,255,255,0.2)" : "none"}
+          borderBottom={hasLevel ? "1px solid rgba(255,255,255,0.2)" : "none"}
           bg="rgba(0,0,0,0.15)"
           position="relative"
           _hover={{bg: "rgba(0,0,0,0.2)"}}
@@ -108,8 +120,8 @@ const NotificationDetails = memo(({ notification }) => {
         </Box>
       )}
       
-      {/* Level section - Only for assessment */}
-      {isAssessment && notification.level && (
+      {/* Level section - Show if level exists */}
+      {hasLevel && (
         <Box 
           p={4}
           bg="rgba(0,0,0,0.2)"

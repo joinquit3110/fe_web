@@ -616,8 +616,12 @@ const NotificationMessage = memo(({ notification }) => {
     type: notification.type
   });
   
+  // Check if we have criteria and level data
+  const hasCriteria = notification.criteria && notification.criteria.trim() !== '';
+  const hasLevel = notification.level && notification.level.trim() !== '';
+  
   // Determine if this is a regular house point or house assessment notification
-  const isAssessment = notification.criteria && notification.level;
+  const isAssessment = hasCriteria || hasLevel;
   
   // Check if reason is valid for display (not a default system message)
   const hasValidReason = notification.reason && 
@@ -657,7 +661,6 @@ const NotificationMessage = memo(({ notification }) => {
             {/* Main message showing points change */}
             <Text as="span">
               {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded to' : 'deducted from'} {notification.house || 'unknown'}
-              {isAssessment && ` (${standardizeCriteria(notification.criteria)})`}
             </Text>
             
             {/* Only show reason if admin provided one (not system default) */}
@@ -673,8 +676,8 @@ const NotificationMessage = memo(({ notification }) => {
               </Text>
             )}
             
-            {/* Only show criteria details for assessment notifications */}
-            {isAssessment && notification.criteria && (
+            {/* Only show criteria details if provided */}
+            {hasCriteria && (
               <Text 
                 as="span" 
                 color="cyan.200"
@@ -686,8 +689,8 @@ const NotificationMessage = memo(({ notification }) => {
               </Text>
             )}
             
-            {/* Only show level details for assessment notifications */}
-            {isAssessment && notification.level && (
+            {/* Only show level details if provided */}
+            {hasLevel && (
               <Text 
                 as="span" 
                 color={
