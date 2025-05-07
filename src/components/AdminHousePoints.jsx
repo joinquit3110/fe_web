@@ -146,42 +146,28 @@ const AdminHousePoints = () => {
   
   // Function to handle adding points
   const handleAddPoints = async (house, points) => {
-    // Get button ID for this operation
     const buttonId = `${house.toLowerCase()}${points}`;
-    
-    // Set just this button to loading state
-    setButtonLoading(prev => ({
-      ...prev,
-      [buttonId]: true
-    }));
-    
+    setButtonLoading(prev => ({ ...prev, [buttonId]: true }));
     try {
-      const reason = prompt(`Reason for awarding ${points} points to ${house}?`);
-      if (reason) {
-        await updateHousePoints(house, points, reason);
-        toast({
-          title: "Points Awarded!",
-          description: `${points} points have been added to ${house}.`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
+      await updateHousePoints(house, points, reason);
+      toast({
+        title: points > 0 ? "Points Awarded!" : "Points Deducted!",
+        description: `${Math.abs(points)} points have been ${points > 0 ? 'added to' : 'deducted from'} ${house}.` + (reason && reason.trim() !== '' ? ` Reason: ${reason}` : ''),
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
-      console.error(`Error adding points to ${house}:`, error);
+      console.error(`Error updating points for ${house}:`, error);
       toast({
         title: "Error",
-        description: `Failed to add points to ${house}: ${error.message || 'Unknown error'}`,
+        description: `Failed to update points for ${house}: ${error.message || 'Unknown error'}`,
         status: "error",
         duration: 5000,
         isClosable: true,
       });
     } finally {
-      // Reset only this button's loading state
-      setButtonLoading(prev => ({
-        ...prev,
-        [buttonId]: false
-      }));
+      setButtonLoading(prev => ({ ...prev, [buttonId]: false }));
     }
   };
   
@@ -412,44 +398,71 @@ const AdminHousePoints = () => {
                           onClick={() => handleAddPoints(selectedHouse, 10)}
                           isLoading={buttonLoading[`${selectedHouse}10`]}
                           leftIcon={<Text as="span">+10</Text>}
-                          isDisabled={buttonLoading[`${selectedHouse}10`]} 
+                          isDisabled={buttonLoading[`${selectedHouse}10`]}
                           className="admin-button success"
                           width="100%"
                         >
                           Award 10 Points
                         </Button>
-                        
                         <Button 
                           onClick={() => handleAddPoints(selectedHouse, 20)}
                           isLoading={buttonLoading[`${selectedHouse}20`]}
                           leftIcon={<Text as="span">+20</Text>}
-                          isDisabled={buttonLoading[`${selectedHouse}20`]} 
+                          isDisabled={buttonLoading[`${selectedHouse}20`]}
                           className="admin-button success"
                           width="100%"
                         >
                           Award 20 Points
                         </Button>
-                        
                         <Button 
                           onClick={() => handleAddPoints(selectedHouse, 30)}
                           isLoading={buttonLoading[`${selectedHouse}30`]}
                           leftIcon={<Text as="span">+30</Text>}
-                          isDisabled={buttonLoading[`${selectedHouse}30`]} 
+                          isDisabled={buttonLoading[`${selectedHouse}30`]}
                           className="admin-button success"
                           width="100%"
                         >
                           Award 30 Points
                         </Button>
-                        
                         <Button 
                           onClick={() => handleAddPoints(selectedHouse, 40)}
                           isLoading={buttonLoading[`${selectedHouse}40`]}
                           leftIcon={<Text as="span">+40</Text>}
-                          isDisabled={buttonLoading[`${selectedHouse}40`]} 
+                          isDisabled={buttonLoading[`${selectedHouse}40`]}
                           className="admin-button success"
                           width="100%"
                         >
                           Award 40 Points
+                        </Button>
+                        <Button 
+                          onClick={() => handleAddPoints(selectedHouse, -20)}
+                          isLoading={buttonLoading[`${selectedHouse}-20`]}
+                          leftIcon={<Text as="span">-20</Text>}
+                          isDisabled={buttonLoading[`${selectedHouse}-20`]}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 20 Points
+                        </Button>
+                        <Button 
+                          onClick={() => handleAddPoints(selectedHouse, -30)}
+                          isLoading={buttonLoading[`${selectedHouse}-30`]}
+                          leftIcon={<Text as="span">-30</Text>}
+                          isDisabled={buttonLoading[`${selectedHouse}-30`]}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 30 Points
+                        </Button>
+                        <Button 
+                          onClick={() => handleAddPoints(selectedHouse, -40)}
+                          isLoading={buttonLoading[`${selectedHouse}-40`]}
+                          leftIcon={<Text as="span">-40</Text>}
+                          isDisabled={buttonLoading[`${selectedHouse}-40`]}
+                          className="admin-button danger"
+                          width="100%"
+                        >
+                          Deduct 40 Points
                         </Button>
                       </VStack>
                       

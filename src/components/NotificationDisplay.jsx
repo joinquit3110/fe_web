@@ -44,6 +44,8 @@ const NotificationDisplay = () => {
   const activeTimeouts = useRef([]);
   const globalDedupeRegistry = useRef(new Map());
   
+  const MAX_ACTIVE_NOTIFICATIONS = 1; // Only show 1 notification at a time
+  
   // Helper function to create a notification hash for deduplication
   const getNotificationHash = (notification) => {
     const type = notification.type || 'info';
@@ -171,33 +173,26 @@ const NotificationDisplay = () => {
   // Optimize notification queue processing
   const processNotificationQueue = useCallback(() => {
     if (processingQueue.current) return;
-    
     const now = performance.now();
     const elapsed = now - lastRenderTime.current;
-    
     if (elapsed < FRAME_TIME) {
       animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
       return;
     }
-    
     lastRenderTime.current = now;
     processingQueue.current = true;
-    
     try {
-      // Process notifications in batches
-      const batchSize = 3;
+      // Only process 1 notification at a time
+      const batchSize = 1;
       const batch = notificationQueue.current.splice(0, batchSize);
-      
       if (batch.length > 0) {
         setActiveNotifications(prev => {
           const newNotifications = [...batch, ...prev];
-          return newNotifications.slice(0, 5); // Keep max 5 active notifications
+          return newNotifications.slice(0, MAX_ACTIVE_NOTIFICATIONS); // Only 1 active notification
         });
       }
     } finally {
       processingQueue.current = false;
-      
-      // Process next batch if queue is not empty
       if (notificationQueue.current.length > 0) {
         animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
       }
@@ -276,42 +271,22 @@ const NotificationDisplay = () => {
     <Fade key={notification.id} in={true}>
       <Box
         padding="0"
-        borderRadius="12px"
+        borderRadius="18px"
         color="white"
-        className="wizard-panel notification-panel"
-        boxShadow="0 10px 30px rgba(0,0,0,0.5)"
-        minHeight="auto" 
+        className="wizard-panel notification-panel magic-glow"
+        boxShadow="0 0 40px 10px rgba(80,0,200,0.25), 0 10px 30px rgba(0,0,0,0.5)"
+        minHeight="auto"
         width="100%"
         height="auto"
         position="relative"
         overflow="hidden"
-        border="1px solid rgba(255, 255, 255, 0.2)"
-        background={`linear-gradient(135deg, 
-          ${notification.type === 'success' ? 'rgba(46, 204, 113, 0.95)' : 
-            notification.type === 'warning' || notification.type === 'error' ? 'rgba(231, 76, 60, 0.95)' :
-            notification.type === 'announcement' ? 'rgba(142, 68, 173, 0.95)' : 
-            'rgba(52, 152, 219, 0.95)'} 0%,
-          ${notification.type === 'success' ? 'rgba(39, 174, 96, 0.98)' : 
-            notification.type === 'warning' || notification.type === 'error' ? 'rgba(192, 57, 43, 0.98)' :
-            notification.type === 'announcement' ? 'rgba(113, 54, 138, 0.98)' : 
-            'rgba(41, 128, 185, 0.98)'} 100%)`
-        }
-        transform="perspective(1000px)"
-        _before={{
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `url(${notification.pointsChange > 0 ? increasePointImg : decreasePointImg}) no-repeat center`,
-          backgroundSize: '250px',
-          opacity: notification.pointsChange ? 0.07 : 0,
-          zIndex: 0,
-          filter: 'blur(2px)'
+        border="2px solid rgba(255, 255, 255, 0.4)"
+        background={`radial-gradient(circle at 60% 40%, rgba(80,0,200,0.18) 0%, rgba(52, 152, 219, 0.95) 100%)`}
+        style={{
+          filter: 'drop-shadow(0 0 30px #a084ee) blur(0.5px)',
+          backdropFilter: 'blur(6px)'
         }}
       >
-        {/* Notification content */}
         <NotificationContent 
           notification={notification} 
           onClose={handleClose}
@@ -322,6 +297,15 @@ const NotificationDisplay = () => {
   
   // Responsive check
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
+
+  // In useEffect for activeNotifications, auto-dismiss after duration
+  useEffect(() => {
+    if (activeNotifications.length === 0) return;
+    const timer = setTimeout(() => {
+      setActiveNotifications(prev => prev.slice(1));
+    }, activeNotifications[0]?.duration || 5000);
+    return () => clearTimeout(timer);
+  }, [activeNotifications]);
 
   if (activeNotifications.length === 0) return null;
   
@@ -414,6 +398,16 @@ const NotificationDisplay = () => {
           0% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
           50% { filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1)); transform: rotate(-2deg) scale(1.1); }
           100% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
+        }
+        
+        .magic-glow {
+          box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44;
+          border: 2px solid #f0c75e;
+          animation: magic-glow-anim 2.5s ease-in-out infinite alternate;
+        }
+        @keyframes magic-glow-anim {
+          0% { box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44; }
+          100% { box-shadow: 0 0 60px 20px #f0c75e, 0 0 120px 40px #a084ee44; }
         }
       `}</style>
     </Stack>
