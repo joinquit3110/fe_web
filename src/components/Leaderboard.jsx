@@ -199,7 +199,12 @@ const Leaderboard = () => {
                     {houseStats[house.value]?.users || 0} students
                   </Badge>
                   <Box 
-                    p={3} 
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    width="90px"
+                    height="90px"
+                    p={0}
                     borderRadius="full" 
                     bg={index === 0 ? 'gold' : `${house.textColor}DD`}
                     color={index === 0 ? house.bgColor : house.bgColor}
@@ -208,17 +213,50 @@ const Leaderboard = () => {
                     className="point-badge"
                     boxShadow={index === 0 ? '0 0 20px gold' : '0 0 8px #fff'}
                     mt={2}
+                    mb={2}
+                    style={{
+                      minWidth: '90px',
+                      minHeight: '90px',
+                      maxWidth: '90px',
+                      maxHeight: '90px',
+                      aspectRatio: '1/1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto',
+                      letterSpacing: '1px',
+                      border: index === 0 ? '3px solid #fff' : '2px solid #fff',
+                      transition: 'box-shadow 0.3s',
+                    }}
                   >
                     {houseStats[house.value]?.points || 0}
                   </Box>
-                  <HStack mt={4} justify="space-between" w="100%">
-                    <Text fontSize="sm" opacity={0.9}>
-                      Average points per student
-                    </Text>
-                    <Text fontSize="sm" fontWeight="bold">
-                      Rank: #{index + 1}
-                    </Text>
-                  </HStack>
+                  {/* Creative Rank Ribbon/Badge */}
+                  <Box
+                    mt={2}
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                  >
+                    <span style={{
+                      background: index === 0 ? 'linear-gradient(90deg, gold, #fffbe7)' : 'linear-gradient(90deg, #222, #444)',
+                      color: index === 0 ? '#bfa100' : '#fff',
+                      borderRadius: '16px',
+                      padding: '4px 18px',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      boxShadow: index === 0 ? '0 0 10px gold' : '0 0 6px #fff',
+                      letterSpacing: '1px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      border: index === 0 ? '2px solid #fffbe7' : '1.5px solid #fff',
+                      marginBottom: '4px',
+                    }}>
+                      {index === 0 ? '👑' : '🏅'}
+                      {index === 0 ? 'HOUSE CHAMPION' : `RANK #${index + 1}`}
+                    </span>
+                  </Box>
                 </Flex>
               </Box>
             ))}
