@@ -6,6 +6,24 @@ import { useSocket } from '../context/SocketContext';
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
 
+// Helper function to standardize criteria text
+const standardizeCriteria = (criteria) => {
+  if (!criteria) return '';
+  return criteria
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+};
+
+// Helper function to standardize level text
+const standardizeLevel = (level) => {
+  if (!level) return '';
+  return level
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+};
+
 const NotificationDisplay = () => {
   const [activeNotifications, setActiveNotifications] = useState([]);
   const { user } = useAuth();
@@ -35,24 +53,6 @@ const NotificationDisplay = () => {
     const msgStart = notification.message ? notification.message.substring(0, 30) : '';
     
     return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}`;
-  };
-  
-  // Helper function to standardize criteria text
-  const standardizeCriteria = (criteria) => {
-    if (!criteria) return '';
-    return criteria
-      .toLowerCase()
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
-  };
-  
-  // Helper function to standardize level text
-  const standardizeLevel = (level) => {
-    if (!level) return '';
-    return level
-      .toLowerCase()
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
   };
   
   // Extract criteria and level
