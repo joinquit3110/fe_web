@@ -263,34 +263,9 @@ const NotificationDisplay = () => {
   useEffect(() => {
     if (socketNotifications.length === 0) return;
     
-    console.log('[NOTIFICATION] Processing socket notifications:', socketNotifications);
-    
-    socketNotifications.forEach(notification => {
-      if (!notificationQueue.current.some(item => item.id === notification.id)) {
-        const notificationItem = {
-          id: notification.id,
-          type: notification.type,
-          title: notification.title || getNotificationTitle(notification.type),
-          message: notification.message,
-          timestamp: notification.timestamp ? new Date(notification.timestamp) : new Date(),
-          source: 'socket',
-          duration: getDurationByType(notification.type),
-          pointsChange: notification.pointsChange,
-          reason: notification.reason,
-          criteria: notification.criteria,
-          level: notification.level
-        };
-        
-        console.log('[NOTIFICATION] Created socket notification item:', notificationItem);
-        
-        notificationQueue.current.push(notificationItem);
-      }
-    });
-    
-    if (!processingQueue.current) {
-      animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
-    }
-  }, [socketNotifications, processNotificationQueue]);
+    // Use the new processSocketNotifications function
+    processSocketNotifications(socketNotifications);
+  }, [socketNotifications, processSocketNotifications]);
   
   // Helper functions for notification display
   const getNotificationTitle = (type) => {

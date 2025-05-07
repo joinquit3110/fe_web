@@ -275,6 +275,18 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
       
+      // Dispatch the event to inform other components
+      if (typeof window !== 'undefined') {
+        const socketEvent = new CustomEvent('socketUpdate', {
+          detail: { 
+            type: 'sync_update',
+            data,
+            timestamp: new Date().toISOString()
+          }
+        });
+        window.dispatchEvent(socketEvent);
+      }
+      
       if (data.type === 'user_update' && data.data?.updatedFields) {
         handleUserUpdate(data.data.updatedFields);
       }
@@ -290,7 +302,12 @@ export const SocketProvider = ({ children }) => {
           const oldPoints = user.magicPoints || 0;
           const pointsDiff = newPoints - oldPoints;
           
-          if (pointsDiff !== 0) {
+          // Only create notification if there's an actual change and we haven't shown this update already
+          const notificationKey = `points_update_${newPoints}_${Date.now().toString().substring(0, 10)}`;
+          if (pointsDiff !== 0 && !recentNotifications.current.has(notificationKey)) {
+            // Add to recent notifications to prevent duplicates
+            recentNotifications.current.add(notificationKey);
+            
             // Extract potential reason from data
             const reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
             
@@ -315,6 +332,8 @@ export const SocketProvider = ({ children }) => {
             console.log('[SOCKET] Created point update notification:', notification);
             
             addNotification(notification);
+          } else {
+            console.log(`[SOCKET] Skipping duplicate point update notification for ${pointsDiff} points or zero change`);
           }
         }
       }
@@ -500,8 +519,9 @@ export const SocketProvider = ({ children }) => {
     if (user && setUser) {
       const oldPoints = user.magicPoints || 0;
       const newPoints = updatedFields.magicPoints;
+      const pointsDiff = newPoints - oldPoints;
       
-      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
+      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints} (change: ${pointsDiff})`);
       
       // Update the user object
       setUser(prev => ({
@@ -509,19 +529,25 @@ export const SocketProvider = ({ children }) => {
         magicPoints: newPoints
       }));
       
-      // Also notify the MagicPointsContext via a custom event
-      if (typeof window !== 'undefined') {
-        const pointsEvent = new CustomEvent('magicPointsUpdated', {
-          detail: {
-            points: newPoints,
-            source: 'serverSync',
-            immediate: true,
-            oldPoints: oldPoints,
-            timestamp: new Date().toISOString()
-          }
-        });
-        console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
-        window.dispatchEvent(pointsEvent);
+      // Only send notification if there's an actual change
+      if (pointsDiff !== 0) {
+        // Also notify the MagicPointsContext via a custom event
+        if (typeof window !== 'undefined') {
+          const pointsEvent = new CustomEvent('magicPointsUpdated', {
+            detail: {
+              points: newPoints,
+              pointsChange: pointsDiff,
+              source: 'serverSync',
+              immediate: true,
+              oldPoints: oldPoints,
+              timestamp: new Date().toISOString()
+            }
+          });
+          console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
+          window.dispatchEvent(pointsEvent);
+        }
+      } else {
+        console.log('[SOCKET] Points unchanged, skipping notification');
       }
     }
   };
