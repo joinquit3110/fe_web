@@ -360,23 +360,19 @@ export const SocketProvider = ({ children }) => {
     });
   }, [addNotification, fetchUserData]);
 
-  // Initialize socket with the working backend - FIXED FUNCTION
-  const initializeSocket = useCallback(async (forceUrl = null) => {
+  // Socket initialization function - will be used for initial setup and reconnects
+  const initializeSocket = useCallback(async (backendUrl = null) => {
     socketInitializationAttempts.current += 1;
     
-    // Clean up existing socket if any
-    if (socket) {
-      console.log('[SOCKET] Cleaning up existing socket connection');
-      socket.disconnect();
+    if (socketInitializationAttempts.current > 10) {
+      console.error('[SOCKET] Too many socket initialization attempts, giving up');
+      return null;
     }
     
-    // Determine which URL to use
-    let backendUrl = forceUrl;
+    // If no backend URL is provided, try to find a working one
     if (!backendUrl) {
-      // If we've tried too many times, try finding a working URL
-      if (socketInitializationAttempts.current > 2) {
-        backendUrl = await findWorkingBackendUrl();
-      } else {
+      if (BACKEND_URLS.length > 1) {
+        const activeBackendUrl = await findWorkingBackendUrl();
         backendUrl = activeBackendUrl;
       }
     }
@@ -384,18 +380,31 @@ export const SocketProvider = ({ children }) => {
     console.log(`[SOCKET] Initializing socket connection to ${backendUrl} (attempt ${socketInitializationAttempts.current})`);
     setActiveBackendUrl(backendUrl);
     
-    // Validate user before socket creation
-    if (!user || !user.token) {
+    // Get token from localStorage as fallback if user object doesn't have it
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    let parsedUser = null;
+    
+    try {
+      if (storedUser) {
+        parsedUser = JSON.parse(storedUser);
+      }
+    } catch (e) {
+      console.error('[SOCKET] Error parsing stored user:', e);
+    }
+    
+    // Validate user before socket creation - use stored token as fallback
+    if ((!user || !user.token) && !storedToken) {
       console.error('[SOCKET] Cannot initialize socket: missing user or token');
       return null;
     }
     
-    // Prepare auth data
+    // Prepare auth data using available information
     const authData = {
-      userId: user.id || '',
-      username: user.username || '',
-      house: user.house || '',
-      token: user.token || ''
+      userId: user?.id || parsedUser?.id || '',
+      username: user?.username || parsedUser?.username || '',
+      house: user?.house || parsedUser?.house || '',
+      token: user?.token || storedToken || ''
     };
     
     console.log('[SOCKET] Initializing with auth data:', {
@@ -456,12 +465,12 @@ export const SocketProvider = ({ children }) => {
     // Setup notification handlers
     setupNotificationHandlers(newSocket);
     
-  }, []);
+  }, [setupNotificationHandlers, setNotificationQueue, setIsConnected, setConnectionQuality]);
   
   // Socket initialization effect - IMPORTANT: This comes after all the function declarations
   useEffect(() => {
-    if (!isAuthenticated || !user) {
-      console.log('[SOCKET] Not authenticated or no user, skipping socket initialization');
+    if (!isAuthenticated) {
+      console.log('[SOCKET] Not authenticated, skipping socket initialization');
       return;
     }
     
@@ -572,7 +581,7 @@ export const SocketProvider = ({ children }) => {
         user.isAdmin === true ||
         ADMIN_USERS.includes(user.username);
       
-      console.log(`[SOCKET] User ${user.username} is${isAdminUser.current ? '' : ' not'} an admin`);
+      console.log(`[SOCKET] User ${user?.username} is${isAdminUser.current ? '' : ' not'} an admin`);
     } else {
       isAdminUser.current = false;
     }

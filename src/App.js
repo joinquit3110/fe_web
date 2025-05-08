@@ -475,11 +475,13 @@ const App = () => {
   return (
     <ChakraProvider theme={theme}>
       <AuthProvider>
-        <AdminProvider>
-          <SocketProvider>
-            <AppContent />
-          </SocketProvider>
-        </AdminProvider>
+        <MagicPointsProvider>
+          <AdminProvider>
+            <SocketProvider>
+              <AppContent />
+            </SocketProvider>
+          </AdminProvider>
+        </MagicPointsProvider>
       </AuthProvider>
     </ChakraProvider>
   );
