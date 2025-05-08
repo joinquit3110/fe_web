@@ -227,6 +227,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     error,
+    setUser, // Added setUser
+    setError, // Added setError
     login,
     logout,
     register,
@@ -241,10 +243,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

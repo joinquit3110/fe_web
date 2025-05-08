@@ -10,8 +10,10 @@ import {
   useBreakpointValue, Card, CardBody, 
   Stack, SimpleGrid, useDisclosure, Modal,
   ModalOverlay, ModalContent, ModalHeader,
-  ModalBody, ModalCloseButton, Tooltip
+  ModalBody, ModalCloseButton, Tooltip,
+  IconButton
 } from '@chakra-ui/react';
+import { RepeatIcon } from '@chakra-ui/icons';
 import '../styles/Admin.css';
 
 const AdminUserManagement = () => {
@@ -517,13 +519,13 @@ const AdminUserManagement = () => {
               </Button>
             </Tooltip>
             <Tooltip label="Refresh student data">
-              <Button 
+              <IconButton
+                icon={<RepeatIcon />}
                 onClick={fetchUsers}
                 className="admin-button primary"
                 size="sm"
-              >
-                Refresh
-              </Button>
+                aria-label="Refresh student data"
+              />
             </Tooltip>
           </div>
         </Box>
