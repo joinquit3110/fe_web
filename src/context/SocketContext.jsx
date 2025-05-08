@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 
 // Backend URL for socket connection
-const SOCKET_URL = "https://be-web-6c4k.onrender.com";
+const SOCKET_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com";
 
 // Create context
 const SocketContext = createContext();
@@ -99,11 +99,11 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Initializing new socket connection...');
       
       // Create socket with improved options and fallback
-      const newSocket = io(process.env.REACT_APP_API_URL || 'https://be-web-6c4k.onrender.com', {
+      const newSocket = io(SOCKET_URL, {
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 2000,
+        reconnectionAttempts: maxReconnectAttempts,
+        reconnectionDelay: reconnectDelay,
         reconnectionDelayMax: 5000,
         timeout: 20000,
         autoConnect: true,
@@ -153,6 +153,13 @@ export const SocketProvider = ({ children }) => {
           // Store notifications locally
           const storedNotifications = JSON.stringify(notifications);
           localStorage.setItem('pendingNotifications', storedNotifications);
+          
+          // Try polling as fallback
+          if (newSocket.io.opts.transports[0] === 'websocket') {
+            console.log('[SOCKET] Falling back to polling transport');
+            newSocket.io.opts.transports = ['polling', 'websocket'];
+            newSocket.connect();
+          }
         }
       });
 
