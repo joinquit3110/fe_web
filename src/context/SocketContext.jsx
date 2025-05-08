@@ -23,6 +23,7 @@ export const SocketProvider = ({ children }) => {
   // Enhanced notification tracking
   const recentNotifications = useRef(new Map()); // Changed to Map for better tracking
   const reconnectAttempts = useRef(0);
+  const reconnectTimeout = useRef(null); // Add reconnectTimeout ref
   const maxReconnectAttempts = 5;
   const reconnectDelay = 2000;
   const notificationExpiry = 5000; // 5 seconds expiry for deduplication
