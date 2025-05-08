@@ -51,7 +51,7 @@ const NotificationDisplay = () => {
   const activeTimeouts = useRef([]);
   const globalDedupeRegistry = useRef(new Map());
   
-  const MAX_ACTIVE_NOTIFICATIONS = 1;
+  const MAX_ACTIVE_NOTIFICATIONS = isMobile ? 1 : 3;
   const NOTIFICATION_DURATION = {
     success: 8000,
     warning: 10000,
@@ -124,59 +124,20 @@ const NotificationDisplay = () => {
             return null;
           }
         })
-        .filter(Boolean); // Remove null entries (duplicates or errors)
-      
-      // Only update state if we have valid notifications
-      if (processedNotifications.length > 0) {
-        notificationQueue.current.push(...processedNotifications);
+        .filter(Boolean); // Remove null entries
         
-        if (!processingQueue.current) {
-          animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
-        }
+      if (processedNotifications.length > 0) {
+        setActiveNotifications(prev => {
+          const newNotifications = [...processedNotifications, ...prev];
+          return newNotifications.slice(0, MAX_ACTIVE_NOTIFICATIONS);
+        });
       }
     } catch (error) {
       console.error('[NOTIFICATION] Error processing notification batch:', error);
     }
   }, [getNotificationHash]);
 
-  // Enhanced notification queue processing with error handling
-  const processNotificationQueue = useCallback(() => {
-    if (processingQueue.current) return;
-    
-    const now = performance.now();
-    const elapsed = now - lastRenderTime.current;
-    
-    if (elapsed < FRAME_TIME) {
-      animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
-      return;
-    }
-    
-    lastRenderTime.current = now;
-    processingQueue.current = true;
-    
-    try {
-      // Only process 1 notification at a time
-      const batchSize = 1;
-      const batch = notificationQueue.current.splice(0, batchSize);
-      
-      if (batch.length > 0) {
-        setActiveNotifications(prev => {
-          const newNotifications = [...batch, ...prev];
-          return newNotifications.slice(0, MAX_ACTIVE_NOTIFICATIONS);
-        });
-      }
-    } catch (error) {
-      console.error('[NOTIFICATION] Error processing notification queue:', error);
-    } finally {
-      processingQueue.current = false;
-      
-      if (notificationQueue.current.length > 0) {
-        animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
-      }
-    }
-  }, []);
-
-  // Enhanced notification display handling
+  // Enhanced notification display with animation
   const handleNotificationDisplay = useCallback((notification) => {
     const duration = notification.duration || NOTIFICATION_DURATION.default;
     
@@ -232,140 +193,101 @@ const NotificationDisplay = () => {
     return () => clearTimeout(timer);
   }, [activeNotifications, handleClose]);
 
-  // Add renderNotification function
-  const renderNotification = useCallback((notification) => (
-    <motion.div
-      key={notification.id}
-      initial={{ opacity: 0, y: 50, scale: 0.3 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-    >
-      <Box
-        className="notification-panel"
-        bg="rgba(0,0,0,0.85)"
-        borderRadius="lg"
-        overflow="hidden"
-        boxShadow="0 4px 20px rgba(0,0,0,0.3)"
-        backdropFilter="blur(10px)"
-        border="1px solid rgba(255,255,255,0.1)"
-        width="100%"
-        maxWidth="480px"
-        position="relative"
-        mb={4}
+  // Memoize the renderNotification function
+  const renderNotification = useCallback((notification) => {
+    if (!notification) return null;
+    
+    const isAssessment = notification.criteria && notification.level;
+    const pointsChange = notification.pointsChange;
+    const isPositive = pointsChange > 0;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -50 }}
+        transition={{ duration: 0.3 }}
       >
-        <NotificationContent 
-          notification={notification} 
-          onClose={handleClose}
-        />
-      </Box>
-    </motion.div>
-  ), [handleClose]);
+        <Box
+          p={4}
+          mb={2}
+          borderRadius="md"
+          boxShadow="md"
+          bg={notification.type === 'error' ? 'red.100' : 
+              notification.type === 'warning' ? 'orange.100' : 
+              notification.type === 'success' ? 'green.100' : 
+              notification.type === 'announcement' ? 'blue.100' : 'gray.100'}
+          position="relative"
+          maxW={isMobile ? "100%" : "400px"}
+          w="100%"
+        >
+          <Flex justify="space-between" align="center" mb={2}>
+            <Heading size="sm" color={notification.type === 'error' ? 'red.600' : 
+                                     notification.type === 'warning' ? 'orange.600' : 
+                                     notification.type === 'success' ? 'green.600' : 
+                                     notification.type === 'announcement' ? 'blue.600' : 'gray.600'}>
+              {notification.title || (isAssessment ? 'HOUSE ASSESSMENT!' : 
+                                   isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!')}
+            </Heading>
+            <CloseButton onClick={() => handleClose(notification.id)} />
+          </Flex>
+          
+          <VStack align="start" spacing={2}>
+            <Text>{notification.message}</Text>
+            
+            {pointsChange && (
+              <Flex align="center">
+                <Image
+                  src={isPositive ? increasePointImg : decreasePointImg}
+                  alt={isPositive ? "Points Increased" : "Points Decreased"}
+                  boxSize="24px"
+                  mr={2}
+                />
+                <Badge colorScheme={isPositive ? "green" : "red"}>
+                  {isPositive ? "+" : "-"}{Math.abs(pointsChange)} points
+                </Badge>
+              </Flex>
+            )}
+            
+            {isAssessment && (
+              <Box>
+                <Badge colorScheme="purple" mr={2}>
+                  {standardizeCriteria(notification.criteria)}
+                </Badge>
+                <Badge colorScheme="blue">
+                  {standardizeLevel(notification.level)}
+                </Badge>
+              </Box>
+            )}
+            
+            {notification.newTotal !== undefined && (
+              <Text fontSize="sm" color="gray.600">
+                New total: {notification.newTotal}
+              </Text>
+            )}
+          </VStack>
+        </Box>
+      </motion.div>
+    );
+  }, [isMobile, handleClose]);
 
-  if (activeNotifications.length === 0) return null;
-  
   return (
-    <Stack
-      spacing={isMobile ? 2 : 5}
+    <Box
       position="fixed"
-      top={isMobile ? '10px' : '100px'}
-      right={isMobile ? '0' : '20px'}
-      left={isMobile ? '0' : undefined}
+      top={4}
+      right={4}
       zIndex={1000}
-      maxWidth={isMobile ? '98vw' : '480px'}
-      width={isMobile ? '98vw' : 'auto'}
-      maxHeight={isMobile ? 'calc(100vh - 20px)' : 'calc(100vh - 150px)'}
-      overflowY="auto"
-      alignItems={isMobile ? 'center' : 'flex-end'}
-      px={isMobile ? 1 : 0}
+      maxW={isMobile ? "100%" : "400px"}
+      w="100%"
     >
-      {activeNotifications.map(renderNotification)}
-      
-      {/* CSS for animations */}
-      <style jsx global>{`
-        @keyframes pop-in {
-          0% { transform: scale(0.95); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        
-        .notification-panel {
-          animation: pop-in 0.3s ease-out;
-          transform-origin: center center;
-        }
-        
-        @keyframes points-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); text-shadow: 0 0 15px rgba(0,0,0,0.8); }
-        }
-        
-        .points-text-animation {
-          animation: points-pulse 1.5s ease-in-out infinite;
-        }
-        
-        .point-glow-positive {
-          box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
-          animation: glow-positive 2s ease-in-out infinite;
-        }
-        
-        @keyframes glow-positive {
-          0%, 100% { box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); }
-          50% { box-shadow: 0 0 25px rgba(46, 204, 113, 1); }
-        }
-        
-        .point-glow-negative {
-          box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
-          animation: glow-negative 2s ease-in-out infinite;
-        }
-        
-        @keyframes glow-negative {
-          0%, 100% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.7); }
-          50% { box-shadow: 0 0 25px rgba(231, 76, 60, 1); }
-        }
-        
-        .image-container {
-          position: relative;
-          transform-origin: center center;
-          animation: container-float 3s ease-in-out infinite;
-        }
-        
-        @keyframes container-float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        
-        .increase-animation {
-          filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
-          animation: increase-image-animation 3s ease-in-out infinite;
-        }
-        
-        @keyframes increase-image-animation {
-          0% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
-          50% { filter: drop-shadow(0 0 25px rgba(46, 204, 113, 1)); transform: rotate(2deg) scale(1.1); }
-          100% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
-        }
-        
-        .decrease-animation {
-          filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
-          animation: decrease-image-animation 3s ease-in-out infinite;
-        }
-        
-        @keyframes decrease-image-animation {
-          0% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
-          50% { filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1)); transform: rotate(-2deg) scale(1.1); }
-          100% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
-        }
-        
-        .magic-glow {
-          box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44;
-          border: 2px solid #f0c75e;
-          animation: magic-glow-anim 2.5s ease-in-out infinite alternate;
-        }
-        @keyframes magic-glow-anim {
-          0% { box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44; }
-          100% { box-shadow: 0 0 60px 20px #f0c75e, 0 0 120px 40px #a084ee44; }
-        }
-      `}</style>
-    </Stack>
+      <AnimatePresence>
+        {activeNotifications.map(notification => (
+          <Box key={notification.id}>
+            {renderNotification(notification)}
+          </Box>
+        ))}
+      </AnimatePresence>
+    </Box>
   );
 };
 

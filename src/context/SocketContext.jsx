@@ -97,9 +97,9 @@ export const SocketProvider = ({ children }) => {
 
       console.log('[SOCKET] Initializing new socket connection...');
       
-      // Create socket with improved options
-      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
-        transports: ['websocket'],
+      // Create socket with improved options and fallback
+      const newSocket = io(process.env.REACT_APP_API_URL || 'https://be-web-6c4k.onrender.com', {
+        transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -110,7 +110,8 @@ export const SocketProvider = ({ children }) => {
         auth: {
           userId: user?.id,
           username: user?.username,
-          house: user?.house
+          house: user?.house,
+          token: user?.token
         }
       });
 
@@ -119,6 +120,15 @@ export const SocketProvider = ({ children }) => {
         console.log('[SOCKET] Connected successfully');
         setIsConnected(true);
         setConnectionQuality('good');
+        reconnectAttempts.current = 0;
+        
+        // Authenticate with server
+        newSocket.emit('authenticate', {
+          userId: user?.id,
+          username: user?.username,
+          house: user?.house,
+          token: user?.token
+        });
         
         // Request initial sync after connection
         newSocket.emit('request_sync');
@@ -132,14 +142,16 @@ export const SocketProvider = ({ children }) => {
         setIsConnected(false);
         setConnectionQuality('poor');
         
-        // Store notifications locally if connection fails
-        const storedNotifications = localStorage.getItem('pendingNotifications');
-        if (storedNotifications) {
-          try {
-            setNotificationQueue(JSON.parse(storedNotifications));
-          } catch (e) {
-            console.error('[SOCKET] Error parsing stored notifications:', e);
-          }
+        // Increment reconnect attempts
+        reconnectAttempts.current += 1;
+        
+        if (reconnectAttempts.current >= maxReconnectAttempts) {
+          console.log('[SOCKET] Max reconnection attempts reached');
+          setConnectionQuality('disconnected');
+          
+          // Store notifications locally
+          const storedNotifications = JSON.stringify(notifications);
+          localStorage.setItem('pendingNotifications', storedNotifications);
         }
       });
 
@@ -148,14 +160,34 @@ export const SocketProvider = ({ children }) => {
         setIsConnected(false);
         
         // If disconnect was not initiated by client, attempt to reconnect
-        if (reason !== 'io client disconnect') {
-          setTimeout(() => {
+        if (reason !== 'io client disconnect' && reconnectAttempts.current < maxReconnectAttempts) {
+          if (reconnectTimeout.current) {
+            clearTimeout(reconnectTimeout.current);
+          }
+          
+          reconnectTimeout.current = setTimeout(() => {
             if (!socket?.connected) {
               console.log('[SOCKET] Attempting to reconnect...');
               newSocket.connect();
             }
-          }, 2000);
+          }, reconnectDelay);
         }
+      });
+
+      // Add error handler for socket events
+      newSocket.on('error', (error) => {
+        console.error('[SOCKET] Socket error:', error);
+        setConnectionQuality('poor');
+      });
+
+      // Add authentication error handler
+      newSocket.on('auth_error', (error) => {
+        console.error('[SOCKET] Authentication error:', error);
+        // Clear auth state and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.setItem('isAuthenticated', 'false');
+        window.location.href = '/login';
       });
 
       // Enhanced notification handling
@@ -233,14 +265,19 @@ export const SocketProvider = ({ children }) => {
         }
       });
 
-      // Store the socket instance
       setSocket(newSocket);
-      
       return newSocket;
     };
 
     const cleanup = initializeSocket();
-    return cleanup;
+    return () => {
+      if (cleanup) {
+        cleanup.disconnect();
+      }
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
+    };
   }, [isAuthenticated, user]);
 
   // Handle socket reconnection
