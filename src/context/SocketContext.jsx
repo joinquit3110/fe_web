@@ -266,114 +266,149 @@ export const SocketProvider = ({ children }) => {
     });
   }, [processNotificationQueue]);
 
-  // Enhanced socket event handlers
+  // Socket event handlers
   useEffect(() => {
-    if (!socket) return;
-
-    const handleSyncUpdate = (data) => {
-      console.log('[SOCKET] Received sync update:', data);
-      setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
-      
-      if (data.type === 'user_update' && data.data?.updatedFields) {
-        handleUserUpdate(data.data.updatedFields);
-      }
-      
-      // Convert sync_update with points change messages to notifications
-      if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
-        console.log('[SOCKET] Converting point update to notification:', data);
-        
-        // Parse points value from message
-        const pointsMatch = data.message.match(/updated to (\d+)/);
-        if (pointsMatch && pointsMatch[1] && user) {
-          const newPoints = parseInt(pointsMatch[1], 10);
-          const oldPoints = user.magicPoints || 0;
-          const pointsDiff = newPoints - oldPoints;
-          
-          if (pointsDiff !== 0) {
-            // Extract potential reason from data
-            const reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
-            
-            // Extract criteria/level if available
-            const criteria = data.criteria || data.data?.criteria || null;
-            const level = data.level || data.data?.level || null;
-            
-            // Create notification for points change
-            const notification = {
-              id: `points_update_${Date.now()}`,
-              type: pointsDiff > 0 ? 'success' : 'warning',
-              title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
-              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}`,
-              timestamp: new Date(),
-              pointsChange: pointsDiff,
-              reason: reason || 'System update',
-              criteria: criteria,
-              level: level,
-              house: user.house
-            };
-            
-            addNotification(notification);
-          }
-        }
-      }
-    };
-
-    const handleHousePointsUpdate = (data) => {
-      console.log('[SOCKET] Received house_points_update:', data);
-      if (isAdminUser.current || user?.house === 'muggle' || !user?.house) return;
-      
-      if (data.house === user?.house) {
-        // Log detailed data to verify criteria and level
-        console.log('[SOCKET] Creating notification with data:', {
-          house: data.house,
-          points: data.points,
-          reason: data.reason,
-          criteria: data.criteria,
-          level: data.level,
-          timestamp: data.timestamp
-        });
-        
-        const notification = createHousePointsNotification(data);
-        addNotification(notification);
-      }
-    };
-
-    const handleAdminNotification = (data) => {
-      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) return;
-      
-      const notification = {
-        id: Date.now(),
-        type: data.notificationType || 'info',
-        message: data.message,
-        timestamp: new Date()
-      };
-      
-      addNotification(notification);
-    };
-
-    const handleGlobalAnnouncement = (data) => {
-      const notification = {
-        id: Date.now(),
-        type: 'announcement',
-        message: `ANNOUNCEMENT: ${data.message}`,
-        timestamp: new Date()
-      };
-      
-      addNotification(notification);
-    };
-
-    // Register event handlers
+    if (!socket || !isConnected) return;
+    
+    // Set up socket event handlers
     socket.on('sync_update', handleSyncUpdate);
     socket.on('house_points_update', handleHousePointsUpdate);
     socket.on('admin_notification', handleAdminNotification);
     socket.on('global_announcement', handleGlobalAnnouncement);
-
+    socket.on('user_update', handleUserUpdate);
+    socket.on('house_update', handleHouseUpdate);
+    socket.on('magic_points_update', handleMagicPointsUpdate);
+    
+    // New event listener for client_house_notification from admin
+    socket.on('client_house_notification', (data) => {
+      console.log('[SOCKET] Received client_house_notification:', data);
+      
+      // Create a format for the notification
+      const notification = createHousePointsNotification(data);
+      
+      // Add to notification queue
+      if (notification) {
+        addNotification(notification);
+        
+        // Also dispatch a custom event for direct UI updates
+        if (typeof window !== 'undefined') {
+          const event = new CustomEvent('house-points-update', {
+            detail: {
+              house: data.house,
+              points: data.points,
+              reason: data.reason,
+              newTotal: data.newTotal,
+              timestamp: new Date().toISOString()
+            }
+          });
+          window.dispatchEvent(event);
+        }
+      }
+    });
+    
+    // Clean up on unmount
     return () => {
       socket.off('sync_update', handleSyncUpdate);
       socket.off('house_points_update', handleHousePointsUpdate);
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
+      socket.off('user_update', handleUserUpdate);
+      socket.off('house_update', handleHouseUpdate);
+      socket.off('magic_points_update', handleMagicPointsUpdate);
+      socket.off('client_house_notification');
     };
-  }, [socket, user, isAdminUser.current, addNotification]);
+  }, [socket, isConnected, user]); 
+  
+  // Handle sync update event with improved handling
+  const handleSyncUpdate = (data) => {
+    console.log('[SOCKET] Received sync update:', data);
+    const lastMessage = data;
+    setLastMessage(lastMessage);
+    
+    try {
+      // Handle different types of sync updates
+      if (data.type === 'user_update') {
+        // User data update
+        if (data.data && data.data.userId === user?.id) {
+          // Personal user update
+          handleUserUpdate(data.data);
+        }
+      } else if (data.type === 'points_update') {
+        // Points update
+        if (data.data && data.data.userId === user?.id) {
+          console.log('[SOCKET] Received points update:', data.data);
+          
+          // Create a points notification
+          const notification = {
+            id: `points-${Date.now()}`,
+            type: 'points',
+            title: data.data.points > 0 ? 'Points Earned!' : 'Points Lost',
+            message: `${data.data.points > 0 ? '+' : ''}${data.data.points} points! ${data.data.reason || ''}`,
+            timestamp: data.timestamp,
+            priority: 'high',
+            user: user.username,
+            pointsChange: data.data.points
+          };
+          
+          addNotification(notification);
+          
+          // Also dispatch a custom event for the MagicPointsContext
+          if (typeof window !== 'undefined') {
+            const event = new CustomEvent('magicPointsUpdated', {
+              detail: {
+                points: data.data.totalPoints || 0,
+                pointsDiff: data.data.points || 0,
+                reason: data.data.reason,
+                timestamp: data.timestamp
+              }
+            });
+            window.dispatchEvent(event);
+          }
+        }
+      } else if (data.type === 'house_points_update') {
+        // House points update, handled separately
+        handleHousePointsUpdate(data.data);
+      }
+    } catch (error) {
+      console.error('[SOCKET] Error handling sync update:', error);
+    }
+  };
+  
+  // Handle house points update with improved handling
+  const handleHousePointsUpdate = (data) => {
+    console.log('[SOCKET] Received house points update:', data);
+    
+    if (!data || !data.house) return;
+    
+    // Only show notification if it's for the user's house
+    if (user?.house === data.house || user?.house === 'admin') {
+      try {
+        // Create a notification for this house update
+        const notification = createHousePointsNotification(data);
+        
+        // Add to notification queue
+        if (notification) {
+          addNotification(notification);
+        }
+        
+        // Also dispatch a custom event for direct UI updates
+        if (typeof window !== 'undefined') {
+          const event = new CustomEvent('house-points-update', {
+            detail: {
+              house: data.house,
+              points: data.points,
+              reason: data.reason,
+              newTotal: data.newTotal,
+              timestamp: data.timestamp || new Date().toISOString()
+            }
+          });
+          window.dispatchEvent(event);
+        }
+      } catch (error) {
+        console.error('[SOCKET] Error handling house points update:', error);
+      }
+    }
+  };
 
   // Helper to create house points notification
   const createHousePointsNotification = (data) => {
@@ -429,56 +464,153 @@ export const SocketProvider = ({ children }) => {
     return message;
   };
 
-  // Helper to handle user updates
-  const handleUserUpdate = (updatedFields) => {
-    if (updatedFields.house && user && setUser) {
-      handleHouseUpdate(updatedFields.house);
+  // Handle admin notification
+  const handleAdminNotification = (data) => {
+    console.log('[SOCKET] Received admin notification:', data);
+    
+    // Skip if this is an admin-targeted message and current user is admin
+    if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
+      console.log('[SOCKET] Skipping admin notification for admin user');
+      return;
     }
     
-    if (updatedFields.magicPoints !== undefined) {
-      handleMagicPointsUpdate(updatedFields);
-    }
+    // Create notification object
+    const notification = {
+      id: `admin-${Date.now()}`,
+      type: data.notificationType || 'info',
+      title: data.title || 'Notification',
+      message: data.message,
+      timestamp: data.timestamp || new Date().toISOString(),
+      priority: data.priority || 'medium'
+    };
+    
+    // Add to notification queue
+    addNotification(notification);
   };
 
-  // Helper to handle house updates
-  const handleHouseUpdate = (newHouse) => {
-    if (user && setUser) {
-      setUser(prev => ({
-        ...prev,
-        house: newHouse,
-        previousHouse: prev.house
-      }));
+  // Handle global announcement
+  const handleGlobalAnnouncement = (data) => {
+    console.log('[SOCKET] Received global announcement:', data);
+    
+    // Create announcement notification
+    const notification = {
+      id: `announcement-${Date.now()}`,
+      type: 'announcement',
+      title: data.title || 'ANNOUNCEMENT',
+      message: data.message,
+      timestamp: data.timestamp || new Date().toISOString(),
+      priority: 'high'
+    };
+    
+    // Add to notification queue with priority
+    addNotification(notification);
+    
+    // Also dispatch a custom event for direct UI updates
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('global-announcement', {
+        detail: {
+          title: data.title,
+          message: data.message,
+          timestamp: data.timestamp || new Date().toISOString()
+        }
+      });
+      window.dispatchEvent(event);
     }
   };
-
-  // Helper to handle magic points updates
-  const handleMagicPointsUpdate = (updatedFields) => {
-    if (user && setUser) {
-      const oldPoints = user.magicPoints || 0;
-      const newPoints = updatedFields.magicPoints;
-      
-      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
-      
-      // Update the user object
-      setUser(prev => ({
-        ...prev,
-        magicPoints: newPoints
-      }));
-      
-      // Also notify the MagicPointsContext via a custom event
-      if (typeof window !== 'undefined') {
-        const pointsEvent = new CustomEvent('magicPointsUpdated', {
-          detail: {
-            points: newPoints,
-            source: 'serverSync',
-            immediate: true,
-            oldPoints: oldPoints,
-            timestamp: new Date().toISOString()
-          }
-        });
-        console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
-        window.dispatchEvent(pointsEvent);
+  
+  // Handle user update from server
+  const handleUserUpdate = (updatedFields) => {
+    console.log('[SOCKET] Received user update:', updatedFields);
+    
+    // If this contains a points update, create a notification
+    if (updatedFields && updatedFields.magicPoints !== undefined) {
+      // Dispatch event for the MagicPointsContext
+      if (typeof window !== 'undefined' && user) {
+        const oldPoints = user.magicPoints || 0;
+        const newPoints = updatedFields.magicPoints;
+        const pointsDiff = newPoints - oldPoints;
+        
+        if (pointsDiff !== 0) {
+          const event = new CustomEvent('magicPointsUpdated', {
+            detail: {
+              points: newPoints,
+              pointsDiff: pointsDiff,
+              reason: updatedFields.reason || 'User update',
+              timestamp: new Date().toISOString()
+            }
+          });
+          window.dispatchEvent(event);
+        }
       }
+    }
+    
+    // Update user state if a setter is available
+    if (setUser && updatedFields) {
+      setUser(prevUser => ({
+        ...prevUser,
+        ...updatedFields
+      }));
+    }
+  };
+  
+  // Handle house update (assignment or change)
+  const handleHouseUpdate = (newHouse) => {
+    console.log('[SOCKET] Received house update:', newHouse);
+    
+    // Update user state with new house if a setter is available
+    if (setUser && newHouse) {
+      setUser(prevUser => ({
+        ...prevUser,
+        previousHouse: prevUser.house,
+        house: newHouse
+      }));
+      
+      // Create notification for house assignment/change
+      const notification = {
+        id: `house-assignment-${Date.now()}`,
+        type: 'success',
+        title: 'House Assignment',
+        message: `You have been assigned to ${newHouse.charAt(0).toUpperCase() + newHouse.slice(1)}!`,
+        timestamp: new Date().toISOString(),
+        priority: 'high',
+        house: newHouse
+      };
+      
+      addNotification(notification);
+    }
+  };
+  
+  // Handle magic points update
+  const handleMagicPointsUpdate = (updatedFields) => {
+    console.log('[SOCKET] Received magic points update:', updatedFields);
+    
+    if (!updatedFields || updatedFields.points === undefined) return;
+    
+    // Create notification for points change
+    const points = parseInt(updatedFields.points, 10);
+    const notification = {
+      id: `points-${Date.now()}`,
+      type: points >= 0 ? 'success' : 'warning',
+      title: points >= 0 ? 'Points Earned!' : 'Points Lost',
+      message: `${points >= 0 ? '+' : ''}${points} magic points. ${updatedFields.reason || ''}`,
+      timestamp: updatedFields.timestamp || new Date().toISOString(),
+      priority: 'high',
+      pointsChange: points
+    };
+    
+    addNotification(notification);
+    
+    // Dispatch event for direct UI updates
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('magicPointsUpdated', {
+        detail: {
+          points: updatedFields.totalPoints || 0,
+          pointsDiff: points,
+          reason: updatedFields.reason,
+          timestamp: updatedFields.timestamp || new Date().toISOString()
+        }
+      });
+      window.dispatchEvent(event);
     }
   };
 
