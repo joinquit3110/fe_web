@@ -362,6 +362,12 @@ export const SocketProvider = ({ children }) => {
 
   // Socket initialization function - will be used for initial setup and reconnects
   const initializeSocket = useCallback(async (backendUrl = null) => {
+    // If we already have a connected socket, don't reinitialize
+    if (socket && socket.connected) {
+      console.log('[SOCKET] Socket already connected, skipping initialization');
+      return socket;
+    }
+    
     socketInitializationAttempts.current += 1;
     
     if (socketInitializationAttempts.current > 10) {
@@ -414,6 +420,12 @@ export const SocketProvider = ({ children }) => {
       hasToken: !!authData.token
     });
     
+    // Cleanup existing socket if present
+    if (socket) {
+      console.log('[SOCKET] Disconnecting existing socket before creating new one');
+      socket.disconnect();
+    }
+    
     // Create socket using helper function to avoid circular references
     const newSocket = createAndConfigureSocket(backendUrl, authData);
     if (!newSocket) return null;
@@ -424,7 +436,7 @@ export const SocketProvider = ({ children }) => {
     // Store in state and return
     setSocket(newSocket);
     return newSocket;
-  }, [socket, activeBackendUrl, user, findWorkingBackendUrl]);
+  }, [socket, activeBackendUrl, user, findWorkingBackendUrl, setupSocketEventHandlers]);
   
   // IMPORTANT: Split the event handler setup into a separate function
   // to avoid circular dependencies
@@ -438,6 +450,9 @@ export const SocketProvider = ({ children }) => {
       setConnectionQuality('good');
       reconnectAttempts.current = 0;
       socketInitializationAttempts.current = 0;
+      
+      // Log connection ID for debugging
+      console.log(`[SOCKET] Connection established with ID: ${newSocket.id}, transport: ${newSocket.io.engine.transport.name}`);
       
       // Authenticate with server - ensure we have auth data
       if (authData && authData.token) {
@@ -459,6 +474,34 @@ export const SocketProvider = ({ children }) => {
       setNotificationQueue([]);
     });
     
+    // Error handlers
+    newSocket.on('connect_error', (error) => {
+      console.error(`[SOCKET] Connection error: ${error.message}`);
+      setConnectionQuality('poor');
+      
+      // If we get an auth error, it might be due to an invalid token
+      if (error.message.includes('auth') || error.message.includes('unauthorized')) {
+        console.error('[SOCKET] Authentication error detected, may need to re-login');
+      }
+    });
+    
+    newSocket.on('error', (error) => {
+      console.error(`[SOCKET] Socket error: ${error.message || error}`);
+      setConnectionQuality('poor');
+    });
+    
+    newSocket.on('disconnect', (reason) => {
+      console.log(`[SOCKET] Disconnected: ${reason}`);
+      setIsConnected(false);
+      if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+        // The disconnection was initiated by the server or client, no need to reconnect
+        setConnectionQuality('disconnected');
+      } else {
+        // For other reasons like transport close, try to reconnect
+        setConnectionQuality('poor');
+      }
+    });
+    
     // Add all the other event handlers here...
     // (omitted for brevity, these would be the same as before)
     
@@ -475,24 +518,26 @@ export const SocketProvider = ({ children }) => {
     }
     
     console.log('[SOCKET] User authenticated, initializing socket');
-    const socketPromise = initializeSocket();
+    
+    // Store the socket instance in a ref to avoid cleanup issues
+    let socketInstance = null;
+    const initSocket = async () => {
+      socketInstance = await initializeSocket();
+    };
+    
+    // Call the async function without using the return value directly in the effect
+    initSocket();
     
     // Cleanup function
     return () => {
-      if (socketPromise && typeof socketPromise.then === 'function') {
-        // Handle Promise return from initializeSocket
-        socketPromise.then(socketInstance => {
-          if (socketInstance && typeof socketInstance.disconnect === 'function') {
-            console.log('[SOCKET] Cleaning up socket connection (from promise)');
-            socketInstance.disconnect();
-          }
-        }).catch(err => {
-          console.error('[SOCKET] Error in socket cleanup:', err);
-        });
+      // Only disconnect if we have a valid socket instance
+      if (socketInstance && typeof socketInstance.disconnect === 'function') {
+        console.log('[SOCKET] Cleaning up socket connection (from explicit cleanup)');
+        socketInstance.disconnect();
       }
       
-      // Also clean up the current socket from state if available
-      if (socket && typeof socket.disconnect === 'function') {
+      // Also clean up the current socket from state if available and different from socketInstance
+      if (socket && socket !== socketInstance && typeof socket.disconnect === 'function') {
         console.log('[SOCKET] Cleaning up socket connection (from state)');
         socket.disconnect();
       }
@@ -501,7 +546,7 @@ export const SocketProvider = ({ children }) => {
         clearTimeout(reconnectTimeout.current);
       }
     };
-  }, [isAuthenticated, user, initializeSocket, socket]);
+  }, [isAuthenticated, initializeSocket, socket]);
   
   // Handle socket reconnection
   useEffect(() => {
