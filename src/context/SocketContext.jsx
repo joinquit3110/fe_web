@@ -2,8 +2,12 @@ import React, { createContext, useState, useEffect, useContext, useCallback, use
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 
-// Backend URL for socket connection - force correct URL
-const SOCKET_URL = "https://be-web-6c4k.onrender.com";
+// Potential backend URLs - will try in order
+const BACKEND_URLS = [
+  "https://be-web-6c4k.onrender.com",
+  "https://inequality-web-api.onrender.com",
+  process.env.REACT_APP_API_URL
+].filter(Boolean); // Remove any undefined/empty values
 
 // Create context
 const SocketContext = createContext();
@@ -15,21 +19,21 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
+  const [connectionQuality, setConnectionQuality] = useState('good');
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  const [housePoints, setHousePoints] = useState({}); // Add housePoints state
+  const [housePoints, setHousePoints] = useState({});
+  const [activeBackendUrl, setActiveBackendUrl] = useState(BACKEND_URLS[0]);
   const { user, isAuthenticated, setUser } = useAuth();
   
-  // Enhanced notification tracking
-  const recentNotifications = useRef(new Map()); // Changed to Map for better tracking
+  // Enhanced connection tracking
+  const recentNotifications = useRef(new Map());
   const reconnectAttempts = useRef(0);
-  const reconnectTimeout = useRef(null); // Add reconnectTimeout ref
-  const maxReconnectAttempts = 10; // Increased from 5
-  const reconnectDelay = 3000; // Increased from 2000
-  const notificationExpiry = 5000; // 5 seconds expiry for deduplication
-
-  // Add admin checking functionality
+  const reconnectTimeout = useRef(null);
+  const maxReconnectAttempts = 10;
+  const reconnectDelay = 3000;
+  const notificationExpiry = 5000;
   const isAdminUser = useRef(false);
+  const socketInitializationAttempts = useRef(0);
 
   // Enhanced notification queue with priority and batching
   const [notificationQueue, setNotificationQueue] = useState([]);
@@ -38,51 +42,441 @@ export const SocketProvider = ({ children }) => {
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100;
 
-  // Add fetchUserData function
-  const fetchUserData = useCallback(async () => {
-    if (!user?.id) return;
+  // Find the best backend URL that responds
+  const findWorkingBackendUrl = useCallback(async () => {
+    console.log('[SOCKET] Trying to find a working backend URL...');
+    
+    for (const url of BACKEND_URLS) {
+      if (!url) continue;
+      
+      try {
+        console.log(`[SOCKET] Testing backend URL: ${url}`);
+        
+        // Try a simple fetch to see if the server responds at all
+        const response = await fetch(`${url}/api/health`, { 
+          method: 'GET',
+          mode: 'cors',
+          headers: { 'Accept': 'application/json' },
+          timeout: 5000,
+          signal: AbortSignal.timeout(5000)
+        }).catch(() => null);
+        
+        if (response && response.ok) {
+          console.log(`[SOCKET] Backend URL ${url} is responding with OK status`);
+          return url;
+        }
+        
+        // Even if not OK but we got a response, the server is at least online
+        if (response) {
+          console.log(`[SOCKET] Backend URL ${url} is responding with status: ${response.status}`);
+          return url;
+        }
+      } catch (error) {
+        console.log(`[SOCKET] Backend URL ${url} failed: ${error.message}`);
+      }
+      
+      // Try alternative health check endpoints
+      try {
+        // Try root path as fallback
+        const rootResponse = await fetch(url, { 
+          mode: 'cors',
+          timeout: 3000,
+          signal: AbortSignal.timeout(3000)
+        }).catch(() => null);
+        
+        if (rootResponse) {
+          console.log(`[SOCKET] Backend URL ${url} root path is responding`);
+          return url;
+        }
+      } catch (error) {
+        console.log(`[SOCKET] Backend URL ${url} root check failed: ${error.message}`);
+      }
+    }
+    
+    console.warn('[SOCKET] No working backend URLs found, using default');
+    return BACKEND_URLS[0]; // Default to first URL if none respond
+  }, []);
+
+  // Initialize socket with the working backend
+  const initializeSocket = useCallback(async (forceUrl = null) => {
+    socketInitializationAttempts.current += 1;
+    
+    // Clean up existing socket if any
+    if (socket) {
+      console.log('[SOCKET] Cleaning up existing socket connection');
+      socket.disconnect();
+    }
+    
+    // Determine which URL to use
+    let backendUrl = forceUrl;
+    if (!backendUrl) {
+      // If we've tried too many times, try finding a working URL
+      if (socketInitializationAttempts.current > 2) {
+        backendUrl = await findWorkingBackendUrl();
+      } else {
+        backendUrl = activeBackendUrl;
+      }
+    }
+    
+    console.log(`[SOCKET] Initializing socket connection to ${backendUrl} (attempt ${socketInitializationAttempts.current})`);
+    setActiveBackendUrl(backendUrl);
     
     try {
-      const response = await fetch(`${SOCKET_URL}/api/users/${user.id}`);
-      if (!response.ok) throw new Error('Failed to fetch user data');
+      // Create new socket instance
+      const newSocket = io(backendUrl, {
+        transports: ['polling', 'websocket'], // Start with polling which is more reliable
+        reconnection: true,
+        reconnectionAttempts: maxReconnectAttempts,
+        reconnectionDelay: reconnectDelay,
+        reconnectionDelayMax: 10000,
+        timeout: 30000,
+        autoConnect: true,
+        forceNew: true,
+        auth: user ? {
+          userId: user.id,
+          username: user.username,
+          house: user.house,
+          token: user.token
+        } : undefined,
+        path: '/socket.io/',
+        withCredentials: true
+      });
+      
+      // Set up event handlers
+      newSocket.on('connect', () => {
+        console.log('[SOCKET] Connected successfully');
+        setIsConnected(true);
+        setConnectionQuality('good');
+        reconnectAttempts.current = 0;
+        socketInitializationAttempts.current = 0;
+        
+        // Authenticate with server
+        if (user) {
+          newSocket.emit('authenticate', {
+            userId: user.id,
+            username: user.username,
+            house: user.house,
+            token: user.token
+          });
+          
+          // Request initial sync after connection
+          newSocket.emit('request_sync');
+        }
+        
+        // Clear any pending notifications
+        setNotificationQueue([]);
+      });
+      
+      newSocket.on('connect_error', (error) => {
+        console.error('[SOCKET] Connection error:', error);
+        setIsConnected(false);
+        setConnectionQuality('poor');
+        
+        // Increment reconnect attempts
+        reconnectAttempts.current += 1;
+        
+        // Handle max reconnection attempts reached
+        if (reconnectAttempts.current >= maxReconnectAttempts) {
+          console.log('[SOCKET] Max reconnection attempts reached');
+          setConnectionQuality('disconnected');
+          
+          // Store notifications locally for offline mode
+          const storedNotifications = JSON.stringify(notifications);
+          localStorage.setItem('pendingNotifications', storedNotifications);
+          
+          // Try another backend URL as fallback
+          if (socketInitializationAttempts.current < BACKEND_URLS.length) {
+            const nextUrlIndex = socketInitializationAttempts.current % BACKEND_URLS.length;
+            const nextUrl = BACKEND_URLS[nextUrlIndex];
+            
+            if (nextUrl && nextUrl !== backendUrl) {
+              console.log(`[SOCKET] Trying alternative backend URL: ${nextUrl}`);
+              setTimeout(() => initializeSocket(nextUrl), 1000);
+              return;
+            }
+          }
+          
+          // If we've tried all URLs, switch to polling as last resort
+          if (newSocket.io.opts.transports[0] === 'websocket') {
+            console.log('[SOCKET] Switching to polling transport');
+            newSocket.io.opts.transports = ['polling', 'websocket'];
+            setTimeout(() => newSocket.connect(), 1000);
+          }
+        } else {
+          // Calculate exponential backoff delay
+          const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts.current), 10000);
+          console.log(`[SOCKET] Attempting reconnection in ${delay}ms (attempt ${reconnectAttempts.current})`);
+          
+          // Try alternating transport protocols
+          if (reconnectAttempts.current % 2 === 1) {
+            if (newSocket.io.opts.transports[0] === 'websocket') {
+              console.log('[SOCKET] Switching to polling transport for reconnection');
+              newSocket.io.opts.transports = ['polling', 'websocket'];
+            } else {
+              console.log('[SOCKET] Switching to websocket transport for reconnection');
+              newSocket.io.opts.transports = ['websocket', 'polling'];
+            }
+          }
+          
+          // Schedule reconnection attempt
+          setTimeout(() => {
+            if (!newSocket.connected) {
+              newSocket.connect();
+            }
+          }, delay);
+        }
+      });
+      
+      newSocket.on('disconnect', (reason) => {
+        console.log(`[SOCKET] Disconnected: ${reason}`);
+        setIsConnected(false);
+        
+        // If disconnect was not initiated by client, attempt to reconnect
+        if (reason !== 'io client disconnect' && reason !== 'io server disconnect' && 
+            reconnectAttempts.current < maxReconnectAttempts) {
+          if (reconnectTimeout.current) {
+            clearTimeout(reconnectTimeout.current);
+          }
+          
+          reconnectTimeout.current = setTimeout(() => {
+            if (!newSocket.connected) {
+              console.log('[SOCKET] Attempting to reconnect after disconnect');
+              newSocket.connect();
+            }
+          }, reconnectDelay);
+        }
+      });
+      
+      // Error handler for socket events
+      newSocket.on('error', (error) => {
+        console.error('[SOCKET] Socket error:', error);
+        setConnectionQuality('poor');
+      });
+      
+      // Authentication error handler
+      newSocket.on('auth_error', (error) => {
+        console.error('[SOCKET] Authentication error:', error);
+        
+        // Only clear auth if it's not a temporary error
+        if (error && typeof error === 'object' && error.permanent) {
+          // Clear auth state and redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.setItem('isAuthenticated', 'false');
+          window.location.href = '/login';
+        }
+      });
+      
+      // Engine-level error handling
+      newSocket.io.engine.on('error', (err) => {
+        console.error('[SOCKET] Engine error:', err);
+        
+        // Handle specific error types
+        if (err.message && (err.message.includes('CORS') || err.message.includes('xhr poll error'))) {
+          console.log('[SOCKET] Specific transport error detected, trying alternative');
+          
+          // Switch transports
+          newSocket.io.opts.transports = 
+            newSocket.io.opts.transports[0] === 'websocket' ? 
+            ['polling', 'websocket'] : 
+            ['websocket', 'polling'];
+          
+          // Force reconnect with new transport
+          setTimeout(() => {
+            if (!newSocket.connected) {
+              newSocket.connect();
+            }
+          }, 1000);
+        }
+      });
+      
+      // Enhanced notification handling
+      setupNotificationHandlers(newSocket);
+      
+      // Set the socket in state
+      setSocket(newSocket);
+      return newSocket;
+    } catch (error) {
+      console.error('[SOCKET] Error during socket initialization:', error);
+      return null;
+    }
+  }, [socket, activeBackendUrl, user, notifications, findWorkingBackendUrl]);
+  
+  // Set up notification handlers
+  const setupNotificationHandlers = useCallback((socket) => {
+    if (!socket) return;
+    
+    // House points update handler
+    socket.on('house_points_update', (data) => {
+      console.log('[SOCKET] Received house points update:', data);
+      
+      // Create unique key for deduplication
+      const notificationKey = `points_update_${data.house}_${data.points}_${Date.now().toString().substring(0, 8)}`;
+      
+      // Check if this is an assessment notification
+      const isAssessment = data.criteria && data.level;
+      
+      // Create notification object
+      const notification = {
+        id: notificationKey,
+        type: data.points > 0 ? 'success' : 'warning',
+        title: isAssessment ? 'HOUSE ASSESSMENT!' : (data.points > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!'),
+        message: formatHousePointsMessage(data, isAssessment),
+        timestamp: new Date(data.timestamp || Date.now()),
+        pointsChange: data.points,
+        reason: data.reason || (isAssessment ? 'House Assessment' : 'House Points Update'),
+        criteria: data.criteria,
+        level: data.level,
+        house: data.house,
+        isAssessment: isAssessment,
+        newTotal: data.newTotal
+      };
+      
+      // Add to notifications queue
+      addNotification(notification);
+      
+      // Update local points if needed
+      if (typeof data.newTotal === 'number') {
+        setHousePoints(prev => ({
+          ...prev,
+          [data.house]: data.newTotal
+        }));
+      }
+    });
+    
+    // Sync update handler
+    socket.on('sync_update', (data) => {
+      console.log('[SOCKET] Received sync update:', data);
+      
+      if (data.type === 'force_sync') {
+        // Force refresh user data
+        fetchUserData();
+      } else if (data.type === 'user_update') {
+        // Handle user data updates
+        if (data.data?.updatedFields) {
+          const updates = data.data.updatedFields;
+          
+          // Update local user state
+          if (setUser && typeof setUser === 'function') {
+            setUser(prev => ({
+              ...prev,
+              ...updates
+            }));
+          }
+          
+          // Create notification for significant updates
+          if (updates.house || updates.magicPoints !== undefined) {
+            const notification = {
+              id: `user_update_${Date.now()}`,
+              type: 'info',
+              title: 'Profile Updated',
+              message: formatUserUpdateMessage(updates),
+              timestamp: new Date()
+            };
+            addNotification(notification);
+          }
+        }
+      }
+    });
+    
+    // General notification handler
+    socket.on('notification', (data) => {
+      console.log('[SOCKET] Received notification:', data);
+      addNotification({
+        id: data.id || `notification_${Date.now()}`,
+        type: data.type || 'info',
+        title: data.title || 'Notification',
+        message: data.message,
+        timestamp: new Date(data.timestamp || Date.now())
+      });
+    });
+    
+    // Admin notification handler
+    socket.on('admin_notification', (data) => {
+      console.log('[SOCKET] Received admin notification:', data);
+      addNotification({
+        id: data.id || `admin_${Date.now()}`,
+        type: data.notificationType || 'info',
+        title: data.title || 'Admin Notification',
+        message: data.message,
+        timestamp: new Date(data.timestamp || Date.now())
+      });
+    });
+    
+    // Handle batch notifications
+    socket.on('notification_batch', (data) => {
+      console.log('[SOCKET] Received notification batch:', data);
+      if (Array.isArray(data.notifications)) {
+        data.notifications.forEach(notif => addNotification(notif));
+      }
+    });
+    
+    // Handle connection status updates
+    socket.on('connection_status', (data) => {
+      console.log('[SOCKET] Connection status update:', data);
+      setConnectionQuality(data.connected ? 'good' : 'poor');
+    });
+  }, []);
+
+  // Fetch user data with active backend URL
+  const fetchUserData = useCallback(async () => {
+    if (!user?.id) return null;
+    
+    try {
+      console.log(`[SOCKET] Fetching user data from ${activeBackendUrl}`);
+      const response = await fetch(`${activeBackendUrl}/api/users/${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user data: ${response.status}`);
+      }
       
       const userData = await response.json();
-      // Update user data in context or state as needed
+      console.log('[SOCKET] User data fetched successfully');
+      
+      // Update user data if needed
+      if (setUser && userData) {
+        setUser(prev => ({
+          ...prev,
+          ...userData
+        }));
+      }
+      
       return userData;
     } catch (error) {
       console.error('Error fetching user data:', error);
       return null;
     }
-  }, [user?.id]);
+  }, [user, activeBackendUrl, setUser]);
 
-  // Add server health check function
-  const checkServerHealth = useCallback(async () => {
-    try {
-      console.log('[SOCKET] Checking server health at', SOCKET_URL);
-      const response = await fetch(`${SOCKET_URL}/api/health`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[SOCKET] Server health check result:', data);
-        return true;
-      } else {
-        console.error('[SOCKET] Server health check failed with status:', response.status);
-        return false;
-      }
-    } catch (error) {
-      console.error('[SOCKET] Server health check error:', error);
-      return false;
-    }
-  }, []);
-
-  // Run health check on mount
+  // Initialize socket when user logs in
   useEffect(() => {
-    checkServerHealth().then(isHealthy => {
-      console.log('[SOCKET] Initial server health check:', isHealthy ? 'HEALTHY' : 'UNHEALTHY');
-    });
-  }, [checkServerHealth]);
-
-  // Check if current user is admin when user changes
+    if (!isAuthenticated || !user) {
+      console.log('[SOCKET] Not authenticated or no user, skipping socket initialization');
+      return;
+    }
+    
+    console.log('[SOCKET] User authenticated, initializing socket');
+    const socket = initializeSocket();
+    
+    // Cleanup function
+    return () => {
+      if (socket) {
+        console.log('[SOCKET] Cleaning up socket connection');
+        socket.disconnect();
+      }
+      
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
+    };
+  }, [isAuthenticated, user, initializeSocket]);
+  
+  // Check if current user is admin
   useEffect(() => {
     if (user) {
       // Admin can be determined by house, role or username
@@ -108,305 +502,10 @@ export const SocketProvider = ({ children }) => {
           recentNotifications.current.delete(key);
         }
       });
-    }, 1000); // Check every second
+    }, 1000);
     
     return () => clearInterval(cleanupInterval);
   }, []);
-
-  // Initialize socket connection with enhanced error handling
-  useEffect(() => {
-    if (!isAuthenticated || !user) return;
-
-    const initializeSocket = () => {
-      if (socket) {
-        console.log('[SOCKET] Socket already exists, cleaning up...');
-        socket.disconnect();
-      }
-
-      console.log('[SOCKET] Initializing new socket connection to', SOCKET_URL);
-      
-      // Add diagnostic check for any stale connections to the old URL
-      if (window && window.fetch) {
-        const oldSocketUrl = "https://inequality-web-api.onrender.com";
-        if (SOCKET_URL !== oldSocketUrl) {
-          console.log(`[SOCKET] Checking if old URL ${oldSocketUrl} is still being used...`);
-          
-          // Test if the page is trying to connect to the old URL
-          const originalFetch = window.fetch;
-          const fetchDetection = function(url, options) {
-            if (url && typeof url === 'string' && url.includes('inequality-web-api.onrender.com')) {
-              console.error(`[SOCKET] DETECTED STALE CONNECTION TO OLD URL: ${url}`);
-              console.log('[SOCKET] This may indicate that the app needs to be rebuilt or cache cleared');
-            }
-            return originalFetch(url, options);
-          };
-          
-          // Temporarily patch fetch to detect these calls
-          window.fetch = fetchDetection;
-          setTimeout(() => {
-            // Restore original fetch after 10 seconds of monitoring
-            window.fetch = originalFetch;
-          }, 10000);
-        }
-      }
-      
-      // Create socket with improved options
-      const newSocket = io(SOCKET_URL, {
-        transports: ['polling', 'websocket'], // Start with polling to avoid CORS issues
-        reconnection: true,
-        reconnectionAttempts: maxReconnectAttempts,
-        reconnectionDelay: reconnectDelay,
-        reconnectionDelayMax: 10000,
-        timeout: 30000,
-        autoConnect: true,
-        forceNew: true,
-        auth: {
-          userId: user?.id,
-          username: user?.username,
-          house: user?.house,
-          token: user?.token
-        },
-        path: '/socket.io/',
-        withCredentials: true,
-        extraHeaders: {
-          'Access-Control-Allow-Origin': 'https://fe-web-lilac.vercel.app'
-        }
-      });
-
-      // Connection event handlers
-      newSocket.on('connect', () => {
-        console.log('[SOCKET] Connected successfully');
-        setIsConnected(true);
-        setConnectionQuality('good');
-        reconnectAttempts.current = 0;
-        
-        // Authenticate with server
-        newSocket.emit('authenticate', {
-          userId: user?.id,
-          username: user?.username,
-          house: user?.house,
-          token: user?.token
-        });
-        
-        // Request initial sync after connection
-        newSocket.emit('request_sync');
-        
-        // Clear any pending notifications
-        setNotificationQueue([]);
-      });
-
-      newSocket.on('connect_error', (error) => {
-        console.error('[SOCKET] Connection error:', error);
-        setIsConnected(false);
-        setConnectionQuality('poor');
-        
-        // Increment reconnect attempts
-        reconnectAttempts.current += 1;
-        
-        if (reconnectAttempts.current >= maxReconnectAttempts) {
-          console.log('[SOCKET] Max reconnection attempts reached');
-          setConnectionQuality('disconnected');
-          
-          // Store notifications locally
-          const storedNotifications = JSON.stringify(notifications);
-          localStorage.setItem('pendingNotifications', storedNotifications);
-          
-          // Try polling as fallback
-          if (newSocket.io.opts.transports[0] === 'websocket') {
-            console.log('[SOCKET] Falling back to polling transport');
-            newSocket.io.opts.transports = ['polling', 'websocket'];
-            
-            // Force reconnect with new transport
-            setTimeout(() => {
-              console.log('[SOCKET] Attempting reconnect with polling transport');
-              newSocket.connect();
-            }, 1000);
-          } else {
-            // Try HTTP fallback as last resort if WSS is failing
-            console.log('[SOCKET] Attempting HTTP fallback');
-            const httpUrl = SOCKET_URL.replace('wss://', 'http://').replace('https://', 'http://');
-            
-            // Test HTTP connection
-            fetch(`${httpUrl}/api/health`)
-              .then(response => {
-                if (response.ok) {
-                  console.log('[SOCKET] HTTP fallback available, will retry connection');
-                  setTimeout(() => newSocket.connect(), 2000);
-                }
-              })
-              .catch(err => {
-                console.error('[SOCKET] HTTP fallback failed:', err);
-              });
-          }
-        } else {
-          // Exponential backoff for reconnection
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
-          console.log(`[SOCKET] Attempting reconnection in ${delay}ms (attempt ${reconnectAttempts.current})`);
-          setTimeout(() => {
-            if (!newSocket.connected) {
-              // Try to modify transport method on odd-numbered attempts
-              if (reconnectAttempts.current % 2 === 1) {
-                if (newSocket.io.opts.transports[0] === 'websocket') {
-                  console.log('[SOCKET] Switching to polling-first reconnection strategy');
-                  newSocket.io.opts.transports = ['polling', 'websocket'];
-                } else {
-                  console.log('[SOCKET] Switching to websocket-first reconnection strategy');
-                  newSocket.io.opts.transports = ['websocket', 'polling'];
-                }
-              }
-              
-              newSocket.connect();
-            }
-          }, delay);
-        }
-      });
-
-      // Add specific websocket error handler
-      newSocket.io.engine.on('error', (err) => {
-        console.error('[SOCKET] Engine error:', err);
-        
-        // Check for specific CORS errors
-        if (err.message && err.message.includes('CORS')) {
-          console.log('[SOCKET] CORS error detected, switching to polling transport');
-          newSocket.io.opts.transports = ['polling'];
-          
-          setTimeout(() => {
-            if (!newSocket.connected) {
-              newSocket.connect();
-            }
-          }, 1000);
-        }
-      });
-
-      // Add upgrade handler to track transport changes
-      newSocket.io.engine.on('upgrade', (transport) => {
-        console.log(`[SOCKET] Transport upgraded to: ${transport.name}`);
-      });
-
-      newSocket.on('disconnect', (reason) => {
-        console.log('[SOCKET] Disconnected:', reason);
-        setIsConnected(false);
-        
-        // If disconnect was not initiated by client, attempt to reconnect
-        if (reason !== 'io client disconnect' && reconnectAttempts.current < maxReconnectAttempts) {
-          if (reconnectTimeout.current) {
-            clearTimeout(reconnectTimeout.current);
-          }
-          
-          reconnectTimeout.current = setTimeout(() => {
-            if (!socket?.connected) {
-              console.log('[SOCKET] Attempting to reconnect...');
-              newSocket.connect();
-            }
-          }, reconnectDelay);
-        }
-      });
-
-      // Add error handler for socket events
-      newSocket.on('error', (error) => {
-        console.error('[SOCKET] Socket error:', error);
-        setConnectionQuality('poor');
-      });
-
-      // Add authentication error handler
-      newSocket.on('auth_error', (error) => {
-        console.error('[SOCKET] Authentication error:', error);
-        // Clear auth state and redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.setItem('isAuthenticated', 'false');
-        window.location.href = '/login';
-      });
-
-      // Enhanced notification handling
-      newSocket.on('house_points_update', (data) => {
-        console.log('[SOCKET] Received house points update:', data);
-        
-        // Create unique key for deduplication
-        const notificationKey = `points_update_${data.house}_${data.points}_${Date.now().toString().substring(0, 8)}`;
-        
-        // Check if this is an assessment notification
-        const isAssessment = data.criteria && data.level;
-        
-        // Create notification object
-        const notification = {
-          id: notificationKey,
-          type: data.points > 0 ? 'success' : 'warning',
-          title: isAssessment ? 'HOUSE ASSESSMENT!' : (data.points > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!'),
-          message: formatHousePointsMessage(data, isAssessment),
-          timestamp: new Date(data.timestamp || Date.now()),
-          pointsChange: data.points,
-          reason: data.reason || (isAssessment ? 'House Assessment' : 'House Points Update'),
-          criteria: data.criteria,
-          level: data.level,
-          house: data.house,
-          isAssessment: isAssessment,
-          newTotal: data.newTotal
-        };
-        
-        // Add to notifications queue
-        addNotification(notification);
-        
-        // Update local points if needed
-        if (typeof data.newTotal === 'number' && setHousePoints) {
-          setHousePoints(prev => ({
-            ...prev,
-            [data.house]: data.newTotal
-          }));
-        }
-      });
-
-      // Enhanced sync update handling
-      newSocket.on('sync_update', (data) => {
-        console.log('[SOCKET] Received sync update:', data);
-        
-        if (data.type === 'force_sync') {
-          // Force refresh user data
-          if (typeof fetchUserData === 'function') {
-            fetchUserData();
-          }
-        } else if (data.type === 'user_update') {
-          // Handle user data updates
-          if (data.data?.updatedFields) {
-            const updates = data.data.updatedFields;
-            
-            // Update local user state
-            if (setUser && typeof setUser === 'function') {
-              setUser(prev => ({
-                ...prev,
-                ...updates
-              }));
-            }
-            
-            // Create notification for significant updates
-            if (updates.house || updates.magicPoints) {
-              const notification = {
-                id: `user_update_${Date.now()}`,
-                type: 'info',
-                title: 'Profile Updated',
-                message: formatUserUpdateMessage(updates),
-                timestamp: new Date()
-              };
-              addNotification(notification);
-            }
-          }
-        }
-      });
-
-      setSocket(newSocket);
-      return newSocket;
-    };
-
-    const cleanup = initializeSocket();
-    return () => {
-      if (cleanup) {
-        cleanup.disconnect();
-      }
-      if (reconnectTimeout.current) {
-        clearTimeout(reconnectTimeout.current);
-      }
-    };
-  }, [isAuthenticated, user]);
 
   // Handle socket reconnection
   useEffect(() => {
@@ -428,6 +527,15 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Failed to reconnect');
       setConnectionQuality('disconnected');
       setIsConnected(false);
+      
+      // Try an alternative URL if available
+      const nextUrlIndex = (BACKEND_URLS.indexOf(activeBackendUrl) + 1) % BACKEND_URLS.length;
+      const nextUrl = BACKEND_URLS[nextUrlIndex];
+      
+      if (nextUrl && nextUrl !== activeBackendUrl) {
+        console.log(`[SOCKET] Trying alternative backend URL after reconnection failure: ${nextUrl}`);
+        setTimeout(() => initializeSocket(nextUrl), 1000);
+      }
     };
 
     socket.on('reconnect', handleReconnect);
@@ -439,7 +547,7 @@ export const SocketProvider = ({ children }) => {
       socket.off('reconnect_error', handleReconnectError);
       socket.off('reconnect_failed', handleReconnectFailed);
     };
-  }, [socket]);
+  }, [socket, activeBackendUrl, initializeSocket]);
   
   // Implement heartbeat mechanism
   useEffect(() => {
@@ -469,7 +577,7 @@ export const SocketProvider = ({ children }) => {
       });
     }
   }, [socket, isConnected, user?.house]);
-
+  
   // Enhanced notification processing
   const processNotificationQueue = useCallback(() => {
     if (isProcessingQueue || notificationQueue.length === 0) return;
@@ -516,6 +624,11 @@ export const SocketProvider = ({ children }) => {
 
   // Enhanced notification adding with deduplication
   const addNotification = useCallback((notification) => {
+    if (!notification || !notification.message) {
+      console.warn('[SOCKET] Tried to add invalid notification:', notification);
+      return;
+    }
+    
     const notificationKey = `${notification.type}_${notification.id}_${Date.now()}`;
     
     // Check for duplicates
@@ -526,9 +639,6 @@ export const SocketProvider = ({ children }) => {
     
     // Add to recent notifications with expiry
     recentNotifications.current.set(notificationKey, Date.now());
-    setTimeout(() => {
-      recentNotifications.current.delete(notificationKey);
-    }, notificationExpiry);
     
     setNotificationQueue(prev => {
       const newQueue = [...prev, notification];
@@ -618,6 +728,16 @@ export const SocketProvider = ({ children }) => {
     setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
   }, []);
 
+  // Method to force reconnection to a different backend
+  const reconnectToAlternativeBackend = useCallback(() => {
+    const currentIndex = BACKEND_URLS.indexOf(activeBackendUrl);
+    const nextIndex = (currentIndex + 1) % BACKEND_URLS.length;
+    const nextUrl = BACKEND_URLS[nextIndex];
+    
+    console.log(`[SOCKET] Manually switching backend from ${activeBackendUrl} to ${nextUrl}`);
+    initializeSocket(nextUrl);
+  }, [activeBackendUrl, initializeSocket]);
+
   return (
     <SocketContext.Provider
       value={{
@@ -631,7 +751,8 @@ export const SocketProvider = ({ children }) => {
         sendMessage,
         requestSync,
         clearNotifications,
-        removeNotification
+        removeNotification,
+        reconnectToAlternativeBackend
       }}
     >
       {children}
