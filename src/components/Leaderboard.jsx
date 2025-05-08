@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack,
-  useToast, Spinner
+  useToast, Spinner, Button
 } from '@chakra-ui/react';
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
@@ -29,29 +29,29 @@ const Leaderboard = () => {
     { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000', logo: hufflepuffLogo }
   ];
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await fetchUsers();
-      } catch (err) {
-        toast({
-          title: 'Error loading leaderboard data',
-          description: err.message || 'Failed to fetch house data',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await fetchUsers();
+    } catch (err) {
+      toast({
+        title: 'Error loading leaderboard data',
+        description: err.message || 'Failed to fetch house data',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUsers, toast]);
 
+  useEffect(() => {
     loadData();
     // Refresh data every 60 seconds
     const interval = setInterval(loadData, 60000);
     return () => clearInterval(interval);
-  }, [fetchUsers, toast]);
+  }, [loadData]);
 
   useEffect(() => {
     if (!users || users.length === 0) return;
@@ -92,35 +92,43 @@ const Leaderboard = () => {
     (houseStats[b.value]?.points || 0) - (houseStats[a.value]?.points || 0)
   );
 
+  const handleRefresh = () => {
+    loadData();
+  };
+
   return (
     <Box className="wizard-panel">
       <VStack spacing={4} align="stretch">
-        <Heading 
-          className="activity-title" 
-          fontFamily="'Cinzel', serif"
-          textAlign="center"
-          position="relative"
-          textShadow="0 0 10px rgba(211, 166, 37, 0.5)"
-          letterSpacing="1px"
-          mb={4}
-        >
-          <span style={{
-            display: "inline-block",
-            padding: "0 30px",
-            position: "relative"
-          }}>
-            Hogwarts House Cup Leaderboard
+        <Flex justifyContent="space-between" alignItems="center" mb={4}>
+          <Heading 
+            className="activity-title" 
+            fontFamily="'Cinzel', serif"
+            textAlign="center"
+            position="relative"
+            textShadow="0 0 10px rgba(211, 166, 37, 0.5)"
+            letterSpacing="1px"
+          >
             <span style={{
-              position: "absolute",
-              bottom: "-5px",
-              left: "0",
-              right: "0",
-              height: "2px",
-              background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-              animation: "shimmer 2s infinite"
-            }}></span>
-          </span>
-        </Heading>
+              display: "inline-block",
+              padding: "0 30px",
+              position: "relative"
+            }}>
+              Hogwarts House Cup Leaderboard
+              <span style={{
+                position: "absolute",
+                bottom: "-5px",
+                left: "0",
+                right: "0",
+                height: "2px",
+                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+                animation: "shimmer 2s infinite"
+              }}></span>
+            </span>
+          </Heading>
+          <Button onClick={handleRefresh} isLoading={loading} colorScheme="yellow" variant="outline">
+            Refresh
+          </Button>
+        </Flex>
 
         {loading ? (
           <Flex justify="center" py={10} align="center" height="200px">

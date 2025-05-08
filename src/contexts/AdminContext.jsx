@@ -435,7 +435,7 @@ export const AdminProvider = ({ children }) => {
             { 
               magicPoints: newPoints,
               lastPointsUpdate: new Date().toISOString(),
-              lastUpdateReason: reason
+              lastUpdateReason: reason || 'House points update' // Make reason optional
             },
             {
               headers: {
@@ -456,86 +456,36 @@ export const AdminProvider = ({ children }) => {
       // Only try to send notification if points were updated successfully
       if (updatedUserIds.length > 0) {
         try {
-          // Create a notification for users - simplified format for better compatibility
-          const notification = {
-            type: pointsChange > 0 ? 'success' : 'warning',
-            title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
-            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
-            targetUsers: [], // Trường bắt buộc - rỗng để gửi cho tất cả người dùng
-            housesAffected: [house], // Trường bắt buộc - chỉ định nhà bị ảnh hưởng
-            // Thêm các trường mở rộng cho frontend
-            house: house,
-            pointsChange: pointsChange,
-            reason: reason || 'House points update'
-          };
-          
-          // Send notification to the backend for real-time delivery
-          // Use a try-catch block specifically for the notification
-          // to prevent notification errors from failing the whole operation
-          try {
-            await axios.post(`${API_URL}/notifications`, notification, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
+          // Socket notification approach
+          if (window.socket && typeof window.socket.emit === 'function') {
+            console.log('Sending house_points_update via socket');
+            window.socket.emit('client_house_notification', {
+              house,
+              points: pointsChange,
+              reason: reason || null, // Send reason if provided, otherwise null
+              criteria: null,
+              level: null,
+              newTotal: houseUsers.reduce((total, user) => 
+                total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
+              timestamp: new Date().toISOString()
             });
-            console.log('House notification sent successfully');
-            
-            // Add direct socket notification using app.locals (if available)
-            try {
-              // Also send a direct socket event if there's an active socket connection
-              if (window.socket && typeof window.socket.emit === 'function') {
-                console.log('Sending house_points_update via socket');
-                window.socket.emit('client_house_notification', {
-                  house,
-                  points: pointsChange,
-                  reason,
-                  criteria: null,
-                  level: null,
-                  newTotal: houseUsers.reduce((total, user) => 
-                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
-                });
-              }
-              
-              // Dispatch a custom event for local notification display
-              // This will trigger notification display even if server sockets fail
-              const notificationEvent = new CustomEvent('house-points-update', {
-                detail: {
-                  house,
-                  points: pointsChange,
-                  reason,
-                  criteria: null,
-                  level: null,
-                  timestamp: new Date().toISOString()
-                }
-              });
-              window.dispatchEvent(notificationEvent);
-            } catch (socketError) {
-              console.error('Error with direct socket notification:', socketError);
-              // Socket error shouldn't fail the operation
-            }
-          } catch (notifError) {
-            // Log notification error but don't throw - this shouldn't stop the function
-            console.error('Failed to send notification (non-critical):', notifError);
-            
-            // Client-side fallback: Add notification to local storage for the frontend to pick up
-            try {
-              const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-              localNotifications.push({
-                ...notification,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                clientFallback: true
-              });
-              localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
-              console.log('Added notification to local fallback system');
-            } catch (fallbackError) {
-              console.error('Failed to store notification in local fallback:', fallbackError);
-            }
           }
           
+          // Dispatch a custom event for local notification display
+          // This ensures notification display even if server sockets fail
+          const notificationEvent = new CustomEvent('house-points-update', {
+            detail: {
+              house,
+              points: pointsChange,
+              reason: reason || null, // Make reason optional
+              criteria: null,
+              level: null,
+              timestamp: new Date().toISOString()
+            }
+          });
+          window.dispatchEvent(notificationEvent);
+          
           // Force sync for all affected users
-          // Use the bulk sync endpoint if available
           try {
             await axios.post(`${API_URL}/users/force-sync`, 
               { userIds: updatedUserIds },
@@ -651,32 +601,21 @@ export const AdminProvider = ({ children }) => {
         throw new Error('Invalid criteria type');
       }
 
-      // Format reason with criteria and level clearly marked for parsing
+      // Get the criteria and level labels
       const { criteriaLabel, levelLabel } = getCriteriaAndLevelLabels(criteriaType, performanceLevel);
       
       // Make reason optional - only include if provided by user
-      // Separate the user-provided reason from the system-added criteria and level
-      let userReason = details ? details.trim() : '';
+      const userReason = details ? details.trim() : null;
       
-      // Format the full message with criteria and level, but keep reason separate
-      let systemInfo = `Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
+      // Create a system-generated reason with criteria and level
+      const systemInfo = `Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
       
-      // Create a formatted version with both (for database/backend)
-      let fullFormattedReason = userReason ? 
-        `${userReason}. ${systemInfo}` : 
-        systemInfo;
-      
-      // Keep the full reason with criteria and level in backend data
-      let backendReason = fullFormattedReason;
-
       // Get authentication token
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
       if (!token) {
         throw new Error('Authentication token not found');
       }
-
-      console.log('Sending house points update with formatted reason:', backendReason);
 
       // Filter users by house
       const houseUsers = users.filter(user => user.house === house);
@@ -704,12 +643,16 @@ export const AdminProvider = ({ children }) => {
           const currentPoints = user.magicPoints || 0;
           const newPoints = Math.max(0, currentPoints + pointsChange); // Ensure points don't go below 0
           
+          // Create the final reason that will be stored in the database
+          // If user provided a reason, include it followed by the system info
+          const finalReason = userReason ? `${userReason}. ${systemInfo}` : systemInfo;
+          
           // Update user's points
           await axios.patch(`${API_URL}/users/${userId}`, 
             { 
               magicPoints: newPoints,
               lastPointsUpdate: new Date().toISOString(),
-              lastUpdateReason: backendReason // Use the full reason for database records
+              lastUpdateReason: finalReason // Use the combined reason
             },
             {
               headers: {
@@ -730,83 +673,33 @@ export const AdminProvider = ({ children }) => {
       // Only try to send notification if points were updated successfully
       if (updatedUserIds.length > 0) {
         try {
-          // Create a notification for users with the full message including criteria/level info
-          // to ensure it works properly in all network conditions
-          const notification = {
-            type: pointsChange > 0 ? 'success' : 'warning',
-            title: pointsChange > 0 ? 'Group Criteria: Points Awarded!' : 'Group Criteria: Points Deducted!',
-            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${fullFormattedReason}`,
-            targetUsers: [], // Empty to send to all users
-            housesAffected: [house], // Specify affected house
-            // Additional fields for frontend
-            house: house,
-            pointsChange: pointsChange,
-            criteria: criteriaLabel,
-            level: levelLabel,
-            reason: userReason // Keep simple reason for the display system
-          };
-          
-          // Send notification to the backend for real-time delivery
-          try {
-            await axios.post(`${API_URL}/notifications`, notification, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
+          // Direct socket notification approach
+          if (window.socket && typeof window.socket.emit === 'function') {
+            console.log('Sending group criteria house_points_update via socket');
+            window.socket.emit('client_house_notification', {
+              house,
+              points: pointsChange,
+              reason: userReason, // Optional user-provided reason
+              criteria: criteriaLabel,
+              level: levelLabel,
+              newTotal: houseUsers.reduce((total, user) => 
+                total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
+              timestamp: new Date().toISOString()
             });
-            console.log('Group criteria notification sent successfully');
-            
-            // Add direct socket notification using app.locals (if available)
-            try {
-              // Also send a direct socket event if there's an active socket connection
-              if (window.socket && typeof window.socket.emit === 'function') {
-                console.log('Sending group criteria house_points_update via socket');
-                window.socket.emit('client_house_notification', {
-                  house,
-                  points: pointsChange,
-                  reason: userReason,
-                  criteria: criteriaLabel,
-                  level: levelLabel,
-                  newTotal: houseUsers.reduce((total, user) => 
-                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
-                });
-              }
-              
-              // Dispatch a custom event for local notification display
-              // This will trigger notification display even if server sockets fail
-              const notificationEvent = new CustomEvent('house-points-update', {
-                detail: {
-                  house,
-                  points: pointsChange,
-                  reason: userReason,
-                  criteria: criteriaLabel,
-                  level: levelLabel,
-                  timestamp: new Date().toISOString()
-                }
-              });
-              window.dispatchEvent(notificationEvent);
-            } catch (socketError) {
-              console.error('Error with direct socket notification:', socketError);
-              // Socket error shouldn't fail the operation
-            }
-          } catch (notifError) {
-            console.error('Failed to send notification (non-critical):', notifError);
-            
-            // Client-side fallback: Add notification to local storage
-            try {
-              const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-              localNotifications.push({
-                ...notification,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                clientFallback: true
-              });
-              localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
-              console.log('Added notification to local fallback system');
-            } catch (fallbackError) {
-              console.error('Failed to store notification in local fallback:', fallbackError);
-            }
           }
+          
+          // Dispatch a custom event for local notification display
+          const notificationEvent = new CustomEvent('house-points-update', {
+            detail: {
+              house,
+              points: pointsChange,
+              reason: userReason, // Optional user-provided reason
+              criteria: criteriaLabel,
+              level: levelLabel,
+              timestamp: new Date().toISOString()
+            }
+          });
+          window.dispatchEvent(notificationEvent);
           
           // Force sync for all affected users
           try {

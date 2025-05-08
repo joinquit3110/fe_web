@@ -157,6 +157,9 @@ const AdminHousePoints = () => {
         duration: 3000,
         isClosable: true,
       });
+      
+      // Auto-clear reason field after successful submission
+      setReason('');
     } catch (error) {
       console.error(`Error updating points for ${house}:`, error);
       toast({
@@ -198,17 +201,15 @@ const AdminHousePoints = () => {
         return;
       }
       
-      const reason = prompt(`Reason for deducting ${Math.abs(points)} points from ${house}?`);
-      if (reason) {
-        await updateHousePoints(house, points, reason);
-        toast({
-          title: "Points Deducted!",
-          description: `${Math.abs(points)} points have been deducted from ${house}.`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
+      const reason = prompt(`Reason for deducting ${Math.abs(points)} points from ${house}? (optional)`);
+      await updateHousePoints(house, points, reason || '');
+      toast({
+        title: "Points Deducted!",
+        description: `${Math.abs(points)} points have been deducted from ${house}.` + (reason ? ` Reason: ${reason}` : ''),
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
       console.error(`Error deducting points from ${house}:`, error);
       toast({
@@ -275,6 +276,8 @@ const AdminHousePoints = () => {
           status: 'success',
           duration: 2000,
         });
+        
+        // Auto-clear details field after successful submission
         setDetails('');
         
         setTimeout(() => {
@@ -379,7 +382,7 @@ const AdminHousePoints = () => {
                     </FormControl>
                     
                     <FormControl className="admin-form-group">
-                      <FormLabel className="admin-form-label">Reason for Point Change</FormLabel>
+                      <FormLabel className="admin-form-label">Reason for Point Change (Optional)</FormLabel>
                       <Textarea 
                         value={reason} 
                         onChange={(e) => setReason(e.target.value)} 

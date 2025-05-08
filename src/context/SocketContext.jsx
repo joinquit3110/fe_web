@@ -326,10 +326,10 @@ export const SocketProvider = ({ children }) => {
         console.log('[SOCKET] Creating notification with data:', {
           house: data.house,
           points: data.points,
-          reason: data.reason,
-          criteria: data.criteria,
-          level: data.level,
-          timestamp: data.timestamp
+          reason: data.reason || null,
+          criteria: data.criteria || null,
+          level: data.level || null,
+          timestamp: data.timestamp || Date.now()
         });
         
         const notification = createHousePointsNotification(data);
@@ -338,30 +338,36 @@ export const SocketProvider = ({ children }) => {
     };
 
     const handleAdminNotification = (data) => {
-      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) return;
-      
+      console.log('Admin notification received:', data);
+      // Ensure all relevant fields from the backend are used
       const notification = {
-        id: Date.now(),
-        type: data.notificationType || 'info',
+        id: data.id || uuidv4(), // Use backend ID or generate one
+        type: 'admin',
+        title: data.title || 'Admin Notification', // Use backend title
         message: data.message,
-        timestamp: new Date()
+        reason: data.reason, // Add reason
+        criteria: data.criteria, // Add criteria
+        level: data.level, // Add level
+        timestamp: data.timestamp || new Date().toISOString(),
+        pointsChange: data.pointsChange, // Include if admin notifications can change points
+        variant: data.variant || 'info', // Default to info, or use backend-provided variant
       };
-      
       addNotification(notification);
     };
 
     const handleGlobalAnnouncement = (data) => {
+      console.log('[SOCKET] Received global announcement:', data);
       const notification = {
-        id: Date.now(),
+        id: data.id || `announcement_${Date.now()}`,
         type: 'announcement',
-        message: `ANNOUNCEMENT: ${data.message}`,
-        timestamp: new Date()
+        title: data.title || 'Global Announcement',
+        message: data.message,
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date()
       };
       
       addNotification(notification);
     };
 
-    // Register event handlers
     socket.on('sync_update', handleSyncUpdate);
     socket.on('house_points_update', handleHousePointsUpdate);
     socket.on('admin_notification', handleAdminNotification);
@@ -373,161 +379,39 @@ export const SocketProvider = ({ children }) => {
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
-  }, [socket, user, isAdminUser.current, addNotification]);
+  }, [socket, user, isAdminUser, addNotification]);
 
-  // Helper to create house points notification
+  const handleUserUpdate = (updatedFields) => {
+    console.log('[SOCKET] Handling user update:', updatedFields);
+    setUser(prevUser => ({
+      ...prevUser,
+      ...updatedFields
+    }));
+  };
+
   const createHousePointsNotification = (data) => {
-    const pointsChange = data.points;
-    const isPositive = pointsChange > 0;
-    const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
-    
     return {
-      id: uniqueId,
-      type: isPositive ? 'success' : 'warning',
-      title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
-      message: formatHousePointsMessage(data),
+      id: `house_points_${Date.now()}`,
+      type: data.points > 0 ? 'success' : 'warning',
+      title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
+      message: `Your house ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points`,
       timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-      pointsChange,
-      reason: data.reason,
-      criteria: data.criteria,
-      level: data.level,
-      source: 'house_points_update',
+      reason: data.reason || 'System update',
+      criteria: data.criteria || null,
+      level: data.level || null,
       house: data.house
     };
   };
 
-  // Helper to format house points message
-  const formatHousePointsMessage = (data) => {
-    // Start with base message
-    let message = `House ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points!`;
-    
-    // Add total if available
-    if (data.newTotal !== undefined) {
-      message += ` New total: ${data.newTotal}`;
-    }
-    
-    // Add reason, criteria, level in a consistent format
-    const details = [];
-    
-    if (data.reason && data.reason !== 'Admin action' && data.reason.trim() !== '') {
-      details.push(`Reason: ${data.reason}`);
-    }
-    
-    if (data.criteria && data.criteria !== null) {
-      details.push(`Criteria: ${data.criteria}`);
-    }
-    
-    if (data.level && data.level !== null) {
-      details.push(`Level: ${data.level}`);
-    }
-    
-    // Join all details with periods
-    if (details.length > 0) {
-      message += `. ${details.join('. ')}`;
-    }
-    
-    return message;
-  };
-
-  // Helper to handle user updates
-  const handleUserUpdate = (updatedFields) => {
-    if (updatedFields.house && user && setUser) {
-      handleHouseUpdate(updatedFields.house);
-    }
-    
-    if (updatedFields.magicPoints !== undefined) {
-      handleMagicPointsUpdate(updatedFields);
-    }
-  };
-
-  // Helper to handle house updates
-  const handleHouseUpdate = (newHouse) => {
-    if (user && setUser) {
-      setUser(prev => ({
-        ...prev,
-        house: newHouse,
-        previousHouse: prev.house
-      }));
-    }
-  };
-
-  // Helper to handle magic points updates
-  const handleMagicPointsUpdate = (updatedFields) => {
-    if (user && setUser) {
-      const oldPoints = user.magicPoints || 0;
-      const newPoints = updatedFields.magicPoints;
-      
-      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
-      
-      // Update the user object
-      setUser(prev => ({
-        ...prev,
-        magicPoints: newPoints
-      }));
-      
-      // Also notify the MagicPointsContext via a custom event
-      if (typeof window !== 'undefined') {
-        const pointsEvent = new CustomEvent('magicPointsUpdated', {
-          detail: {
-            points: newPoints,
-            source: 'serverSync',
-            immediate: true,
-            oldPoints: oldPoints,
-            timestamp: new Date().toISOString()
-          }
-        });
-        console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
-        window.dispatchEvent(pointsEvent);
-      }
-    }
-  };
-
-  // Method to send a message to the server
-  const sendMessage = useCallback((eventName, data) => {
-    if (socket && isConnected) {
-      socket.emit(eventName, data);
-      return true;
-    }
-    return false;
-  }, [socket, isConnected]);
-
-  // Method to request an immediate sync from server
-  const requestSync = useCallback(() => {
-    if (socket && isConnected) {
-      console.log('[SOCKET] Manually requesting data sync');
-      socket.emit('request_sync');
-      return true;
-    }
-    
-    console.log('[SOCKET] Cannot request sync - not connected');
-    return false;
-  }, [socket, isConnected]);
-
-  // Method to clear notifications
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
-  // Method to remove a specific notification
-  const removeNotification = useCallback((notificationId) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-  }, []);
-
   return (
-    <SocketContext.Provider
-      value={{
-        socket,
-        isConnected,
-        connectionQuality,
-        lastMessage,
-        notifications,
-        lastHeartbeat,
-        sendMessage,
-        requestSync,
-        clearNotifications,
-        removeNotification
-      }}
-    >
+    <SocketContext.Provider value={{
+      socket,
+      isConnected,
+      lastMessage,
+      notifications,
+      connectionQuality,
+      addNotification
+    }}>
       {children}
     </SocketContext.Provider>
   );
