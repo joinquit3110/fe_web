@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack, IconButton, useToast, useDisclosure, keyframes, Portal } from '@chakra-ui/react';
+import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack, IconButton, useToast, useDisclosure, Portal } from '@chakra-ui/react';
+import { keyframes } from '@emotion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
