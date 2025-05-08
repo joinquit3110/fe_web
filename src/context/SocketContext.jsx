@@ -37,6 +37,23 @@ export const SocketProvider = ({ children }) => {
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100;
 
+  // Add fetchUserData function
+  const fetchUserData = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${user.id}`);
+      if (!response.ok) throw new Error('Failed to fetch user data');
+      
+      const userData = await response.json();
+      // Update user data in context or state as needed
+      return userData;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
+    }
+  }, [user?.id]);
+
   // Check if current user is admin when user changes
   useEffect(() => {
     if (user) {

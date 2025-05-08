@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack } from '@chakra-ui/react';
+import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack, useBreakpointValue } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,6 +35,9 @@ const NotificationDisplay = () => {
   const lastRenderTime = useRef(0);
   const FPS_LIMIT = 60;
   const FRAME_TIME = 1000 / FPS_LIMIT;
+  
+  // Add isMobile check using Chakra's useBreakpointValue
+  const isMobile = useBreakpointValue({ base: true, md: false });
   
   // Get socket notifications with memoization
   const socketContext = useSocket();
@@ -228,6 +231,36 @@ const NotificationDisplay = () => {
     
     return () => clearTimeout(timer);
   }, [activeNotifications, handleClose]);
+
+  // Add renderNotification function
+  const renderNotification = useCallback((notification) => (
+    <motion.div
+      key={notification.id}
+      initial={{ opacity: 0, y: 50, scale: 0.3 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
+      <Box
+        className="notification-panel"
+        bg="rgba(0,0,0,0.85)"
+        borderRadius="lg"
+        overflow="hidden"
+        boxShadow="0 4px 20px rgba(0,0,0,0.3)"
+        backdropFilter="blur(10px)"
+        border="1px solid rgba(255,255,255,0.1)"
+        width="100%"
+        maxWidth="480px"
+        position="relative"
+        mb={4}
+      >
+        <NotificationContent 
+          notification={notification} 
+          onClose={handleClose}
+        />
+      </Box>
+    </motion.div>
+  ), [handleClose]);
 
   if (activeNotifications.length === 0) return null;
   
