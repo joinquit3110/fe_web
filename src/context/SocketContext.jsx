@@ -2,8 +2,8 @@ import React, { createContext, useState, useEffect, useContext, useCallback, use
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 
-// Backend URL for socket connection
-const SOCKET_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com";
+// Backend URL for socket connection - force correct URL
+const SOCKET_URL = "https://be-web-6c4k.onrender.com";
 
 // Create context
 const SocketContext = createContext();
@@ -43,7 +43,7 @@ export const SocketProvider = ({ children }) => {
     if (!user?.id) return;
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${user.id}`);
+      const response = await fetch(`${SOCKET_URL}/api/users/${user.id}`);
       if (!response.ok) throw new Error('Failed to fetch user data');
       
       const userData = await response.json();
@@ -54,6 +54,33 @@ export const SocketProvider = ({ children }) => {
       return null;
     }
   }, [user?.id]);
+
+  // Add server health check function
+  const checkServerHealth = useCallback(async () => {
+    try {
+      console.log('[SOCKET] Checking server health at', SOCKET_URL);
+      const response = await fetch(`${SOCKET_URL}/api/health`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[SOCKET] Server health check result:', data);
+        return true;
+      } else {
+        console.error('[SOCKET] Server health check failed with status:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('[SOCKET] Server health check error:', error);
+      return false;
+    }
+  }, []);
+
+  // Run health check on mount
+  useEffect(() => {
+    checkServerHealth().then(isHealthy => {
+      console.log('[SOCKET] Initial server health check:', isHealthy ? 'HEALTHY' : 'UNHEALTHY');
+    });
+  }, [checkServerHealth]);
 
   // Check if current user is admin when user changes
   useEffect(() => {
@@ -96,11 +123,36 @@ export const SocketProvider = ({ children }) => {
         socket.disconnect();
       }
 
-      console.log('[SOCKET] Initializing new socket connection...');
+      console.log('[SOCKET] Initializing new socket connection to', SOCKET_URL);
+      
+      // Add diagnostic check for any stale connections to the old URL
+      if (window && window.fetch) {
+        const oldSocketUrl = "https://inequality-web-api.onrender.com";
+        if (SOCKET_URL !== oldSocketUrl) {
+          console.log(`[SOCKET] Checking if old URL ${oldSocketUrl} is still being used...`);
+          
+          // Test if the page is trying to connect to the old URL
+          const originalFetch = window.fetch;
+          const fetchDetection = function(url, options) {
+            if (url && typeof url === 'string' && url.includes('inequality-web-api.onrender.com')) {
+              console.error(`[SOCKET] DETECTED STALE CONNECTION TO OLD URL: ${url}`);
+              console.log('[SOCKET] This may indicate that the app needs to be rebuilt or cache cleared');
+            }
+            return originalFetch(url, options);
+          };
+          
+          // Temporarily patch fetch to detect these calls
+          window.fetch = fetchDetection;
+          setTimeout(() => {
+            // Restore original fetch after 10 seconds of monitoring
+            window.fetch = originalFetch;
+          }, 10000);
+        }
+      }
       
       // Create socket with improved options
       const newSocket = io(SOCKET_URL, {
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'], // Start with polling to avoid CORS issues
         reconnection: true,
         reconnectionAttempts: maxReconnectAttempts,
         reconnectionDelay: reconnectDelay,
@@ -163,7 +215,28 @@ export const SocketProvider = ({ children }) => {
           if (newSocket.io.opts.transports[0] === 'websocket') {
             console.log('[SOCKET] Falling back to polling transport');
             newSocket.io.opts.transports = ['polling', 'websocket'];
-            newSocket.connect();
+            
+            // Force reconnect with new transport
+            setTimeout(() => {
+              console.log('[SOCKET] Attempting reconnect with polling transport');
+              newSocket.connect();
+            }, 1000);
+          } else {
+            // Try HTTP fallback as last resort if WSS is failing
+            console.log('[SOCKET] Attempting HTTP fallback');
+            const httpUrl = SOCKET_URL.replace('wss://', 'http://').replace('https://', 'http://');
+            
+            // Test HTTP connection
+            fetch(`${httpUrl}/api/health`)
+              .then(response => {
+                if (response.ok) {
+                  console.log('[SOCKET] HTTP fallback available, will retry connection');
+                  setTimeout(() => newSocket.connect(), 2000);
+                }
+              })
+              .catch(err => {
+                console.error('[SOCKET] HTTP fallback failed:', err);
+              });
           }
         } else {
           // Exponential backoff for reconnection
@@ -171,10 +244,43 @@ export const SocketProvider = ({ children }) => {
           console.log(`[SOCKET] Attempting reconnection in ${delay}ms (attempt ${reconnectAttempts.current})`);
           setTimeout(() => {
             if (!newSocket.connected) {
+              // Try to modify transport method on odd-numbered attempts
+              if (reconnectAttempts.current % 2 === 1) {
+                if (newSocket.io.opts.transports[0] === 'websocket') {
+                  console.log('[SOCKET] Switching to polling-first reconnection strategy');
+                  newSocket.io.opts.transports = ['polling', 'websocket'];
+                } else {
+                  console.log('[SOCKET] Switching to websocket-first reconnection strategy');
+                  newSocket.io.opts.transports = ['websocket', 'polling'];
+                }
+              }
+              
               newSocket.connect();
             }
           }, delay);
         }
+      });
+
+      // Add specific websocket error handler
+      newSocket.io.engine.on('error', (err) => {
+        console.error('[SOCKET] Engine error:', err);
+        
+        // Check for specific CORS errors
+        if (err.message && err.message.includes('CORS')) {
+          console.log('[SOCKET] CORS error detected, switching to polling transport');
+          newSocket.io.opts.transports = ['polling'];
+          
+          setTimeout(() => {
+            if (!newSocket.connected) {
+              newSocket.connect();
+            }
+          }, 1000);
+        }
+      });
+
+      // Add upgrade handler to track transport changes
+      newSocket.io.engine.on('upgrade', (transport) => {
+        console.log(`[SOCKET] Transport upgraded to: ${transport.name}`);
       });
 
       newSocket.on('disconnect', (reason) => {
