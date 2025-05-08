@@ -97,6 +97,38 @@ export const SocketProvider = ({ children }) => {
     return BACKEND_URLS[0]; // Default to first URL if none respond
   }, []);
 
+  // Initialize socket when user logs in
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      console.log('[SOCKET] Not authenticated or no user, skipping socket initialization');
+      return;
+    }
+    
+    console.log('[SOCKET] User authenticated, initializing socket');
+    const socketInstance = initializeSocket();
+    
+    // Cleanup function
+    return () => {
+      if (socketInstance && typeof socketInstance.then === 'function') {
+        // Handle Promise return from initializeSocket
+        socketInstance.then(socket => {
+          if (socket && typeof socket.disconnect === 'function') {
+            console.log('[SOCKET] Cleaning up socket connection (from promise)');
+            socket.disconnect();
+          }
+        });
+      } else if (socket) {
+        // Handle direct socket instance from state
+        console.log('[SOCKET] Cleaning up socket connection (from state)');
+        socket.disconnect();
+      }
+      
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
+    };
+  }, [isAuthenticated, user, initializeSocket, socket]);
+
   // Initialize socket with the working backend
   const initializeSocket = useCallback(async (forceUrl = null) => {
     socketInitializationAttempts.current += 1;
@@ -122,7 +154,13 @@ export const SocketProvider = ({ children }) => {
     setActiveBackendUrl(backendUrl);
     
     try {
-      // Create new socket instance
+      // Validate user before socket creation
+      if (!user || !user.token) {
+        console.error('[SOCKET] Cannot initialize socket: missing user or token');
+        return null;
+      }
+
+      // Create new socket instance with validated auth data
       const newSocket = io(backendUrl, {
         transports: ['polling', 'websocket'], // Start with polling which is more reliable
         reconnection: true,
@@ -132,14 +170,22 @@ export const SocketProvider = ({ children }) => {
         timeout: 30000,
         autoConnect: true,
         forceNew: true,
-        auth: user ? {
-          userId: user.id,
-          username: user.username,
-          house: user.house,
-          token: user.token
-        } : undefined,
+        auth: {
+          userId: user.id || '',
+          username: user.username || '',
+          house: user.house || '',
+          token: user.token || ''
+        },
         path: '/socket.io/',
         withCredentials: true
+      });
+
+      // Debug auth data
+      console.log('[SOCKET] Initializing with auth data:', {
+        userId: user.id || '[MISSING]',
+        username: user.username || '[MISSING]',
+        house: user.house || '[MISSING]',
+        hasToken: !!user.token
       });
       
       // Set up event handlers
@@ -150,17 +196,25 @@ export const SocketProvider = ({ children }) => {
         reconnectAttempts.current = 0;
         socketInitializationAttempts.current = 0;
         
-        // Authenticate with server
-        if (user) {
+        // Authenticate with server - ensure we have auth data
+        if (user && user.token) {
+          console.log('[SOCKET] Sending authentication data');
           newSocket.emit('authenticate', {
-            userId: user.id,
-            username: user.username,
-            house: user.house,
-            token: user.token
+            userId: user.id || '',
+            username: user.username || '',
+            house: user.house || '',
+            token: user.token || ''
           });
           
           // Request initial sync after connection
-          newSocket.emit('request_sync');
+          setTimeout(() => {
+            if (newSocket.connected) {
+              console.log('[SOCKET] Requesting initial sync');
+              newSocket.emit('request_sync');
+            }
+          }, 1000); // Delay sync request to ensure auth is processed
+        } else {
+          console.warn('[SOCKET] Cannot authenticate - missing user data');
         }
         
         // Clear any pending notifications
@@ -257,13 +311,44 @@ export const SocketProvider = ({ children }) => {
       newSocket.on('auth_error', (error) => {
         console.error('[SOCKET] Authentication error:', error);
         
-        // Only clear auth if it's not a temporary error
-        if (error && typeof error === 'object' && error.permanent) {
-          // Clear auth state and redirect to login
+        // Check if we should retry authentication
+        const errorMessage = error && (error.message || (typeof error === 'string' ? error : ''));
+        const shouldRetry = errorMessage && (
+          errorMessage.includes('timeout') || 
+          errorMessage.includes('Missing') ||
+          !errorMessage.includes('Invalid')
+        );
+        
+        if (shouldRetry && reconnectAttempts.current < 3) {
+          console.log('[SOCKET] Will retry authentication');
+          reconnectAttempts.current += 1;
+          
+          // Delay to allow state updates
+          setTimeout(() => {
+            if (user && user.token) {
+              console.log('[SOCKET] Resending authentication data');
+              newSocket.emit('authenticate', {
+                userId: user.id || '',
+                username: user.username || '',
+                house: user.house || '',
+                token: user.token || ''
+              });
+            }
+          }, 1000);
+        } else if (error && typeof error === 'object' && error.permanent) {
+          // Only clear auth for permanent/invalid token errors
+          console.log('[SOCKET] Permanent authentication failure, logging out');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           localStorage.setItem('isAuthenticated', 'false');
-          window.location.href = '/login';
+          
+          // Use timeout to avoid React state updates during render
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
+        } else {
+          console.log('[SOCKET] Temporary authentication failure');
+          // Don't disconnect, socket.io will handle reconnection
         }
       });
       
@@ -292,6 +377,32 @@ export const SocketProvider = ({ children }) => {
       
       // Enhanced notification handling
       setupNotificationHandlers(newSocket);
+      
+      // Add additional connection error debugging
+      newSocket.io.on('error', error => {
+        console.error('[SOCKET] Engine IO error:', error);
+      });
+      
+      newSocket.io.on('close', reason => {
+        console.log('[SOCKET] Engine IO closed:', reason);
+      });
+      
+      newSocket.io.on('reconnect_attempt', attempt => {
+        console.log(`[SOCKET] Engine IO reconnect attempt ${attempt}`);
+      });
+      
+      // Add transport type monitoring
+      if (newSocket.io.engine) {
+        newSocket.io.engine.on('upgrade', transport => {
+          console.log(`[SOCKET] Transport upgraded to: ${transport}`);
+        });
+        
+        newSocket.io.engine.on('packet', packet => {
+          if (packet.type === 'error') {
+            console.error('[SOCKET] Transport packet error:', packet.data);
+          }
+        });
+      }
       
       // Set the socket in state
       setSocket(newSocket);
@@ -452,29 +563,6 @@ export const SocketProvider = ({ children }) => {
       return null;
     }
   }, [user, activeBackendUrl, setUser]);
-
-  // Initialize socket when user logs in
-  useEffect(() => {
-    if (!isAuthenticated || !user) {
-      console.log('[SOCKET] Not authenticated or no user, skipping socket initialization');
-      return;
-    }
-    
-    console.log('[SOCKET] User authenticated, initializing socket');
-    const socket = initializeSocket();
-    
-    // Cleanup function
-    return () => {
-      if (socket) {
-        console.log('[SOCKET] Cleaning up socket connection');
-        socket.disconnect();
-      }
-      
-      if (reconnectTimeout.current) {
-        clearTimeout(reconnectTimeout.current);
-      }
-    };
-  }, [isAuthenticated, user, initializeSocket]);
   
   // Check if current user is admin
   useEffect(() => {
