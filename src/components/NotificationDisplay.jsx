@@ -48,343 +48,186 @@ const NotificationDisplay = () => {
   const activeTimeouts = useRef([]);
   const globalDedupeRegistry = useRef(new Map());
   
-  const MAX_ACTIVE_NOTIFICATIONS = 1; // Only show 1 notification at a time
-  
-  // Helper function to create a notification hash for deduplication
-  const getNotificationHash = (notification) => {
+  const MAX_ACTIVE_NOTIFICATIONS = 1;
+  const NOTIFICATION_DURATION = {
+    success: 8000,
+    warning: 10000,
+    error: 12000,
+    announcement: 15000,
+    default: 8000
+  };
+
+  // Enhanced notification hash generation
+  const getNotificationHash = useCallback((notification) => {
     const type = notification.type || 'info';
     const pointsChange = notification.pointsChange ? `pc:${notification.pointsChange}` : '';
     const criteria = notification.criteria ? `cr:${notification.criteria}` : '';
     const level = notification.level ? `lv:${notification.level}` : '';
     const msgStart = notification.message ? notification.message.substring(0, 30) : '';
+    const timestamp = notification.timestamp ? notification.timestamp.getTime().toString().substring(0, 8) : '';
+    const house = notification.house || '';
     
-    return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}`;
-  };
-  
-  // Extract criteria and level
-  const extractCriteriaAndLevel = (notification) => {
-    let { message, criteria, level } = notification;
-    
-    if (criteria && level) {
-      return {
-        criteria: standardizeCriteria(criteria),
-        level: standardizeLevel(level)
-      };
-    }
-    
-    if (message) {
-      if (!criteria) {
-        const criteriaMatch = message.match(/[Cc]riteria:?\s*(.+?)(?=\.|$|\s*Level:|\s*Reason:)/);
-        if (criteriaMatch) {
-          criteria = criteriaMatch[1].trim();
-        }
-      }
-      
-      if (!level) {
-        const levelMatch = message.match(/[Ll]evel:?\s*(.+?)(?=\.|$|\s*Criteria:|\s*Reason:)/);
-        if (levelMatch) {
-          level = levelMatch[1].trim();
-        }
-      }
-    }
-    
-    // Fix potentially swapped values
-    if (level && (
-        level.toLowerCase().includes('participation') || 
-        level.toLowerCase().includes('english') ||
-        level.toLowerCase().includes('complete tasks')
-    )) {
-      const tempCriteria = level;
-      level = criteria;
-      criteria = tempCriteria;
-    }
-    
-    return {
-      criteria: criteria ? standardizeCriteria(criteria) : '',
-      level: level ? standardizeLevel(level) : ''
-    };
-  };
-  
-  // Cleanup stale dedupe entries every minute
-  useEffect(() => {
-    const cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      globalDedupeRegistry.current.forEach((timestamp, key) => {
-        if (now - timestamp > 60000) { // 1 minute (reduced from 2 min)
-          globalDedupeRegistry.current.delete(key);
-        }
-      });
-    }, 30000); // Run cleanup every 30 seconds
-    
-    return () => clearInterval(cleanupInterval);
+    return `${type}|${pointsChange}|${criteria}|${level}|${msgStart}|${timestamp}|${house}`;
   }, []);
-  
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      activeTimeouts.current.forEach(timeoutId => {
-        clearTimeout(timeoutId);
-      });
-    };
-  }, []);
-  
-  // Process fallback notifications from localStorage
-  useEffect(() => {
-    const checkLocalFallbackNotifications = () => {
-      try {
-        const pendingNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
-        
-        if (pendingNotifications.length > 0) {
-          console.log('[NOTIFICATION] Processing local fallback notifications:', pendingNotifications.length);
-          
-          pendingNotifications.forEach(notification => {
-            if (!notificationQueue.current.some(item => item.id === notification.id)) {
-              const notificationItem = {
-                id: notification.id,
-                type: notification.type || 'info',
-                title: notification.title || getNotificationTitle(notification.type || 'info'),
-                message: notification.message,
-                timestamp: new Date(notification.timestamp),
-                source: 'local-fallback',
-                duration: getDurationByType(notification.type || 'info'),
-                pointsChange: notification.pointsChange,
-                reason: notification.reason,
-                criteria: notification.criteria || notification.typeDetails?.criteria,
-                level: notification.level || notification.typeDetails?.level
-              };
-              notificationQueue.current.push(notificationItem);
-            }
-          });
-          
-          localStorage.setItem('pendingNotifications', '[]');
-          
-          if (!processingQueue.current) {
-            processNotificationQueue();
-          }
-        }
-      } catch (error) {
-        console.error('Error processing local fallback notifications:', error);
-      }
-    };
-    
-    // Initial check and set interval (reduced from 3000ms to 2000ms)
-    checkLocalFallbackNotifications();
-    const interval = setInterval(checkLocalFallbackNotifications, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Listen for custom house points update events
-  useEffect(() => {
-    const handleHousePointsUpdate = (event) => {
-      console.log('[NOTIFICATION] Received house-points-update event:', event.detail);
-      console.log('[NOTIFICATION] Detail fields:', {
-        house: event.detail.house,
-        points: event.detail.points,
-        reason: event.detail.reason,
-        criteria: event.detail.criteria,
-        level: event.detail.level
-      });
-      
-      const { house, points, reason, criteria, level, timestamp } = event.detail;
-      if (!user || user.house !== house) return;
-      
-      // Create a house points notification directly
-      const notificationItem = {
-        id: `house_points_${Date.now()}`,
-        type: points > 0 ? 'success' : 'warning',
-        title: points > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
-        message: `${Math.abs(points)} points ${points > 0 ? 'awarded to' : 'deducted from'} ${house}`,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
-        source: 'custom-event',
-        duration: getDurationByType(points > 0 ? 'success' : 'warning'),
-        pointsChange: points,
-        reason: reason || 'House points update',
-        criteria,
-        level,
-        house: house
-      };
-      
-      console.log('[NOTIFICATION] Created notification item:', notificationItem);
-      
-      notificationQueue.current.push(notificationItem);
-      
-      if (!processingQueue.current) {
-        requestAnimationFrame(processNotificationQueue);
-      }
-    };
-    
-    window.addEventListener('house-points-update', handleHousePointsUpdate);
-    
-    return () => {
-      window.removeEventListener('house-points-update', handleHousePointsUpdate);
-    };
-  }, [user]);
-  
-  // Optimize notification queue processing
-  const processNotificationQueue = useCallback(() => {
-    if (processingQueue.current) return;
-    const now = performance.now();
-    const elapsed = now - lastRenderTime.current;
-    if (elapsed < FRAME_TIME) {
-      animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
-      return;
-    }
-    lastRenderTime.current = now;
-    processingQueue.current = true;
-    try {
-      // Only process 1 notification at a time
-      const batchSize = 1;
-      const batch = notificationQueue.current.splice(0, batchSize);
-      if (batch.length > 0) {
-        setActiveNotifications(prev => {
-          const newNotifications = [...batch, ...prev];
-          return newNotifications.slice(0, MAX_ACTIVE_NOTIFICATIONS); // Only 1 active notification
-        });
-      }
-    } finally {
-      processingQueue.current = false;
-      if (notificationQueue.current.length > 0) {
-        animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
-      }
-    }
-  }, []);
-  
-  // Cleanup animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
-  
-  // Optimize socket notification processing
+
+  // Enhanced notification processing with error handling
   const processSocketNotifications = useCallback((newNotifications) => {
     if (!newNotifications || newNotifications.length === 0) return;
     
     console.log('[NOTIFICATION] Processing socket notifications:', newNotifications);
     
-    // Keep track of point update notification ids to avoid duplicates
-    const pointUpdateIds = new Set();
-    
-    const processedNotifications = newNotifications.map(notification => {
-      // Create a unique identifier based on content for deduplication
-      const notificationKey = `${notification.type}_${notification.title}_${notification.message}`;
+    try {
+      const processedNotifications = newNotifications
+        .map(notification => {
+          try {
+            // Create a unique identifier based on content for deduplication
+            const notificationHash = getNotificationHash(notification);
+            
+            // Check if we've seen this notification recently
+            if (globalDedupeRegistry.current.has(notificationHash)) {
+              console.log('[NOTIFICATION] Skipping duplicate notification:', notification);
+              return null;
+            }
+            
+            // Add to dedupe registry with expiry
+            globalDedupeRegistry.current.set(notificationHash, Date.now());
+            setTimeout(() => {
+              globalDedupeRegistry.current.delete(notificationHash);
+            }, 5000);
+            
+            // Validate notification data
+            if (!notification.id) {
+              notification.id = `socket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            }
+            
+            if (!notification.timestamp) {
+              notification.timestamp = new Date();
+            }
+            
+            // Create socket notification with additional properties
+            const socketNotification = {
+              ...notification,
+              source: 'socket',
+              read: false,
+              visible: true,
+              created: notification.timestamp,
+              duration: NOTIFICATION_DURATION[notification.type] || NOTIFICATION_DURATION.default
+            };
+            
+            console.log('[NOTIFICATION] Created socket notification item:', socketNotification);
+            return socketNotification;
+          } catch (error) {
+            console.error('[NOTIFICATION] Error processing notification:', error);
+            return null;
+          }
+        })
+        .filter(Boolean); // Remove null entries (duplicates or errors)
       
-      // Check if this is a point update notification
-      const isPointUpdate = notification.id && notification.id.includes('points_update');
-      
-      // If we've already seen this point update notification, skip it
-      if (isPointUpdate) {
-        if (pointUpdateIds.has(notificationKey)) {
-          console.log('[NOTIFICATION] Skipping duplicate point update:', notification);
-          return null;
+      // Only update state if we have valid notifications
+      if (processedNotifications.length > 0) {
+        notificationQueue.current.push(...processedNotifications);
+        
+        if (!processingQueue.current) {
+          animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
         }
-        pointUpdateIds.add(notificationKey);
       }
-      
-      // Create socket notification with additional properties
-      const socketNotification = {
-        ...notification,
-        id: notification.id || `socket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        source: 'socket',
-        read: false,
-        visible: true,
-        created: notification.timestamp || new Date()
-      };
-      
-      console.log('[NOTIFICATION] Created socket notification item:', socketNotification);
-      return socketNotification;
-    }).filter(Boolean); // Remove null entries (duplicates)
+    } catch (error) {
+      console.error('[NOTIFICATION] Error processing notification batch:', error);
+    }
+  }, [getNotificationHash]);
+
+  // Enhanced notification queue processing with error handling
+  const processNotificationQueue = useCallback(() => {
+    if (processingQueue.current) return;
     
-    // Only update state if we have valid notifications
-    if (processedNotifications.length > 0) {
-      notificationQueue.current.push(...processedNotifications);
+    const now = performance.now();
+    const elapsed = now - lastRenderTime.current;
+    
+    if (elapsed < FRAME_TIME) {
+      animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
+      return;
+    }
+    
+    lastRenderTime.current = now;
+    processingQueue.current = true;
+    
+    try {
+      // Only process 1 notification at a time
+      const batchSize = 1;
+      const batch = notificationQueue.current.splice(0, batchSize);
       
-      if (!processingQueue.current) {
+      if (batch.length > 0) {
+        setActiveNotifications(prev => {
+          const newNotifications = [...batch, ...prev];
+          return newNotifications.slice(0, MAX_ACTIVE_NOTIFICATIONS);
+        });
+      }
+    } catch (error) {
+      console.error('[NOTIFICATION] Error processing notification queue:', error);
+    } finally {
+      processingQueue.current = false;
+      
+      if (notificationQueue.current.length > 0) {
         animationFrameRef.current = requestAnimationFrame(processNotificationQueue);
       }
     }
   }, []);
-  
-  // Optimize socket notification processing with useEffect hook
+
+  // Enhanced notification display handling
+  const handleNotificationDisplay = useCallback((notification) => {
+    const duration = notification.duration || NOTIFICATION_DURATION.default;
+    
+    try {
+      const timeout = setTimeout(() => {
+        handleClose(notification.id);
+      }, duration);
+      
+      activeTimeouts.current.push(timeout);
+    } catch (error) {
+      console.error('[NOTIFICATION] Error setting notification timeout:', error);
+    }
+  }, []);
+
+  // Enhanced notification removal
+  const handleClose = useCallback((id) => {
+    try {
+      setActiveNotifications(prev => prev.filter(item => item.id !== id));
+      removeNotification(id);
+    } catch (error) {
+      console.error('[NOTIFICATION] Error removing notification:', error);
+    }
+  }, [removeNotification]);
+
+  // Process socket notifications when they change
   useEffect(() => {
     if (socketNotifications.length === 0) return;
-    
-    // Use the processSocketNotifications function
     processSocketNotifications(socketNotifications);
   }, [socketNotifications, processSocketNotifications]);
-  
-  // Helper functions for notification display
-  const getNotificationTitle = (type) => {
-    switch (type) {
-      case 'success': return 'Success!';
-      case 'warning': return 'Warning!';
-      case 'error': return 'Error!';
-      case 'announcement': return 'Announcement';
-      default: return 'Notification';
-    }
-  };
-  
-  const getDurationByType = (type) => {
-    switch (type) {
-      case 'error': return 12000; // 12 seconds
-      case 'warning': return 10000; // 10 seconds
-      case 'success': return 8000; // 8 seconds
-      case 'announcement': return 15000; // 15 seconds
-      default: return 8000; // 8 seconds
-    }
-  };
-  
-  // Create random ID helper
-  const createId = () => Math.random().toString(36).substring(2, 15);
-  
-  // Optimize notification removal
-  const handleClose = useCallback((id) => {
-    setActiveNotifications(prev => prev.filter(item => item.id !== id));
-  }, []);
-  
-  // Memoize notification rendering
-  const renderNotification = useCallback((notification) => (
-    <Fade key={notification.id} in={true}>
-      <Box
-        padding="0"
-        borderRadius="18px"
-        color="white"
-        className="wizard-panel notification-panel magic-glow"
-        boxShadow="0 0 40px 10px rgba(80,0,200,0.25), 0 10px 30px rgba(0,0,0,0.5)"
-        minHeight="auto"
-        width="100%"
-        height="auto"
-        position="relative"
-        overflow="hidden"
-        border="2px solid rgba(255, 255, 255, 0.4)"
-        background={`radial-gradient(circle at 60% 40%, rgba(80,0,200,0.18) 0%, rgba(52, 152, 219, 0.95) 100%)`}
-        style={{
-          filter: 'drop-shadow(0 0 30px #a084ee) blur(0.5px)',
-          backdropFilter: 'blur(6px)'
-        }}
-      >
-        <NotificationContent 
-          notification={notification} 
-          onClose={handleClose}
-        />
-      </Box>
-    </Fade>
-  ), [handleClose]);
-  
-  // Responsive check
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600;
 
-  // In useEffect for activeNotifications, auto-dismiss after duration
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      activeTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      activeTimeouts.current = [];
+    };
+  }, []);
+
+  // Auto-dismiss notifications after duration
   useEffect(() => {
     if (activeNotifications.length === 0) return;
+    
+    const notification = activeNotifications[0];
+    const duration = notification.duration || NOTIFICATION_DURATION.default;
+    
     const timer = setTimeout(() => {
-      setActiveNotifications(prev => prev.slice(1));
-    }, activeNotifications[0]?.duration || 5000);
+      handleClose(notification.id);
+    }, duration);
+    
     return () => clearTimeout(timer);
-  }, [activeNotifications]);
+  }, [activeNotifications, handleClose]);
 
   if (activeNotifications.length === 0) return null;
   
@@ -637,17 +480,18 @@ const NotificationMessage = memo(({ notification }) => {
     reason: notification.reason,
     criteria: notification.criteria,
     level: notification.level,
-    type: notification.type
+    type: notification.type,
+    isAssessment: notification.isAssessment
   });
   
   // Check if we have criteria and level data
   const hasCriteria = notification.criteria && notification.criteria.trim() !== '';
   const hasLevel = notification.level && notification.level.trim() !== '';
   
-  // Determine if this is a regular house point or house assessment notification
-  const isAssessment = hasCriteria || hasLevel;
+  // Determine if this is a house assessment notification
+  const isAssessment = notification.isAssessment || (hasCriteria && hasLevel);
   
-  // Check if reason is valid for display (not a default system message)
+  // Check if reason is valid for display
   const hasValidReason = notification.reason && 
                        notification.reason !== 'System update' && 
                        notification.reason !== 'House points update' && 
@@ -687,8 +531,38 @@ const NotificationMessage = memo(({ notification }) => {
               {Math.abs(notification.pointsChange)} points {notification.pointsChange > 0 ? 'awarded to' : 'deducted from'} {notification.house || 'unknown'}
             </Text>
             
-            {/* Only show reason if admin provided one (not system default) */}
-            {hasValidReason && (
+            {/* Show assessment details if it's an assessment */}
+            {isAssessment && (
+              <>
+                <Text 
+                  as="span" 
+                  color="cyan.200"
+                  fontWeight="bold"
+                  display="block"
+                  mt={1}
+                >
+                  Assessment: {standardizeCriteria(notification.criteria)}
+                </Text>
+                <Text 
+                  as="span" 
+                  color={
+                    notification.level.toLowerCase().includes('excellent') ? 'green.300' :
+                    notification.level.toLowerCase().includes('good') ? 'blue.300' :
+                    notification.level.toLowerCase().includes('satisfactory') ? 'yellow.300' :
+                    notification.level.toLowerCase().includes('poor') ? 'red.300' :
+                    'gray.300'
+                  }
+                  fontWeight="bold"
+                  display="block"
+                  mt={1}
+                >
+                  Level: {standardizeLevel(notification.level)}
+                </Text>
+              </>
+            )}
+            
+            {/* Show reason if provided and valid */}
+            {!isAssessment && hasValidReason && (
               <Text 
                 as="span" 
                 color={notification.pointsChange > 0 ? "yellow.300" : "orange.300"}
@@ -700,35 +574,16 @@ const NotificationMessage = memo(({ notification }) => {
               </Text>
             )}
             
-            {/* Only show criteria details if provided */}
-            {hasCriteria && (
+            {/* Show new total if available */}
+            {notification.newTotal !== undefined && (
               <Text 
                 as="span" 
-                color="cyan.200"
+                color="white"
                 fontWeight="bold"
                 display="block"
                 mt={1}
               >
-                Criteria: {standardizeCriteria(notification.criteria)}
-              </Text>
-            )}
-            
-            {/* Only show level details if provided */}
-            {hasLevel && (
-              <Text 
-                as="span" 
-                color={
-                  notification.level.toLowerCase().includes('excellent') ? 'green.300' :
-                  notification.level.toLowerCase().includes('good') ? 'blue.300' :
-                  notification.level.toLowerCase().includes('satisfactory') ? 'yellow.300' :
-                  notification.level.toLowerCase().includes('poor') ? 'red.300' :
-                  'gray.300'
-                }
-                fontWeight="bold"
-                display="block"
-                mt={1}
-              >
-                Level: {standardizeLevel(notification.level)}
+                New Total: {notification.newTotal} points
               </Text>
             )}
           </>
