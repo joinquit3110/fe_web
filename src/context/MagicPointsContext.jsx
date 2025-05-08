@@ -6,9 +6,6 @@ import {
   USE_OFFLINE_MODE,
   checkAuthStatus 
 } from "../api/magicPointsApi";
-import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
-import { useSocket } from './SocketContext';
 
 // API URL for direct calls
 const API_URL = "https://be-web-6c4k.onrender.com/api";
@@ -22,8 +19,6 @@ export const useMagicPoints = () => useContext(MagicPointsContext);
 // Define constants outside component to avoid initialization issues
 const MAX_RETRIES = 5;
 const DEFAULT_POINTS = 100;
-const SYNC_INTERVAL = 60000; // 1 minute
-const OFFLINE_MODE_KEY = 'isOfflineMode';
 
 // Move utility functions outside of the component to avoid circular dependencies
 
@@ -103,18 +98,10 @@ const checkNeedSyncInternal = async (isAuthenticated, isOnline) => {
 export const MagicPointsProvider = ({ children }) => {
   const [magicPoints, setMagicPoints] = useState(DEFAULT_POINTS);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isOfflineMode, setIsOfflineMode] = useState(() => {
-    // Check if offline mode was previously set
-    const savedMode = localStorage.getItem(OFFLINE_MODE_KEY);
-    return savedMode ? JSON.parse(savedMode) : false;
-  });
   const [lastSynced, setLastSynced] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingChanges, setPendingChanges] = useState(false);
-  const [pendingOperations, setPendingOperations] = useState(() => {
-    const savedOperations = localStorage.getItem('pendingOperations');
-    return savedOperations ? JSON.parse(savedOperations) : [];
-  });
+  const [pendingOperations, setPendingOperations] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [syncRetries, setSyncRetries] = useState(0);
 
@@ -133,344 +120,6 @@ export const MagicPointsProvider = ({ children }) => {
   // Add a debounce mechanism for sync operations to reduce redundant syncs
   const [lastSyncTimestamp, setLastSyncTimestamp] = useState(0);
   const syncDebounceTimeRef = useRef(3000); // 3 seconds minimum between syncs
-
-  const { user, token } = useAuth();
-  const { isConnected, connectionQuality, socket } = useSocket();
-  const isInitialLoad = useRef(true);
-  const syncRetryCount = useRef(parseInt(localStorage.getItem('syncRetryCount') || '0', 10));
-
-  // Handle online/offline status
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log('[POINTS] Browser is online');
-      setIsOnline(true);
-      // Don't automatically turn off offline mode when coming back online
-      // This allows the user to decide when to sync
-    };
-    
-    const handleOffline = () => {
-      console.log('[POINTS] Browser is offline');
-      setIsOnline(false);
-      // Automatically enable offline mode when browser goes offline
-      setIsOfflineMode(true);
-      localStorage.setItem(OFFLINE_MODE_KEY, 'true');
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Also track socket connection status
-  useEffect(() => {
-    if (connectionQuality === 'disconnected' && !isOfflineMode) {
-      console.log('[POINTS] Socket disconnected, enabling offline mode');
-      setIsOfflineMode(true);
-      localStorage.setItem(OFFLINE_MODE_KEY, 'true');
-    }
-  }, [connectionQuality, isOfflineMode]);
-  
-  // Save pending operations to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
-  }, [pendingOperations]);
-  
-  // Load initial points from localStorage on mount and sync with server if authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      console.log('[POINTS] User is not authenticated, using default points');
-      setMagicPoints(DEFAULT_POINTS);
-      return;
-    }
-    
-    const localPoints = localStorage.getItem('magicPoints');
-    
-    if (localPoints !== null) {
-      // Initial load from localStorage
-      const parsedPoints = parseInt(localPoints, 10);
-      if (!isNaN(parsedPoints)) {
-        setMagicPoints(parsedPoints);
-        console.log(`[POINTS] Loaded from localStorage: ${parsedPoints}`);
-      }
-    }
-    
-    // If we have a token and we're online, sync with server
-    if (token && isOnline && !isOfflineMode) {
-      syncWithServer();
-    }
-    
-    isInitialLoad.current = false;
-  }, [isAuthenticated, token]);
-
-  // Periodically sync with server if authenticated and online
-  useEffect(() => {
-    if (!isAuthenticated || !isOnline || isOfflineMode) return;
-    
-    const syncInterval = setInterval(() => {
-      if (pendingOperations.length > 0) {
-        console.log('[POINTS] Pending operations found, syncing with server...');
-        syncWithServer();
-      } else {
-        console.log('[POINTS] Checking server for updated points');
-        checkServerPoints();
-      }
-    }, SYNC_INTERVAL);
-    
-    return () => clearInterval(syncInterval);
-  }, [isAuthenticated, isOnline, isOfflineMode, pendingOperations]);
-
-  // Listen for magic points updates from socket
-  useEffect(() => {
-    if (!socket || !isConnected) return;
-    
-    const handleMagicPointsUpdated = (event) => {
-      console.log('[POINTS] Received magicPointsUpdated event:', event.detail);
-      
-      if (event.detail && event.detail.points !== undefined) {
-        setMagicPoints(event.detail.points);
-        localStorage.setItem('magicPoints', event.detail.points.toString());
-        
-        // If we have "source: serverSync", also update lastSynced
-        if (event.detail.source === 'serverSync') {
-          const timestamp = new Date().toISOString();
-          setLastSynced(timestamp);
-          localStorage.setItem('lastSynced', timestamp);
-        }
-      }
-    };
-    
-    socket.on('user_points_update', (data) => {
-      if (data && data.points) {
-        const newTotal = data.newTotal || data.totalPoints;
-        console.log(`[POINTS] Socket received points update: ${data.points}, new total: ${newTotal}`);
-        
-        if (newTotal !== undefined) {
-          setMagicPoints(newTotal);
-          localStorage.setItem('magicPoints', newTotal.toString());
-          
-          const timestamp = new Date().toISOString();
-          setLastSynced(timestamp);
-          localStorage.setItem('lastSynced', timestamp);
-        }
-      }
-    });
-    
-    window.addEventListener('magicPointsUpdated', handleMagicPointsUpdated);
-    
-    return () => {
-      window.removeEventListener('magicPointsUpdated', handleMagicPointsUpdated);
-      socket.off('user_points_update');
-    };
-  }, [socket, isConnected]);
-
-  // Helper function to add a pending operation
-  const addPendingOperation = useCallback((type, value, reason) => {
-    const operation = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      type,
-      value,
-      reason,
-      userId: user?.id || user?._id,
-      username: user?.username,
-      status: 'pending'
-    };
-    
-    setPendingOperations(prev => [...prev, operation]);
-    return operation;
-  }, [user]);
-
-  // Helper function to update points locally
-  const updatePointsLocally = useCallback((pointsChange, reason) => {
-    setMagicPoints(prevPoints => {
-      const newPoints = Math.max(0, prevPoints + pointsChange);
-      localStorage.setItem('magicPoints', newPoints.toString());
-      
-      // Dispatch an event so other components can listen for points updates
-      const event = new CustomEvent('magicPointsUpdated', {
-        detail: {
-          points: newPoints,
-          pointsDiff: pointsChange,
-          reason,
-          timestamp: new Date().toISOString()
-        }
-      });
-      window.dispatchEvent(event);
-      
-      return newPoints;
-    });
-    
-    // Add to pending operations if offline or in offline mode
-    if (!isOnline || isOfflineMode) {
-      addPendingOperation('pointsChange', pointsChange, reason);
-    }
-  }, [isOnline, isOfflineMode, addPendingOperation]);
-
-  // Helper function to sync with server
-  const syncWithServer = useCallback(async () => {
-    if (!isAuthenticated || !token || isSyncing) return;
-    
-    if (!isOnline || isOfflineMode) {
-      console.log('[POINTS] Offline mode active, skipping server sync');
-      return false;
-    }
-    
-    // Define syncPendingOperations function
-    const syncPendingOperations = async () => {
-      console.log(`[POINTS] Syncing ${pendingOperations.length} pending operations`);
-      
-      try {
-        // Sort operations by timestamp to ensure they're processed in order
-        const sortedOperations = [...pendingOperations].sort((a, b) => 
-          new Date(a.timestamp) - new Date(b.timestamp)
-        );
-        
-        // Use the API to sync operations
-        const response = await syncMagicPointsOperations(sortedOperations);
-        
-        if (response && response.magicPoints !== undefined) {
-          console.log(`[POINTS] Sync successful. New points total: ${response.magicPoints}`);
-          
-          // Update local state with server value
-          setMagicPoints(response.magicPoints);
-          localStorage.setItem('magicPoints', response.magicPoints.toString());
-          
-          // Clear pending operations after successful sync
-          setPendingOperations([]);
-          localStorage.removeItem('pendingOperations');
-          
-          return true;
-        } else {
-          throw new Error('Invalid response from server');
-        }
-      } catch (error) {
-        console.error('[POINTS] Error syncing pending operations:', error);
-        throw error;
-      }
-    };
-    
-    try {
-      setIsSyncing(true);
-      
-      // Check authentication first
-      const authResult = await checkAuthStatus();
-      
-      if (!authResult.authenticated) {
-        console.log('[POINTS] Auth verification failed, not syncing');
-        setIsSyncing(false);
-        return false;
-      }
-      
-      // First, get the latest server points
-      const response = await axios.get(`${API_URL}/points/user`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      // If we have pending operations, process them
-      if (pendingOperations.length > 0 && response.data && response.data.userId) {
-        await syncPendingOperations();
-      } else {
-        // Just update with the server's points
-        const serverPoints = response.data.magicPoints || DEFAULT_POINTS;
-        
-        if (serverPoints !== magicPoints) {
-          console.log(`[POINTS] Server points (${serverPoints}) differ from local (${magicPoints}), updating local`);
-          setMagicPoints(serverPoints);
-          localStorage.setItem('magicPoints', serverPoints.toString());
-          
-          // Dispatch magicPointsUpdated event
-          const event = new CustomEvent('magicPointsUpdated', {
-            detail: {
-              points: serverPoints,
-              source: 'serverSync',
-              timestamp: new Date().toISOString()
-            }
-          });
-          window.dispatchEvent(event);
-        }
-      }
-      
-      // Update last synced timestamp
-      const timestamp = new Date().toISOString();
-      setLastSynced(timestamp);
-      localStorage.setItem('lastSynced', timestamp);
-      
-      // Reset retry count on successful sync
-      syncRetryCount.current = 0;
-      localStorage.setItem('syncRetryCount', '0');
-      
-      // Dispatch serverSyncCompleted event
-      const syncEvent = new CustomEvent('serverSyncCompleted', {
-        detail: {
-          success: true,
-          timestamp: timestamp
-        }
-      });
-      window.dispatchEvent(syncEvent);
-      
-      setIsSyncing(false);
-      return true;
-    } catch (error) {
-      console.error('[POINTS] Error syncing with server:', error);
-      
-      // Increment retry count
-      syncRetryCount.current++;
-      localStorage.setItem('syncRetryCount', syncRetryCount.current.toString());
-      
-      // If we've tried too many times, switch to offline mode
-      if (syncRetryCount.current >= MAX_RETRIES) {
-        console.log(`[POINTS] Sync failed ${syncRetryCount.current} times, switching to offline mode`);
-        setIsOfflineMode(true);
-        localStorage.setItem(OFFLINE_MODE_KEY, 'true');
-      }
-      
-      setIsSyncing(false);
-      return false;
-    }
-  }, [isAuthenticated, token, isOnline, isOfflineMode, isSyncing, magicPoints, pendingOperations, checkAuthStatus]);
-
-  // Helper function to manually force a sync with the server
-  const forceSync = useCallback(async () => {
-    console.log('[POINTS] Force sync initiated');
-    // Reset offline mode when forcing a sync
-    setIsOfflineMode(false);
-    localStorage.setItem(OFFLINE_MODE_KEY, 'false');
-    return syncWithServer();
-  }, [syncWithServer]);
-
-  // Toggle offline mode
-  const toggleOfflineMode = useCallback((forceValue = null) => {
-    const newValue = forceValue !== null ? forceValue : !isOfflineMode;
-    console.log(`[POINTS] ${newValue ? 'Enabling' : 'Disabling'} offline mode`);
-    setIsOfflineMode(newValue);
-    localStorage.setItem(OFFLINE_MODE_KEY, newValue.toString());
-    
-    // If turning off offline mode, try to sync right away
-    if (!newValue && isOnline) {
-      syncWithServer();
-    }
-  }, [isOfflineMode, isOnline, syncWithServer]);
-
-  // Check if we should switch to offline mode based on multiple factors
-  useEffect(() => {
-    // Combination of conditions that indicate we should be in offline mode
-    const shouldBeOffline = 
-      !isOnline || 
-      connectionQuality === 'disconnected' || 
-      syncRetryCount.current >= MAX_RETRIES;
-    
-    if (shouldBeOffline && !isOfflineMode) {
-      console.log('[POINTS] Network conditions indicate offline mode should be enabled');
-      setIsOfflineMode(true);
-      localStorage.setItem(OFFLINE_MODE_KEY, 'true');
-    }
-  }, [isOnline, connectionQuality, isOfflineMode]);
 
   // Fetch current points from server
   const fetchCurrentPoints = useCallback(async () => {
@@ -727,6 +376,36 @@ export const MagicPointsProvider = ({ children }) => {
   }, [syncToServer]);
 
   // Enhanced force sync function with checks for recent syncs
+  const forceSync = useCallback(async () => {
+    console.log('[POINTS] Force syncing points to server');
+    
+    // Check if we've synced recently
+    const now = Date.now();
+    if (now - lastSyncTimestamp < syncDebounceTimeRef.current) {
+      console.log(`[POINTS] Sync throttled - last sync was ${(now - lastSyncTimestamp)/1000}s ago, minimum delay is ${syncDebounceTimeRef.current/1000}s`);
+      return;
+    }
+    
+    // Mark sync time
+    setLastSyncTimestamp(now);
+    
+    if (!isAuthenticated) {
+      console.log('[POINTS] Cannot sync while not authenticated');
+      return;
+    }
+
+    if (pendingOperations.length === 0 && !pendingChanges) {
+      console.log('[POINTS] No changes to sync, skipping sync operation');
+      return;
+    }
+
+    // Continue with sync logic...
+    if (syncToServerRef.current) {
+      return syncToServerRef.current();
+    }
+  }, [isAuthenticated, pendingOperations, pendingChanges, lastSyncTimestamp, syncToServer]);
+
+  // Force sync with debug information
   const forceSyncWithDebug = useCallback(async () => {
     console.log('[POINTS DEBUG] Force syncing with debug info...');
     
@@ -1637,25 +1316,38 @@ export const MagicPointsProvider = ({ children }) => {
     }
   }, []);
   
+  // Add offline mode detection property
+  const isOfflineMode = USE_OFFLINE_MODE || !isOnline || !isAuthenticated;
+
   return (
     <MagicPointsContext.Provider value={{
       magicPoints,
+      addPoints,
+      removePoints,
+      addPointsWithLog,
+      removePointsWithLog,
       isOnline,
-      isOfflineMode,
-      pendingOperations,
-      isAuthenticated,
       isSyncing,
       lastSynced,
-      updatePointsLocally,
+      pendingChanges,
+      pendingOperations,
+      resetRevelioAttempts,
+      handleBlankRevelioAttempt,
+      handleMultipleRevelioAttempts,
+      handleInequalityFormatCheck,
+      handleInequalitySolutionCheck,
+      handleWrongRegionSelection,
+      handleWrongCoordinateInput,
+      processBlankSubmission, // Keep for backward compatibility
+      processMultipleBlanks,  // Keep for backward compatibility
+      logCurrentPoints,
       forceSync,
-      forceSyncWithDebug,
-      toggleOfflineMode,
-      syncWithServer,
-      checkAuthStatus,
-      resetPoints,
       debugPointsState,
+      forceSyncWithDebug,
+      resetPoints,
       updateAuthentication,
-      resetRevelioAttempts
+      isOfflineMode,
+      isAuthenticated
     }}>
       {children}
     </MagicPointsContext.Provider>

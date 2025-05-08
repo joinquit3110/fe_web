@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack, IconButton, useToast, useDisclosure, Portal } from '@chakra-ui/react';
-import { keyframes } from '@emotion/react';
+import { Box, Text, Badge, CloseButton, Fade, Stack, Image, Flex, Heading, VStack } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../styles/notification.css';
-import { FaTimesCircle } from 'react-icons/fa';
-import { useMagicPoints } from '../context/MagicPointsContext';
-import gryffindorLogo from '../asset/Gryffindor.png';
-import slytherinLogo from '../asset/Slytherin.png';
-import ravenclawLogo from '../asset/Ravenclaw.png';
-import hufflepuffLogo from '../asset/Hufflepuff.png';
+// Import the image assets
+import increasePointImg from '../asset/IncreasePoint.png';
+import decreasePointImg from '../asset/DecreasePoint.png';
 
 // Helper function to standardize criteria text
 const standardizeCriteria = (criteria) => {
@@ -30,40 +26,8 @@ const standardizeLevel = (level) => {
     .replace(/\b\w/g, l => l.toUpperCase());
 };
 
-// Get house color map for styling
-const getHouseColors = (house) => {
-  const colorMap = {
-    gryffindor: { bgColor: '#740001', textColor: '#FFC500', logo: gryffindorLogo },
-    slytherin: { bgColor: '#1A472A', textColor: '#AAAAAA', logo: slytherinLogo },
-    ravenclaw: { bgColor: '#0E1A40', textColor: '#946B2D', logo: ravenclawLogo },
-    hufflepuff: { bgColor: '#ecb939', textColor: '#000000', logo: hufflepuffLogo },
-    default: { bgColor: '#333', textColor: '#FFF', logo: null }
-  };
-  
-  return colorMap[house] || colorMap.default;
-};
-
-// Enhanced animation keyframes
-const slideInOut = keyframes`
-  0% { opacity: 0; transform: translateX(30px); }
-  10% { opacity: 1; transform: translateX(0); }
-  90% { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0; transform: translateX(30px); }
-`;
-
-const glow = keyframes`
-  0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
-  50% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 5px rgba(255, 255, 255, 0.5); }
-  100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
-`;
-
 const NotificationDisplay = () => {
-  const [notifications, setNotifications] = useState([]);
-  const { socket, isConnected } = useSocket();
-  const toast = useToast();
-  const pendingNotificationsRef = useRef([]);
-  const isProcessingRef = useRef(false);
-  const maxNotifications = 5; // Maximum number of notifications displayed at once
+  const [activeNotifications, setActiveNotifications] = useState([]);
   const { user } = useAuth();
   const animationFrameRef = useRef(null);
   const lastRenderTime = useRef(0);
@@ -71,10 +35,11 @@ const NotificationDisplay = () => {
   const FRAME_TIME = 1000 / FPS_LIMIT;
   
   // Get socket notifications with memoization
-  const socketNotifications = useMemo(() => socket?.notifications || [], [socket?.notifications]);
+  const socketContext = useSocket();
+  const socketNotifications = useMemo(() => socketContext?.notifications || [], [socketContext?.notifications]);
   const removeNotification = useCallback((id) => {
-    socket?.removeNotification?.(id);
-  }, [socket]);
+    socketContext?.removeNotification?.(id);
+  }, [socketContext]);
   
   const notificationQueue = useRef([]);
   const processingQueue = useRef(false);
@@ -261,7 +226,7 @@ const NotificationDisplay = () => {
       const batchSize = 1;
       const batch = notificationQueue.current.splice(0, batchSize);
       if (batch.length > 0) {
-        setNotifications(prev => {
+        setActiveNotifications(prev => {
           const newNotifications = [...batch, ...prev];
           return newNotifications.slice(0, MAX_ACTIVE_NOTIFICATIONS); // Only 1 active notification
         });
@@ -338,7 +303,7 @@ const NotificationDisplay = () => {
   
   // Optimize notification removal
   const handleClose = useCallback((id) => {
-    setNotifications(prev => prev.filter(item => item.id !== id));
+    setActiveNotifications(prev => prev.filter(item => item.id !== id));
   }, []);
   
   // Memoize notification rendering
@@ -375,120 +340,117 @@ const NotificationDisplay = () => {
 
   // In useEffect for activeNotifications, auto-dismiss after duration
   useEffect(() => {
-    if (notifications.length === 0) return;
+    if (activeNotifications.length === 0) return;
     const timer = setTimeout(() => {
-      setNotifications(prev => prev.slice(1));
-    }, notifications[0]?.duration || 5000);
+      setActiveNotifications(prev => prev.slice(1));
+    }, activeNotifications[0]?.duration || 5000);
     return () => clearTimeout(timer);
-  }, [notifications]);
+  }, [activeNotifications]);
 
-  if (notifications.length === 0) return null;
+  if (activeNotifications.length === 0) return null;
   
   return (
-    <Portal>
-      <VStack
-        position="fixed"
-        top={isMobile ? '10px' : '100px'}
-        right={isMobile ? '0' : '20px'}
-        left={isMobile ? '0' : undefined}
-        zIndex={1000}
-        maxWidth={isMobile ? '98vw' : '480px'}
-        width={isMobile ? '98vw' : 'auto'}
-        maxHeight={isMobile ? 'calc(100vh - 20px)' : 'calc(100vh - 150px)'}
-        overflowY="auto"
-        alignItems={isMobile ? 'center' : 'flex-end'}
-        px={isMobile ? 1 : 0}
-        spacing={isMobile ? 2 : 5}
-        pointerEvents="none"
-      >
-        {notifications.map(renderNotification)}
+    <Stack
+      spacing={isMobile ? 2 : 5}
+      position="fixed"
+      top={isMobile ? '10px' : '100px'}
+      right={isMobile ? '0' : '20px'}
+      left={isMobile ? '0' : undefined}
+      zIndex={1000}
+      maxWidth={isMobile ? '98vw' : '480px'}
+      width={isMobile ? '98vw' : 'auto'}
+      maxHeight={isMobile ? 'calc(100vh - 20px)' : 'calc(100vh - 150px)'}
+      overflowY="auto"
+      alignItems={isMobile ? 'center' : 'flex-end'}
+      px={isMobile ? 1 : 0}
+    >
+      {activeNotifications.map(renderNotification)}
+      
+      {/* CSS for animations */}
+      <style jsx global>{`
+        @keyframes pop-in {
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
         
-        {/* CSS for animations */}
-        <style jsx global>{`
-          @keyframes pop-in {
-            0% { transform: scale(0.95); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-          }
-          
-          .notification-panel {
-            animation: pop-in 0.3s ease-out;
-            transform-origin: center center;
-          }
-          
-          @keyframes points-pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); text-shadow: 0 0 15px rgba(0,0,0,0.8); }
-          }
-          
-          .points-text-animation {
-            animation: points-pulse 1.5s ease-in-out infinite;
-          }
-          
-          .point-glow-positive {
-            box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
-            animation: glow-positive 2s ease-in-out infinite;
-          }
-          
-          @keyframes glow-positive {
-            0%, 100% { box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); }
-            50% { box-shadow: 0 0 25px rgba(46, 204, 113, 1); }
-          }
-          
-          .point-glow-negative {
-            box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
-            animation: glow-negative 2s ease-in-out infinite;
-          }
-          
-          @keyframes glow-negative {
-            0%, 100% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.7); }
-            50% { box-shadow: 0 0 25px rgba(231, 76, 60, 1); }
-          }
-          
-          .image-container {
-            position: relative;
-            transform-origin: center center;
-            animation: container-float 3s ease-in-out infinite;
-          }
-          
-          @keyframes container-float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-          }
-          
-          .increase-animation {
-            filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
-            animation: increase-image-animation 3s ease-in-out infinite;
-          }
-          
-          @keyframes increase-image-animation {
-            0% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
-            50% { filter: drop-shadow(0 0 25px rgba(46, 204, 113, 1)); transform: rotate(2deg) scale(1.1); }
-            100% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
-          }
-          
-          .decrease-animation {
-            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
-            animation: decrease-image-animation 3s ease-in-out infinite;
-          }
-          
-          @keyframes decrease-image-animation {
-            0% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
-            50% { filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1)); transform: rotate(-2deg) scale(1.1); }
-            100% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
-          }
-          
-          .magic-glow {
-            box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44;
-            border: 2px solid #f0c75e;
-            animation: magic-glow-anim 2.5s ease-in-out infinite alternate;
-          }
-          @keyframes magic-glow-anim {
-            0% { box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44; }
-            100% { box-shadow: 0 0 60px 20px #f0c75e, 0 0 120px 40px #a084ee44; }
-          }
-        `}</style>
-      </VStack>
-    </Portal>
+        .notification-panel {
+          animation: pop-in 0.3s ease-out;
+          transform-origin: center center;
+        }
+        
+        @keyframes points-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); text-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        }
+        
+        .points-text-animation {
+          animation: points-pulse 1.5s ease-in-out infinite;
+        }
+        
+        .point-glow-positive {
+          box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
+          animation: glow-positive 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow-positive {
+          0%, 100% { box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); }
+          50% { box-shadow: 0 0 25px rgba(46, 204, 113, 1); }
+        }
+        
+        .point-glow-negative {
+          box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+          animation: glow-negative 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow-negative {
+          0%, 100% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.7); }
+          50% { box-shadow: 0 0 25px rgba(231, 76, 60, 1); }
+        }
+        
+        .image-container {
+          position: relative;
+          transform-origin: center center;
+          animation: container-float 3s ease-in-out infinite;
+        }
+        
+        @keyframes container-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        
+        .increase-animation {
+          filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7));
+          animation: increase-image-animation 3s ease-in-out infinite;
+        }
+        
+        @keyframes increase-image-animation {
+          0% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
+          50% { filter: drop-shadow(0 0 25px rgba(46, 204, 113, 1)); transform: rotate(2deg) scale(1.1); }
+          100% { filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.7)); transform: rotate(-2deg) scale(1); }
+        }
+        
+        .decrease-animation {
+          filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7));
+          animation: decrease-image-animation 3s ease-in-out infinite;
+        }
+        
+        @keyframes decrease-image-animation {
+          0% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
+          50% { filter: drop-shadow(0 0 25px rgba(231, 76, 60, 1)); transform: rotate(-2deg) scale(1.1); }
+          100% { filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.7)); transform: rotate(2deg) scale(1); }
+        }
+        
+        .magic-glow {
+          box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44;
+          border: 2px solid #f0c75e;
+          animation: magic-glow-anim 2.5s ease-in-out infinite alternate;
+        }
+        @keyframes magic-glow-anim {
+          0% { box-shadow: 0 0 40px 10px #a084ee, 0 0 80px 20px #f0c75e44; }
+          100% { box-shadow: 0 0 60px 20px #f0c75e, 0 0 120px 40px #a084ee44; }
+        }
+      `}</style>
+    </Stack>
   );
 };
 
@@ -523,15 +485,15 @@ const NotificationContent = memo(({ notification, onClose }) => {
           {notification.title}
         </Badge>
         
-        <IconButton
-          icon={<FaTimesCircle />}
-          size="xs"
-          variant="ghost"
-          color="white"
-          opacity={0.7}
-          _hover={{ opacity: 1 }}
-          onClick={() => onClose(notification.id)}
-          aria-label="Dismiss notification"
+        <CloseButton 
+          size="sm"
+          onClick={() => onClose(notification.id)} 
+          zIndex="3"
+          _hover={{
+            background: "rgba(0,0,0,0.2)", 
+            transform: "scale(1.1)"
+          }}
+          transition="all 0.2s"
         />
       </Box>
       
@@ -540,8 +502,8 @@ const NotificationContent = memo(({ notification, onClose }) => {
         {/* Point change visualization */}
         <PointChangeVisualization 
           pointsChange={notification.pointsChange}
-          increasePointImg={gryffindorLogo}
-          decreasePointImg={slytherinLogo}
+          increasePointImg={increasePointImg}
+          decreasePointImg={decreasePointImg}
         />
         
         {/* Message with styling */}

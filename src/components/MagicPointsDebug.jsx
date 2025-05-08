@@ -6,7 +6,6 @@ import {
 import { useMagicPoints } from '../context/MagicPointsContext';
 import { checkAuthStatus } from '../api/magicPointsApi';
 import { useAdmin } from '../contexts/AdminContext';
-import { useSocket } from '../context/SocketContext';
 import axios from 'axios';
 
 // Get API URL and admin credentials from AdminContext
@@ -16,7 +15,6 @@ const ADMIN_PASSWORD = '31102004';
 
 const MagicPointsDebug = () => {
   const { isAdmin } = useAdmin();
-  const { socket, isConnected } = useSocket();
   const { 
     magicPoints,
     isOnline,
@@ -70,49 +68,12 @@ const MagicPointsDebug = () => {
     window.addEventListener('serverSyncCompleted', handlePointsUpdate);
     window.addEventListener('magicPointsUIUpdate', handlePointsUpdate);
     
-    // Also listen for house-points-update event which is dispatched in AdminContext
-    window.addEventListener('house-points-update', (event) => {
-      console.log('[DEBUG] Received house-points-update event:', event.detail);
-      const data = debugPointsState(true);
-      setDebugData(data);
-    });
-    
     return () => {
       window.removeEventListener('magicPointsUpdated', handlePointsUpdate);
       window.removeEventListener('serverSyncCompleted', handlePointsUpdate);
       window.removeEventListener('magicPointsUIUpdate', handlePointsUpdate);
-      window.removeEventListener('house-points-update', handlePointsUpdate);
     };
   }, [debugPointsState]);
-  
-  // Listen for socket events directly
-  useEffect(() => {
-    if (socket && isConnected) {
-      // Listen for sync_update from socket
-      const handleSyncUpdate = (data) => {
-        console.log('[DEBUG] Received socket sync_update:', data);
-        if (data.type === 'user_update' || data.type === 'points_update') {
-          const debugState = debugPointsState(true);
-          setDebugData(debugState);
-        }
-      };
-      
-      // Listen for house_points_update from socket
-      const handleHousePointsUpdate = (data) => {
-        console.log('[DEBUG] Received socket house_points_update:', data);
-        const debugState = debugPointsState(true);
-        setDebugData(debugState);
-      };
-      
-      socket.on('sync_update', handleSyncUpdate);
-      socket.on('house_points_update', handleHousePointsUpdate);
-      
-      return () => {
-        socket.off('sync_update', handleSyncUpdate);
-        socket.off('house_points_update', handleHousePointsUpdate);
-      };
-    }
-  }, [socket, isConnected, debugPointsState]);
   
   // Refresh debug data every 2 seconds (silently)
   useEffect(() => {

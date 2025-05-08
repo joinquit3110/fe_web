@@ -1,12 +1,9 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
 
 // Backend URL for socket connection
 const SOCKET_URL = "https://be-web-6c4k.onrender.com";
-const SOCKET_TIMEOUT = 10000; // Increase timeout to 10 seconds
-const MAX_RECONNECTION_ATTEMPTS = 5;
 
 // Create context
 const SocketContext = createContext();
@@ -16,16 +13,11 @@ export const useSocket = () => useContext(SocketContext);
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [connectionQuality, setConnectionQuality] = useState('disconnected');
   const [lastMessage, setLastMessage] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
-  const [isBackendAvailable, setIsBackendAvailable] = useState(true);
-  const { user, token, setUser } = useAuth();
+  const { user, isAuthenticated, setUser } = useAuth();
   
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
@@ -37,46 +29,8 @@ export const SocketProvider = ({ children }) => {
   const [notificationQueue, setNotificationQueue] = useState([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const batchTimeoutRef = useRef(null);
-  const socketTimeoutRef = useRef(null);
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100; // ms
-  
-  // Sync authentication status with auth context
-  useEffect(() => {
-    setIsAuthenticated(!!user && !!token);
-  }, [user, token]);
-
-  // Check backend availability
-  useEffect(() => {
-    const checkBackendAvailability = async () => {
-      try {
-        // Simple ping to check if backend is reachable
-        const pingResponse = await fetch(`${SOCKET_URL}/health`, { 
-          method: 'GET',
-          mode: 'no-cors',
-          cache: 'no-cache',
-          headers: {
-            'Accept': 'application/json',
-          },
-          timeout: 5000
-        });
-        
-        setIsBackendAvailable(true);
-        console.log('[SOCKET] Backend is available');
-      } catch (error) {
-        console.error('[SOCKET] Backend availability check failed:', error);
-        setIsBackendAvailable(false);
-      }
-    };
-    
-    // Check immediately on mount
-    checkBackendAvailability();
-    
-    // Check periodically
-    const checkInterval = setInterval(checkBackendAvailability, 60000); // Every minute
-    
-    return () => clearInterval(checkInterval);
-  }, []);
 
   // Check if current user is admin when user changes
   useEffect(() => {
@@ -117,57 +71,24 @@ export const SocketProvider = ({ children }) => {
       return;
     }
     
-    // If backend health check failed, don't keep trying to connect
-    if (!isBackendAvailable && connectionAttempts > MAX_RECONNECTION_ATTEMPTS) {
-      console.log('[SOCKET] Backend appears to be down, skipping connection attempt');
-      return;
-    }
-    
     console.log('[SOCKET] Initializing socket connection');
-    setConnectionAttempts(prev => prev + 1);
-    
-    // Clear previous timeout if it exists
-    if (socketTimeoutRef.current) {
-      clearTimeout(socketTimeoutRef.current);
-    }
-    
-    // Set a new global timeout
-    socketTimeoutRef.current = setTimeout(() => {
-      console.log(`[SOCKET] Connection attempt timed out after ${SOCKET_TIMEOUT}ms`);
-      setConnectionQuality('poor');
-      
-      // If we've already tried several times, stop trying to avoid excessive requests
-      if (connectionAttempts > MAX_RECONNECTION_ATTEMPTS) {
-        console.log('[SOCKET] Maximum connection attempts reached, switching to offline mode');
-        setIsBackendAvailable(false);
-      }
-    }, SOCKET_TIMEOUT);
     
     // Create new socket instance with optimized connection settings
     const socketInstance = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'], // Allow fallback to polling if websocket fails
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: MAX_RECONNECTION_ATTEMPTS,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: SOCKET_TIMEOUT,
-      forceNew: true,
-      withCredentials: true,
-      autoConnect: true
+      reconnectionAttempts: 10,
+      reconnectionDelay: 500,         // Reduced from 1000ms
+      reconnectionDelayMax: 3000,     // Reduced from 5000ms
+      timeout: 5000,                  // Reduced from 10000ms
+      forceNew: true                  // Force a new connection to avoid sharing
     });
     
     // Set up event handlers
     socketInstance.on('connect', () => {
-      // Clear timeout since we connected successfully
-      if (socketTimeoutRef.current) {
-        clearTimeout(socketTimeoutRef.current);
-        socketTimeoutRef.current = null;
-      }
-      
       console.log('[SOCKET] Connected to server');
       setIsConnected(true);
       setConnectionQuality('good');
-      setIsBackendAvailable(true);
       
       // Authenticate with user ID and house
       if (user) {
@@ -184,11 +105,6 @@ export const SocketProvider = ({ children }) => {
       console.error('[SOCKET] Connection error:', error);
       setIsConnected(false);
       setConnectionQuality('disconnected');
-      
-      // After multiple errors, consider the backend down
-      if (connectionAttempts > MAX_RECONNECTION_ATTEMPTS) {
-        setIsBackendAvailable(false);
-      }
     });
     
     socketInstance.on('disconnect', (reason) => {
@@ -201,7 +117,6 @@ export const SocketProvider = ({ children }) => {
       console.log(`[SOCKET] Reconnected after ${attempt} attempts`);
       setIsConnected(true);
       setConnectionQuality('good');
-      setIsBackendAvailable(true);
       
       // Re-authenticate on reconnect
       if (user) {
@@ -230,7 +145,6 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Failed to reconnect');
       setIsConnected(false);
       setConnectionQuality('disconnected');
-      setIsBackendAvailable(false);
     });
     
     // Handle connection status updates
@@ -253,15 +167,12 @@ export const SocketProvider = ({ children }) => {
     // Cleanup on unmount
     return () => {
       console.log('[SOCKET] Cleaning up socket connection');
-      if (socketTimeoutRef.current) {
-        clearTimeout(socketTimeoutRef.current);
-      }
       if (socketInstance) {
         socketInstance.disconnect();
         setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user, isBackendAvailable, connectionAttempts]);
+  }, [isAuthenticated, user]);
   
   // Implement heartbeat mechanism
   useEffect(() => {
@@ -355,149 +266,114 @@ export const SocketProvider = ({ children }) => {
     });
   }, [processNotificationQueue]);
 
-  // Socket event handlers
+  // Enhanced socket event handlers
   useEffect(() => {
-    if (!socket || !isConnected) return;
-    
-    // Set up socket event handlers
+    if (!socket) return;
+
+    const handleSyncUpdate = (data) => {
+      console.log('[SOCKET] Received sync update:', data);
+      setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
+      
+      if (data.type === 'user_update' && data.data?.updatedFields) {
+        handleUserUpdate(data.data.updatedFields);
+      }
+      
+      // Convert sync_update with points change messages to notifications
+      if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
+        console.log('[SOCKET] Converting point update to notification:', data);
+        
+        // Parse points value from message
+        const pointsMatch = data.message.match(/updated to (\d+)/);
+        if (pointsMatch && pointsMatch[1] && user) {
+          const newPoints = parseInt(pointsMatch[1], 10);
+          const oldPoints = user.magicPoints || 0;
+          const pointsDiff = newPoints - oldPoints;
+          
+          if (pointsDiff !== 0) {
+            // Extract potential reason from data
+            const reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
+            
+            // Extract criteria/level if available
+            const criteria = data.criteria || data.data?.criteria || null;
+            const level = data.level || data.data?.level || null;
+            
+            // Create notification for points change
+            const notification = {
+              id: `points_update_${Date.now()}`,
+              type: pointsDiff > 0 ? 'success' : 'warning',
+              title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}`,
+              timestamp: new Date(),
+              pointsChange: pointsDiff,
+              reason: reason || 'System update',
+              criteria: criteria,
+              level: level,
+              house: user.house
+            };
+            
+            addNotification(notification);
+          }
+        }
+      }
+    };
+
+    const handleHousePointsUpdate = (data) => {
+      console.log('[SOCKET] Received house_points_update:', data);
+      if (isAdminUser.current || user?.house === 'muggle' || !user?.house) return;
+      
+      if (data.house === user?.house) {
+        // Log detailed data to verify criteria and level
+        console.log('[SOCKET] Creating notification with data:', {
+          house: data.house,
+          points: data.points,
+          reason: data.reason,
+          criteria: data.criteria,
+          level: data.level,
+          timestamp: data.timestamp
+        });
+        
+        const notification = createHousePointsNotification(data);
+        addNotification(notification);
+      }
+    };
+
+    const handleAdminNotification = (data) => {
+      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) return;
+      
+      const notification = {
+        id: Date.now(),
+        type: data.notificationType || 'info',
+        message: data.message,
+        timestamp: new Date()
+      };
+      
+      addNotification(notification);
+    };
+
+    const handleGlobalAnnouncement = (data) => {
+      const notification = {
+        id: Date.now(),
+        type: 'announcement',
+        message: `ANNOUNCEMENT: ${data.message}`,
+        timestamp: new Date()
+      };
+      
+      addNotification(notification);
+    };
+
+    // Register event handlers
     socket.on('sync_update', handleSyncUpdate);
     socket.on('house_points_update', handleHousePointsUpdate);
     socket.on('admin_notification', handleAdminNotification);
     socket.on('global_announcement', handleGlobalAnnouncement);
-    socket.on('user_update', handleUserUpdate);
-    socket.on('house_update', handleHouseUpdate);
-    socket.on('magic_points_update', handleMagicPointsUpdate);
-    
-    // New event listener for client_house_notification from admin
-    socket.on('client_house_notification', (data) => {
-      console.log('[SOCKET] Received client_house_notification:', data);
-      
-      // Create a format for the notification
-      const notification = createHousePointsNotification(data);
-      
-      // Add to notification queue
-      if (notification) {
-        addNotification(notification);
-        
-        // Also dispatch a custom event for direct UI updates
-        if (typeof window !== 'undefined') {
-          const event = new CustomEvent('house-points-update', {
-            detail: {
-              house: data.house,
-              points: data.points,
-              reason: data.reason,
-              newTotal: data.newTotal,
-              timestamp: new Date().toISOString()
-            }
-          });
-          window.dispatchEvent(event);
-        }
-      }
-    });
-    
-    // Clean up on unmount
+
     return () => {
       socket.off('sync_update', handleSyncUpdate);
       socket.off('house_points_update', handleHousePointsUpdate);
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
-      socket.off('user_update', handleUserUpdate);
-      socket.off('house_update', handleHouseUpdate);
-      socket.off('magic_points_update', handleMagicPointsUpdate);
-      socket.off('client_house_notification');
     };
-  }, [socket, isConnected, user]); 
-  
-  // Handle sync update event with improved handling
-  const handleSyncUpdate = (data) => {
-    console.log('[SOCKET] Received sync update:', data);
-    const lastMessage = data;
-    setLastMessage(lastMessage);
-    
-    try {
-      // Handle different types of sync updates
-      if (data.type === 'user_update') {
-        // User data update
-        if (data.data && data.data.userId === user?.id) {
-          // Personal user update
-          handleUserUpdate(data.data);
-        }
-      } else if (data.type === 'points_update') {
-        // Points update
-        if (data.data && data.data.userId === user?.id) {
-          console.log('[SOCKET] Received points update:', data.data);
-          
-          // Create a points notification
-          const notification = {
-            id: `points-${Date.now()}`,
-            type: 'points',
-            title: data.data.points > 0 ? 'Points Earned!' : 'Points Lost',
-            message: `${data.data.points > 0 ? '+' : ''}${data.data.points} points! ${data.data.reason || ''}`,
-            timestamp: data.timestamp,
-            priority: 'high',
-            user: user.username,
-            pointsChange: data.data.points
-          };
-          
-          addNotification(notification);
-          
-          // Also dispatch a custom event for the MagicPointsContext
-          if (typeof window !== 'undefined') {
-            const event = new CustomEvent('magicPointsUpdated', {
-              detail: {
-                points: data.data.totalPoints || 0,
-                pointsDiff: data.data.points || 0,
-                reason: data.data.reason,
-                timestamp: data.timestamp
-              }
-            });
-            window.dispatchEvent(event);
-          }
-        }
-      } else if (data.type === 'house_points_update') {
-        // House points update, handled separately
-        handleHousePointsUpdate(data.data);
-      }
-    } catch (error) {
-      console.error('[SOCKET] Error handling sync update:', error);
-    }
-  };
-  
-  // Handle house points update with improved handling
-  const handleHousePointsUpdate = (data) => {
-    console.log('[SOCKET] Received house points update:', data);
-    
-    if (!data || !data.house) return;
-    
-    // Only show notification if it's for the user's house
-    if (user?.house === data.house || user?.house === 'admin') {
-      try {
-        // Create a notification for this house update
-        const notification = createHousePointsNotification(data);
-        
-        // Add to notification queue
-        if (notification) {
-          addNotification(notification);
-        }
-        
-        // Also dispatch a custom event for direct UI updates
-        if (typeof window !== 'undefined') {
-          const event = new CustomEvent('house-points-update', {
-            detail: {
-              house: data.house,
-              points: data.points,
-              reason: data.reason,
-              newTotal: data.newTotal,
-              timestamp: data.timestamp || new Date().toISOString()
-            }
-          });
-          window.dispatchEvent(event);
-        }
-      } catch (error) {
-        console.error('[SOCKET] Error handling house points update:', error);
-      }
-    }
-  };
+  }, [socket, user, isAdminUser.current, addNotification]);
 
   // Helper to create house points notification
   const createHousePointsNotification = (data) => {
@@ -553,260 +429,67 @@ export const SocketProvider = ({ children }) => {
     return message;
   };
 
-  // Handle admin notification
-  const handleAdminNotification = (data) => {
-    console.log('[SOCKET] Received admin notification:', data);
-    
-    // Skip if this is an admin-targeted message and current user is admin
-    if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
-      console.log('[SOCKET] Skipping admin notification for admin user');
-      return;
-    }
-    
-    // Create notification object
-    const notification = {
-      id: `admin-${Date.now()}`,
-      type: data.notificationType || 'info',
-      title: data.title || 'Notification',
-      message: data.message,
-      timestamp: data.timestamp || new Date().toISOString(),
-      priority: data.priority || 'medium'
-    };
-    
-    // Add to notification queue
-    addNotification(notification);
-  };
-
-  // Handle global announcement
-  const handleGlobalAnnouncement = (data) => {
-    console.log('[SOCKET] Received global announcement:', data);
-    
-    // Create announcement notification
-    const notification = {
-      id: `announcement-${Date.now()}`,
-      type: 'announcement',
-      title: data.title || 'ANNOUNCEMENT',
-      message: data.message,
-      timestamp: data.timestamp || new Date().toISOString(),
-      priority: 'high'
-    };
-    
-    // Add to notification queue with priority
-    addNotification(notification);
-    
-    // Also dispatch a custom event for direct UI updates
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('global-announcement', {
-        detail: {
-          title: data.title,
-          message: data.message,
-          timestamp: data.timestamp || new Date().toISOString()
-        }
-      });
-      window.dispatchEvent(event);
-    }
-  };
-  
-  // Handle user update from server
+  // Helper to handle user updates
   const handleUserUpdate = (updatedFields) => {
-    console.log('[SOCKET] Received user update:', updatedFields);
-    
-    // If this contains a points update, create a notification
-    if (updatedFields && updatedFields.magicPoints !== undefined) {
-      // Dispatch event for the MagicPointsContext
-      if (typeof window !== 'undefined' && user) {
-        const oldPoints = user.magicPoints || 0;
-        const newPoints = updatedFields.magicPoints;
-        const pointsDiff = newPoints - oldPoints;
-        
-        if (pointsDiff !== 0) {
-          const event = new CustomEvent('magicPointsUpdated', {
-            detail: {
-              points: newPoints,
-              pointsDiff: pointsDiff,
-              reason: updatedFields.reason || 'User update',
-              timestamp: new Date().toISOString()
-            }
-          });
-          window.dispatchEvent(event);
-        }
-      }
+    if (updatedFields.house && user && setUser) {
+      handleHouseUpdate(updatedFields.house);
     }
     
-    // Update user state if a setter is available
-    if (setUser && updatedFields) {
-      setUser(prevUser => ({
-        ...prevUser,
-        ...updatedFields
-      }));
+    if (updatedFields.magicPoints !== undefined) {
+      handleMagicPointsUpdate(updatedFields);
     }
   };
-  
-  // Handle house update (assignment or change)
+
+  // Helper to handle house updates
   const handleHouseUpdate = (newHouse) => {
-    console.log('[SOCKET] Received house update:', newHouse);
-    
-    // Update user state with new house if a setter is available
-    if (setUser && newHouse) {
-      setUser(prevUser => ({
-        ...prevUser,
-        previousHouse: prevUser.house,
-        house: newHouse
+    if (user && setUser) {
+      setUser(prev => ({
+        ...prev,
+        house: newHouse,
+        previousHouse: prev.house
+      }));
+    }
+  };
+
+  // Helper to handle magic points updates
+  const handleMagicPointsUpdate = (updatedFields) => {
+    if (user && setUser) {
+      const oldPoints = user.magicPoints || 0;
+      const newPoints = updatedFields.magicPoints;
+      
+      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
+      
+      // Update the user object
+      setUser(prev => ({
+        ...prev,
+        magicPoints: newPoints
       }));
       
-      // Create notification for house assignment/change
-      const notification = {
-        id: `house-assignment-${Date.now()}`,
-        type: 'success',
-        title: 'House Assignment',
-        message: `You have been assigned to ${newHouse.charAt(0).toUpperCase() + newHouse.slice(1)}!`,
-        timestamp: new Date().toISOString(),
-        priority: 'high',
-        house: newHouse
-      };
-      
-      addNotification(notification);
-    }
-  };
-  
-  // Handle magic points update
-  const handleMagicPointsUpdate = (updatedFields) => {
-    console.log('[SOCKET] Received magic points update:', updatedFields);
-    
-    if (!updatedFields || updatedFields.points === undefined) return;
-    
-    // Create notification for points change
-    const points = parseInt(updatedFields.points, 10);
-    const notification = {
-      id: `points-${Date.now()}`,
-      type: points >= 0 ? 'success' : 'warning',
-      title: points >= 0 ? 'Points Earned!' : 'Points Lost',
-      message: `${points >= 0 ? '+' : ''}${points} magic points. ${updatedFields.reason || ''}`,
-      timestamp: updatedFields.timestamp || new Date().toISOString(),
-      priority: 'high',
-      pointsChange: points
-    };
-    
-    addNotification(notification);
-    
-    // Dispatch event for direct UI updates
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('magicPointsUpdated', {
-        detail: {
-          points: updatedFields.totalPoints || 0,
-          pointsDiff: points,
-          reason: updatedFields.reason,
-          timestamp: updatedFields.timestamp || new Date().toISOString()
-        }
-      });
-      window.dispatchEvent(event);
-    }
-  };
-
-  // Method to perform HTTP fallback when socket is unavailable
-  const httpFallback = useCallback(async (action, data) => {
-    if (!token) return { success: false, error: 'No authentication token available' };
-    
-    try {
-      console.log(`[SOCKET] Using HTTP fallback for ${action}`);
-      
-      let endpoint = '';
-      let payload = { ...data };
-      
-      // Map socket actions to HTTP endpoints
-      switch (action) {
-        case 'request_sync':
-          endpoint = '/api/sync';
-          break;
-        case 'house_points_update':
-          endpoint = '/api/house/points';
-          break;
-        case 'user_points_update':
-          endpoint = '/api/points/update';
-          break;
-        case 'authenticate':
-          endpoint = '/api/auth/verify';
-          break;
-        default:
-          return { success: false, error: 'Unsupported action for HTTP fallback' };
-      }
-      
-      const response = await axios.post(`${SOCKET_URL}${endpoint}`, payload, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      return { 
-        success: true, 
-        data: response.data,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error(`[SOCKET] HTTP fallback failed for ${action}:`, error);
-      return { 
-        success: false, 
-        error: error.message || 'HTTP fallback failed',
-        timestamp: new Date().toISOString()
-      };
-    }
-  }, [token]);
-
-  // Update the online/offline detection
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log('[SOCKET] Browser is online');
-      setIsOnline(true);
-    };
-    
-    const handleOffline = () => {
-      console.log('[SOCKET] Browser is offline');
-      setIsOnline(false);
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Enhanced send message function with HTTP fallback
-  const sendMessage = useCallback((eventName, data) => {
-    if (socket && isConnected) {
-      console.log(`[SOCKET] Sending ${eventName} via socket`);
-      socket.emit(eventName, data);
-      return true;
-    } else if (isAuthenticated && isOnline) {
-      // Use HTTP fallback when socket is unavailable but we're online
-      console.log(`[SOCKET] Socket unavailable, trying HTTP fallback for ${eventName}`);
-      httpFallback(eventName, data)
-        .then(result => {
-          if (result.success) {
-            console.log(`[SOCKET] HTTP fallback succeeded for ${eventName}`);
-            
-            // Dispatch appropriate event based on action type
-            if (eventName === 'user_points_update' && typeof window !== 'undefined') {
-              const event = new CustomEvent('magicPointsUpdated', {
-                detail: {
-                  ...result.data,
-                  source: 'httpFallback',
-                  timestamp: result.timestamp
-                }
-              });
-              window.dispatchEvent(event);
-            }
+      // Also notify the MagicPointsContext via a custom event
+      if (typeof window !== 'undefined') {
+        const pointsEvent = new CustomEvent('magicPointsUpdated', {
+          detail: {
+            points: newPoints,
+            source: 'serverSync',
+            immediate: true,
+            oldPoints: oldPoints,
+            timestamp: new Date().toISOString()
           }
         });
+        console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
+        window.dispatchEvent(pointsEvent);
+      }
+    }
+  };
+
+  // Method to send a message to the server
+  const sendMessage = useCallback((eventName, data) => {
+    if (socket && isConnected) {
+      socket.emit(eventName, data);
       return true;
     }
-    
-    console.log(`[SOCKET] Message ${eventName} not sent - offline or not authenticated`);
     return false;
-  }, [socket, isConnected, isAuthenticated, isOnline, httpFallback]);
+  }, [socket, isConnected]);
 
   // Method to request an immediate sync from server
   const requestSync = useCallback(() => {
@@ -842,9 +525,7 @@ export const SocketProvider = ({ children }) => {
         sendMessage,
         requestSync,
         clearNotifications,
-        removeNotification,
-        httpFallback,
-        isOfflineMode: isConnected === false
+        removeNotification
       }}
     >
       {children}

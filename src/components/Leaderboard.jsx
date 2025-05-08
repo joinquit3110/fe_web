@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack,
-  useToast, Spinner, IconButton, Tooltip
+  useToast, Spinner
 } from '@chakra-ui/react';
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
@@ -9,13 +9,11 @@ import slytherinLogo from '../asset/Slytherin.png';
 import ravenclawLogo from '../asset/Ravenclaw.png';
 import gryffindorLogo from '../asset/Gryffindor.png';
 import hufflepuffLogo from '../asset/Hufflepuff.png';
-import { FaSync } from 'react-icons/fa';
 
 const Leaderboard = () => {
   const { users, fetchUsers } = useAdmin();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [houseStats, setHouseStats] = useState({
     gryffindor: { points: 0, users: 0 },
     slytherin: { points: 0, users: 0 },
@@ -31,24 +29,24 @@ const Leaderboard = () => {
     { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000', logo: hufflepuffLogo }
   ];
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      await fetchUsers();
-    } catch (err) {
-      toast({
-        title: 'Error loading leaderboard data',
-        description: err.message || 'Failed to fetch house data',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await fetchUsers();
+      } catch (err) {
+        toast({
+          title: 'Error loading leaderboard data',
+          description: err.message || 'Failed to fetch house data',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
     // Refresh data every 60 seconds
     const interval = setInterval(loadData, 60000);
@@ -89,31 +87,6 @@ const Leaderboard = () => {
     });
   }, [users]);
 
-  // Handle manual refresh button click
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await fetchUsers();
-      toast({
-        title: "House Cup Updated",
-        description: "The leaderboard has been refreshed with the latest data.",
-        status: "success",
-        duration: 2000,
-        isClosable: true,
-      });
-    } catch (err) {
-      toast({
-        title: 'Refresh failed',
-        description: err.message || 'Failed to refresh house data',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   // Sort houses by average points
   const sortedHouses = [...houses].sort((a, b) => 
     (houseStats[b.value]?.points || 0) - (houseStats[a.value]?.points || 0)
@@ -122,58 +95,32 @@ const Leaderboard = () => {
   return (
     <Box className="wizard-panel">
       <VStack spacing={4} align="stretch">
-        <Flex 
-          justify="center" 
-          align="center" 
+        <Heading 
+          className="activity-title" 
+          fontFamily="'Cinzel', serif"
+          textAlign="center"
           position="relative"
+          textShadow="0 0 10px rgba(211, 166, 37, 0.5)"
+          letterSpacing="1px"
           mb={4}
         >
-          <Heading 
-            className="activity-title" 
-            fontFamily="'Cinzel', serif"
-            textAlign="center"
-            position="relative"
-            textShadow="0 0 10px rgba(211, 166, 37, 0.5)"
-            letterSpacing="1px"
-          >
+          <span style={{
+            display: "inline-block",
+            padding: "0 30px",
+            position: "relative"
+          }}>
+            Hogwarts House Cup Leaderboard
             <span style={{
-              display: "inline-block",
-              padding: "0 30px",
-              position: "relative"
-            }}>
-              Hogwarts House Cup Leaderboard
-              <span style={{
-                position: "absolute",
-                bottom: "-5px",
-                left: "0",
-                right: "0",
-                height: "2px",
-                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-                animation: "shimmer 2s infinite"
-              }}></span>
-            </span>
-          </Heading>
-          <Tooltip label="Refresh House Cup data" placement="top">
-            <IconButton
-              icon={<FaSync />}
-              isLoading={refreshing}
-              onClick={handleRefresh}
-              position="absolute"
-              right="5px"
-              top="0"
-              size="sm"
-              aria-label="Refresh data"
-              colorScheme="yellow"
-              variant="ghost"
-              _hover={{ bg: 'rgba(255,215,0,0.2)', opacity: 1 }}
-              className="refresh-button"
-              isDisabled={loading}
-              opacity={0.8}
-              color="var(--secondary-color)"
-              spinnerPlacement="end"
-            />
-          </Tooltip>
-        </Flex>
+              position: "absolute",
+              bottom: "-5px",
+              left: "0",
+              right: "0",
+              height: "2px",
+              background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+              animation: "shimmer 2s infinite"
+            }}></span>
+          </span>
+        </Heading>
 
         {loading ? (
           <Flex justify="center" py={10} align="center" height="200px">
@@ -268,7 +215,7 @@ const Leaderboard = () => {
                   >
                     {houseStats[house.value]?.points || 0}
                   </Box>
-                  {/* Creative Rank Ribbon/Badge with gradient */}
+                  {/* Creative Rank Ribbon/Badge */}
                   <Box
                     mt={2}
                     display="flex"
@@ -276,9 +223,7 @@ const Leaderboard = () => {
                     alignItems="center"
                   >
                     <span style={{
-                      background: index === 0 
-                        ? 'linear-gradient(90deg, #ffd700, #fff6c8, #ffd700)' 
-                        : `linear-gradient(90deg, #333, #666, #333)`,
+                      background: index === 0 ? 'linear-gradient(90deg, gold, #fffbe7)' : 'linear-gradient(90deg, #222, #444)',
                       color: index === 0 ? '#bfa100' : '#fff',
                       borderRadius: '16px',
                       padding: '4px 18px',
