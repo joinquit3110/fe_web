@@ -24,8 +24,8 @@ export const SocketProvider = ({ children }) => {
   const recentNotifications = useRef(new Map()); // Changed to Map for better tracking
   const reconnectAttempts = useRef(0);
   const reconnectTimeout = useRef(null); // Add reconnectTimeout ref
-  const maxReconnectAttempts = 5;
-  const reconnectDelay = 2000;
+  const maxReconnectAttempts = 10; // Increased from 5
+  const reconnectDelay = 3000; // Increased from 2000
   const notificationExpiry = 5000; // 5 seconds expiry for deduplication
 
   // Add admin checking functionality
@@ -98,14 +98,14 @@ export const SocketProvider = ({ children }) => {
 
       console.log('[SOCKET] Initializing new socket connection...');
       
-      // Create socket with improved options and fallback
+      // Create socket with improved options
       const newSocket = io(SOCKET_URL, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: maxReconnectAttempts,
         reconnectionDelay: reconnectDelay,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
+        reconnectionDelayMax: 10000,
+        timeout: 30000,
         autoConnect: true,
         forceNew: true,
         auth: {
@@ -113,6 +113,11 @@ export const SocketProvider = ({ children }) => {
           username: user?.username,
           house: user?.house,
           token: user?.token
+        },
+        path: '/socket.io/',
+        withCredentials: true,
+        extraHeaders: {
+          'Access-Control-Allow-Origin': 'https://fe-web-lilac.vercel.app'
         }
       });
 
@@ -160,6 +165,15 @@ export const SocketProvider = ({ children }) => {
             newSocket.io.opts.transports = ['polling', 'websocket'];
             newSocket.connect();
           }
+        } else {
+          // Exponential backoff for reconnection
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
+          console.log(`[SOCKET] Attempting reconnection in ${delay}ms (attempt ${reconnectAttempts.current})`);
+          setTimeout(() => {
+            if (!newSocket.connected) {
+              newSocket.connect();
+            }
+          }, delay);
         }
       });
 
