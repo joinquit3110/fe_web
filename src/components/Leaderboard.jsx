@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack,
-  useToast, Spinner, Button
+  useToast, Spinner
 } from '@chakra-ui/react';
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
@@ -104,43 +104,22 @@ const Leaderboard = () => {
           letterSpacing="1px"
           mb={4}
         >
-          <Flex justify="space-between" align="center" px={4}>
-            <Box flex={1} />
+          <span style={{
+            display: "inline-block",
+            padding: "0 30px",
+            position: "relative"
+          }}>
+            Hogwarts House Cup Leaderboard
             <span style={{
-              display: "inline-block",
-              padding: "0 30px",
-              position: "relative"
-            }}>
-              Hogwarts House Cup Leaderboard
-              <span style={{
-                position: "absolute",
-                bottom: "-5px",
-                left: "0",
-                right: "0",
-                height: "2px",
-                background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-                animation: "shimmer 2s infinite"
-              }}></span>
-            </span>
-            <Button
-              onClick={() => {
-                setLoading(true);
-                fetchUsers();
-              }}
-              isLoading={loading}
-              size="sm"
-              colorScheme="yellow"
-              variant="outline"
-              _hover={{
-                bg: "rgba(211, 166, 37, 0.2)",
-                transform: "scale(1.05)"
-              }}
-              transition="all 0.2s"
-              className="refresh-button"
-            >
-              Refresh
-            </Button>
-          </Flex>
+              position: "absolute",
+              bottom: "-5px",
+              left: "0",
+              right: "0",
+              height: "2px",
+              background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
+              animation: "shimmer 2s infinite"
+            }}></span>
+          </span>
         </Heading>
 
         {loading ? (

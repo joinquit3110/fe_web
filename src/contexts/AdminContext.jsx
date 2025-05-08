@@ -395,30 +395,28 @@ export const AdminProvider = ({ children }) => {
   // Update points for all users in a specific house
   const updateHousePoints = async (house, pointsChange, reason) => {
     setLoading(true);
+    setError(null);
+    
     try {
+      // Get authentication token from localStorage
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
       if (!token) {
-        setError('Authentication token not found');
-        return false;
+        throw new Error('Authentication token not found');
       }
-      
-      // Ensure we have a reason or provide a default
-      const pointsReason = reason && reason.trim() !== '' ? reason.trim() : 'Admin action';
-      console.log(`[ADMIN] Updating house points with reason: "${pointsReason}"`);
       
       // Filter users by house
       const houseUsers = users.filter(user => user.house === house);
       
       if (houseUsers.length === 0) {
-        setError(`No users found in house: ${house}`);
-        return false;
+        throw new Error(`No users found in house: ${house}`);
       }
       
       const userIds = houseUsers.map(user => user._id || user.id);
+      
+      // Update points in the database first - this is the critical operation
       const updatedUserIds = []; // Keep track of successfully updated users
       
-      // Update points in the database for each user
       for (const userId of userIds) {
         try {
           // Get current user's points
@@ -437,13 +435,7 @@ export const AdminProvider = ({ children }) => {
             { 
               magicPoints: newPoints,
               lastPointsUpdate: new Date().toISOString(),
-              lastUpdateReason: pointsReason, // Use formatted reason
-              lastUpdateDetails: {
-                pointsChange,
-                reason: pointsReason,
-                timestamp: new Date().toISOString(),
-                adminAction: true
-              }
+              lastUpdateReason: reason
             },
             {
               headers: {
@@ -464,21 +456,22 @@ export const AdminProvider = ({ children }) => {
       // Only try to send notification if points were updated successfully
       if (updatedUserIds.length > 0) {
         try {
-          // Create a notification for users
+          // Create a notification for users - simplified format for better compatibility
           const notification = {
             type: pointsChange > 0 ? 'success' : 'warning',
             title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
-            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}` + 
-                    (pointsReason ? `: ${pointsReason}` : ''),
-            targetUsers: [], // Empty to send to all users
-            housesAffected: [house], // Specify affected house
-            // Additional fields for frontend
-            house,
-            pointsChange,
-            reason: pointsReason
+            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
+            targetUsers: [], // Trường bắt buộc - rỗng để gửi cho tất cả người dùng
+            housesAffected: [house], // Trường bắt buộc - chỉ định nhà bị ảnh hưởng
+            // Thêm các trường mở rộng cho frontend
+            house: house,
+            pointsChange: pointsChange,
+            reason: reason || 'House points update'
           };
           
           // Send notification to the backend for real-time delivery
+          // Use a try-catch block specifically for the notification
+          // to prevent notification errors from failing the whole operation
           try {
             await axios.post(`${API_URL}/notifications`, notification, {
               headers: {
@@ -493,16 +486,15 @@ export const AdminProvider = ({ children }) => {
               // Also send a direct socket event if there's an active socket connection
               if (window.socket && typeof window.socket.emit === 'function') {
                 console.log('Sending house_points_update via socket');
-                const socketData = {
+                window.socket.emit('client_house_notification', {
                   house,
                   points: pointsChange,
-                  reason: pointsReason,
+                  reason,
+                  criteria: null,
+                  level: null,
                   newTotal: houseUsers.reduce((total, user) => 
-                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
-                  timestamp: new Date().toISOString()
-                };
-                console.log('[ADMIN] House points socket payload (no criteria/level):', socketData);
-                window.socket.emit('client_house_notification', socketData);
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                });
               }
               
               // Dispatch a custom event for local notification display
@@ -511,7 +503,9 @@ export const AdminProvider = ({ children }) => {
                 detail: {
                   house,
                   points: pointsChange,
-                  reason: pointsReason,
+                  reason,
+                  criteria: null,
+                  level: null,
                   timestamp: new Date().toISOString()
                 }
               });
@@ -521,9 +515,10 @@ export const AdminProvider = ({ children }) => {
               // Socket error shouldn't fail the operation
             }
           } catch (notifError) {
+            // Log notification error but don't throw - this shouldn't stop the function
             console.error('Failed to send notification (non-critical):', notifError);
             
-            // Client-side fallback: Add notification to local storage
+            // Client-side fallback: Add notification to local storage for the frontend to pick up
             try {
               const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
               localNotifications.push({
@@ -540,6 +535,7 @@ export const AdminProvider = ({ children }) => {
           }
           
           // Force sync for all affected users
+          // Use the bulk sync endpoint if available
           try {
             await axios.post(`${API_URL}/users/force-sync`, 
               { userIds: updatedUserIds },
@@ -765,7 +761,7 @@ export const AdminProvider = ({ children }) => {
               // Also send a direct socket event if there's an active socket connection
               if (window.socket && typeof window.socket.emit === 'function') {
                 console.log('Sending group criteria house_points_update via socket');
-                const criteriaSocketData = {
+                window.socket.emit('client_house_notification', {
                   house,
                   points: pointsChange,
                   reason: userReason,
@@ -773,9 +769,7 @@ export const AdminProvider = ({ children }) => {
                   level: levelLabel,
                   newTotal: houseUsers.reduce((total, user) => 
                     total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
-                };
-                console.log('[ADMIN] Group criteria socket payload (with criteria/level):', criteriaSocketData);
-                window.socket.emit('client_house_notification', criteriaSocketData);
+                });
               }
               
               // Dispatch a custom event for local notification display
