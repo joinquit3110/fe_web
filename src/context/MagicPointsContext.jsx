@@ -319,6 +319,40 @@ export const MagicPointsProvider = ({ children }) => {
       return false;
     }
     
+    // Define syncPendingOperations function
+    const syncPendingOperations = async () => {
+      console.log(`[POINTS] Syncing ${pendingOperations.length} pending operations`);
+      
+      try {
+        // Sort operations by timestamp to ensure they're processed in order
+        const sortedOperations = [...pendingOperations].sort((a, b) => 
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+        
+        // Use the API to sync operations
+        const response = await syncMagicPointsOperations(sortedOperations);
+        
+        if (response && response.magicPoints !== undefined) {
+          console.log(`[POINTS] Sync successful. New points total: ${response.magicPoints}`);
+          
+          // Update local state with server value
+          setMagicPoints(response.magicPoints);
+          localStorage.setItem('magicPoints', response.magicPoints.toString());
+          
+          // Clear pending operations after successful sync
+          setPendingOperations([]);
+          localStorage.removeItem('pendingOperations');
+          
+          return true;
+        } else {
+          throw new Error('Invalid response from server');
+        }
+      } catch (error) {
+        console.error('[POINTS] Error syncing pending operations:', error);
+        throw error;
+      }
+    };
+    
     try {
       setIsSyncing(true);
       
@@ -399,7 +433,7 @@ export const MagicPointsProvider = ({ children }) => {
       setIsSyncing(false);
       return false;
     }
-  }, [isAuthenticated, token, isOnline, isOfflineMode, isSyncing, magicPoints, pendingOperations, checkAuthStatus, syncPendingOperations]);
+  }, [isAuthenticated, token, isOnline, isOfflineMode, isSyncing, magicPoints, pendingOperations, checkAuthStatus]);
 
   // Helper function to manually force a sync with the server
   const forceSync = useCallback(async () => {

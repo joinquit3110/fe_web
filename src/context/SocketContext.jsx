@@ -16,13 +16,16 @@ export const useSocket = () => useContext(SocketContext);
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState('disconnected');
   const [lastMessage, setLastMessage] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const [isBackendAvailable, setIsBackendAvailable] = useState(true);
-  const { user, isAuthenticated, setUser, token } = useAuth();
+  const { user, token, setUser } = useAuth();
   
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
@@ -37,6 +40,11 @@ export const SocketProvider = ({ children }) => {
   const socketTimeoutRef = useRef(null);
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100; // ms
+  
+  // Sync authentication status with auth context
+  useEffect(() => {
+    setIsAuthenticated(!!user && !!token);
+  }, [user, token]);
 
   // Check backend availability
   useEffect(() => {
@@ -744,6 +752,27 @@ export const SocketProvider = ({ children }) => {
       };
     }
   }, [token]);
+
+  // Update the online/offline detection
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[SOCKET] Browser is online');
+      setIsOnline(true);
+    };
+    
+    const handleOffline = () => {
+      console.log('[SOCKET] Browser is offline');
+      setIsOnline(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Enhanced send message function with HTTP fallback
   const sendMessage = useCallback((eventName, data) => {

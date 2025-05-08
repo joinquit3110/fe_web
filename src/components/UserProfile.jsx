@@ -39,6 +39,11 @@ const UserProfile = ({ user: propUser }) => {
     width: 100,
     aspect: 1
   });
+  
+  // Move hooks to top level
+  const { isConnected, connectionQuality } = useSocket();
+  const { isOfflineMode, toggleOfflineMode } = useMagicPoints();
+  
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const [completedCrop, setCompletedCrop] = useState(null);
   const previewCanvasRef = useRef(null);
@@ -344,9 +349,6 @@ const UserProfile = ({ user: propUser }) => {
   };
 
   const colors = getHouseColors();
-
-  const { isConnected, connectionQuality } = useSocket();
-  const { isOfflineMode, toggleOfflineMode } = useMagicPoints();
   
   // Determine status color and message
   let statusColor, statusMessage, icon;
