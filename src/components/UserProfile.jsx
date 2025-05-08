@@ -4,6 +4,9 @@ import { useAdmin } from '../contexts/AdminContext';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import '../styles/ProfileUI.css';
+import { useMagicPoints } from '../context/MagicPointsContext';
+import { useSocket } from '../context/SocketContext';
+import { Box, Text } from '@chakra-ui/react';
 
 const API_URL = "https://be-web-6c4k.onrender.com/api";
 
@@ -342,6 +345,55 @@ const UserProfile = ({ user: propUser }) => {
 
   const colors = getHouseColors();
 
+  const { isConnected, connectionQuality } = useSocket();
+  const { isOfflineMode, toggleOfflineMode } = useMagicPoints();
+  
+  // Determine status color and message
+  let statusColor, statusMessage, icon;
+  
+  if (isOfflineMode) {
+    statusColor = "orange.500";
+    statusMessage = "Offline Mode";
+    icon = "⚠️";
+  } else if (!isConnected) {
+    statusColor = "red.500";
+    statusMessage = "Disconnected";
+    icon = "❌";
+  } else if (connectionQuality === 'poor') {
+    statusColor = "yellow.500";
+    statusMessage = "Poor Connection";
+    icon = "⚡";
+  } else {
+    statusColor = "green.500";
+    statusMessage = "Connected";
+    icon = "✓";
+  }
+
+  // Add a ConnectionStatus component
+  const ConnectionStatus = () => (
+    <Box 
+      position="absolute"
+      top="5px"
+      right="5px"
+      px={2}
+      py={1}
+      borderRadius="md"
+      bg={`${statusColor}30`}
+      color={statusColor}
+      fontWeight="bold"
+      fontSize="xs"
+      display="flex"
+      alignItems="center"
+      cursor={isOfflineMode ? "pointer" : "default"}
+      onClick={isOfflineMode ? () => toggleOfflineMode(false) : undefined}
+      title={isOfflineMode ? "Click to try reconnecting" : statusMessage}
+      _hover={isOfflineMode ? { bg: `${statusColor}50` } : {}}
+    >
+      <Text mr={1}>{icon}</Text>
+      <Text>{statusMessage}</Text>
+    </Box>
+  );
+
   return (
     <div className="profile-container-fixed">
       <div
@@ -598,6 +650,8 @@ const UserProfile = ({ user: propUser }) => {
         onChange={handleAvatarChange}
         accept="image/*"
       />
+
+      <ConnectionStatus />
     </div>
   );
 };

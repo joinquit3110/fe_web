@@ -1,9 +1,12 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 
 // Backend URL for socket connection
 const SOCKET_URL = "https://be-web-6c4k.onrender.com";
+const SOCKET_TIMEOUT = 10000; // Increase timeout to 10 seconds
+const MAX_RECONNECTION_ATTEMPTS = 5;
 
 // Create context
 const SocketContext = createContext();
@@ -17,7 +20,9 @@ export const SocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  const { user, isAuthenticated, setUser } = useAuth();
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const [isBackendAvailable, setIsBackendAvailable] = useState(true);
+  const { user, isAuthenticated, setUser, token } = useAuth();
   
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
@@ -29,8 +34,41 @@ export const SocketProvider = ({ children }) => {
   const [notificationQueue, setNotificationQueue] = useState([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const batchTimeoutRef = useRef(null);
+  const socketTimeoutRef = useRef(null);
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100; // ms
+
+  // Check backend availability
+  useEffect(() => {
+    const checkBackendAvailability = async () => {
+      try {
+        // Simple ping to check if backend is reachable
+        const pingResponse = await fetch(`${SOCKET_URL}/health`, { 
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          headers: {
+            'Accept': 'application/json',
+          },
+          timeout: 5000
+        });
+        
+        setIsBackendAvailable(true);
+        console.log('[SOCKET] Backend is available');
+      } catch (error) {
+        console.error('[SOCKET] Backend availability check failed:', error);
+        setIsBackendAvailable(false);
+      }
+    };
+    
+    // Check immediately on mount
+    checkBackendAvailability();
+    
+    // Check periodically
+    const checkInterval = setInterval(checkBackendAvailability, 60000); // Every minute
+    
+    return () => clearInterval(checkInterval);
+  }, []);
 
   // Check if current user is admin when user changes
   useEffect(() => {
@@ -71,24 +109,57 @@ export const SocketProvider = ({ children }) => {
       return;
     }
     
+    // If backend health check failed, don't keep trying to connect
+    if (!isBackendAvailable && connectionAttempts > MAX_RECONNECTION_ATTEMPTS) {
+      console.log('[SOCKET] Backend appears to be down, skipping connection attempt');
+      return;
+    }
+    
     console.log('[SOCKET] Initializing socket connection');
+    setConnectionAttempts(prev => prev + 1);
+    
+    // Clear previous timeout if it exists
+    if (socketTimeoutRef.current) {
+      clearTimeout(socketTimeoutRef.current);
+    }
+    
+    // Set a new global timeout
+    socketTimeoutRef.current = setTimeout(() => {
+      console.log(`[SOCKET] Connection attempt timed out after ${SOCKET_TIMEOUT}ms`);
+      setConnectionQuality('poor');
+      
+      // If we've already tried several times, stop trying to avoid excessive requests
+      if (connectionAttempts > MAX_RECONNECTION_ATTEMPTS) {
+        console.log('[SOCKET] Maximum connection attempts reached, switching to offline mode');
+        setIsBackendAvailable(false);
+      }
+    }, SOCKET_TIMEOUT);
     
     // Create new socket instance with optimized connection settings
     const socketInstance = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket', 'polling'], // Allow fallback to polling if websocket fails
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 500,         // Reduced from 1000ms
-      reconnectionDelayMax: 3000,     // Reduced from 5000ms
-      timeout: 5000,                  // Reduced from 10000ms
-      forceNew: true                  // Force a new connection to avoid sharing
+      reconnectionAttempts: MAX_RECONNECTION_ATTEMPTS,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: SOCKET_TIMEOUT,
+      forceNew: true,
+      withCredentials: true,
+      autoConnect: true
     });
     
     // Set up event handlers
     socketInstance.on('connect', () => {
+      // Clear timeout since we connected successfully
+      if (socketTimeoutRef.current) {
+        clearTimeout(socketTimeoutRef.current);
+        socketTimeoutRef.current = null;
+      }
+      
       console.log('[SOCKET] Connected to server');
       setIsConnected(true);
       setConnectionQuality('good');
+      setIsBackendAvailable(true);
       
       // Authenticate with user ID and house
       if (user) {
@@ -105,6 +176,11 @@ export const SocketProvider = ({ children }) => {
       console.error('[SOCKET] Connection error:', error);
       setIsConnected(false);
       setConnectionQuality('disconnected');
+      
+      // After multiple errors, consider the backend down
+      if (connectionAttempts > MAX_RECONNECTION_ATTEMPTS) {
+        setIsBackendAvailable(false);
+      }
     });
     
     socketInstance.on('disconnect', (reason) => {
@@ -117,6 +193,7 @@ export const SocketProvider = ({ children }) => {
       console.log(`[SOCKET] Reconnected after ${attempt} attempts`);
       setIsConnected(true);
       setConnectionQuality('good');
+      setIsBackendAvailable(true);
       
       // Re-authenticate on reconnect
       if (user) {
@@ -145,6 +222,7 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Failed to reconnect');
       setIsConnected(false);
       setConnectionQuality('disconnected');
+      setIsBackendAvailable(false);
     });
     
     // Handle connection status updates
@@ -167,12 +245,15 @@ export const SocketProvider = ({ children }) => {
     // Cleanup on unmount
     return () => {
       console.log('[SOCKET] Cleaning up socket connection');
+      if (socketTimeoutRef.current) {
+        clearTimeout(socketTimeoutRef.current);
+      }
       if (socketInstance) {
         socketInstance.disconnect();
         setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, isBackendAvailable, connectionAttempts]);
   
   // Implement heartbeat mechanism
   useEffect(() => {
@@ -614,14 +695,89 @@ export const SocketProvider = ({ children }) => {
     }
   };
 
-  // Method to send a message to the server
+  // Method to perform HTTP fallback when socket is unavailable
+  const httpFallback = useCallback(async (action, data) => {
+    if (!token) return { success: false, error: 'No authentication token available' };
+    
+    try {
+      console.log(`[SOCKET] Using HTTP fallback for ${action}`);
+      
+      let endpoint = '';
+      let payload = { ...data };
+      
+      // Map socket actions to HTTP endpoints
+      switch (action) {
+        case 'request_sync':
+          endpoint = '/api/sync';
+          break;
+        case 'house_points_update':
+          endpoint = '/api/house/points';
+          break;
+        case 'user_points_update':
+          endpoint = '/api/points/update';
+          break;
+        case 'authenticate':
+          endpoint = '/api/auth/verify';
+          break;
+        default:
+          return { success: false, error: 'Unsupported action for HTTP fallback' };
+      }
+      
+      const response = await axios.post(`${SOCKET_URL}${endpoint}`, payload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return { 
+        success: true, 
+        data: response.data,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error(`[SOCKET] HTTP fallback failed for ${action}:`, error);
+      return { 
+        success: false, 
+        error: error.message || 'HTTP fallback failed',
+        timestamp: new Date().toISOString()
+      };
+    }
+  }, [token]);
+
+  // Enhanced send message function with HTTP fallback
   const sendMessage = useCallback((eventName, data) => {
     if (socket && isConnected) {
+      console.log(`[SOCKET] Sending ${eventName} via socket`);
       socket.emit(eventName, data);
       return true;
+    } else if (isAuthenticated && isOnline) {
+      // Use HTTP fallback when socket is unavailable but we're online
+      console.log(`[SOCKET] Socket unavailable, trying HTTP fallback for ${eventName}`);
+      httpFallback(eventName, data)
+        .then(result => {
+          if (result.success) {
+            console.log(`[SOCKET] HTTP fallback succeeded for ${eventName}`);
+            
+            // Dispatch appropriate event based on action type
+            if (eventName === 'user_points_update' && typeof window !== 'undefined') {
+              const event = new CustomEvent('magicPointsUpdated', {
+                detail: {
+                  ...result.data,
+                  source: 'httpFallback',
+                  timestamp: result.timestamp
+                }
+              });
+              window.dispatchEvent(event);
+            }
+          }
+        });
+      return true;
     }
+    
+    console.log(`[SOCKET] Message ${eventName} not sent - offline or not authenticated`);
     return false;
-  }, [socket, isConnected]);
+  }, [socket, isConnected, isAuthenticated, isOnline, httpFallback]);
 
   // Method to request an immediate sync from server
   const requestSync = useCallback(() => {
@@ -657,7 +813,9 @@ export const SocketProvider = ({ children }) => {
         sendMessage,
         requestSync,
         clearNotifications,
-        removeNotification
+        removeNotification,
+        httpFallback,
+        isOfflineMode: isConnected === false
       }}
     >
       {children}
