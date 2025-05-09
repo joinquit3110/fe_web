@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://be-hung.onrender.com/api/:path*"
+      "destination": "https://be-web-6c4k.onrender.com/api/:path*"
     }
   ],
   "headers": [
