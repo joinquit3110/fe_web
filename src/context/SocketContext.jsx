@@ -149,13 +149,41 @@ export const SocketProvider = ({ children }) => {
     
     // Cleanup on unmount or when dependencies change
     return () => {
-      // In development mode, React strict mode causes double mounting/unmounting
-      // We'll disable the cleanup in useEffect to prevent infinite socket loop
-      // Only clean up on genuine component unmount (not due to React re-rendering)
+      // Using a more robust cleanup strategy to prevent reconnection loops
       
-      // DO NOT disconnect the socket here - this is causing the reconnection loop
-      // We only want to handle socket disconnection in logout or application close
-      // This makes the socket more stable during React component re-renders
+      // Record start of cleanup to prevent reconnection during cleanup
+      const isInCleanup = isCleaningUpRef.current;
+      
+      // Only perform cleanup if not already in progress
+      if (socketInstance && !isInCleanup) {
+        try {
+          console.log('[SOCKET] Cleaning up socket connection');
+          isCleaningUpRef.current = true;
+          
+          // Remove listeners before disconnecting to prevent cleanup triggers
+          socketInstance.off('connect');
+          socketInstance.off('connect_error');
+          socketInstance.off('disconnect');
+          socketInstance.off('reconnect');
+          socketInstance.off('reconnect_error');
+          
+          // IMPORTANT: In React 18 with StrictMode, components mount, unmount, and mount again
+          // This creates socket connection loops. For development, we'll keep the socket
+          // connected but remove our handlers to prevent them from firing during remounts.
+          
+          if (process.env.NODE_ENV === 'production') {
+            // In production, actually disconnect the socket
+            socketInstance.disconnect();
+            console.log('[SOCKET] Socket disconnected during cleanup');
+          } else {
+            console.log('[SOCKET] Development mode - keeping socket but removing handlers');
+          }
+        } catch (error) {
+          console.error('[SOCKET] Error during socket cleanup:', error);
+        } finally {
+          isCleaningUpRef.current = false;
+        }
+      }
     };
   }, [isAuthenticated, user?.id, user?.username, user?.house]); // Explicit dependencies to prevent unnecessary reconnections
 
@@ -250,6 +278,29 @@ export const SocketProvider = ({ children }) => {
       return newQueue;
     });
   }, [processNotificationQueue]);
+
+  // Define handleUserUpdate before using it in useEffect dependencies
+  const handleUserUpdate = useCallback((updatedFields) => {
+    console.log('[SOCKET] Handling user update:', updatedFields);
+    setUser(prevUser => ({
+      ...prevUser,
+      ...updatedFields
+    }));
+  }, [setUser]);
+
+  const createHousePointsNotification = (data) => {
+    return {
+      id: `house_points_${Date.now()}`,
+      type: data.points > 0 ? 'success' : 'warning',
+      title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
+      message: `Your house ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points`,
+      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+      reason: data.reason || 'System update',
+      criteria: data.criteria || null,
+      level: data.level || null,
+      house: data.house
+    };
+  };
 
   // Enhanced socket event handlers
   useEffect(() => {
@@ -365,28 +416,6 @@ export const SocketProvider = ({ children }) => {
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
   }, [socket, user, addNotification, handleUserUpdate]);
-
-  const handleUserUpdate = useCallback((updatedFields) => {
-    console.log('[SOCKET] Handling user update:', updatedFields);
-    setUser(prevUser => ({
-      ...prevUser,
-      ...updatedFields
-    }));
-  }, [setUser]);
-
-  const createHousePointsNotification = (data) => {
-    return {
-      id: `house_points_${Date.now()}`,
-      type: data.points > 0 ? 'success' : 'warning',
-      title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
-      message: `Your house ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points`,
-      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-      reason: data.reason || 'System update',
-      criteria: data.criteria || null,
-      level: data.level || null,
-      house: data.house
-    };
-  };
 
   return (
     <SocketContext.Provider value={{
