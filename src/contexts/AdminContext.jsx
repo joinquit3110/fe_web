@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 import { useMagicPoints } from '../context/MagicPointsContext';
 import axios from 'axios';
+import { useToast } from '@chakra-ui/react'; // Added useToast import
 
 // Constants
 const ADMIN_USERS = ['hungpro', 'vipro'];
@@ -23,7 +24,8 @@ export const AdminProvider = ({ children }) => {
     resetRevelioAttempts, 
     resetPoints 
   } = useMagicPoints();
-  
+  const toast = useToast(); // Initialized useToast
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
