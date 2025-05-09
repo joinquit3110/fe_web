@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 
 // Backend URL for socket connection
-const SOCKET_URL = "https://be-web-6c4k.onrender.com";
+const SOCKET_URL = "https://inequality-web-api.onrender.com";
 
 // Create context
 const SocketContext = createContext();
@@ -81,8 +81,7 @@ export const SocketProvider = ({ children }) => {
       reconnectionAttempts: 10,
       reconnectionDelay: 500,         // Reduced from 1000ms
       reconnectionDelayMax: 3000,     // Reduced from 5000ms
-      timeout: 5000,                  // Reduced from 10000ms
-      forceNew: true                  // Force a new connection to avoid sharing
+      timeout: 5000                   // Reduced from 10000ms
     });
     
     // Set up event handlers

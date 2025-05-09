@@ -3,8 +3,8 @@ services:
     name: inequality-web-api
     env: node
     plan: free
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+    buildCommand: cd ../be_web && npm install
+    startCommand: cd ../be_web && npm start
     envVars:
       - key: NODE_ENV
         value: production

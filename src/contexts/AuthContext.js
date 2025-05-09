@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const AuthContext = createContext(null);
 
 // Use a consistent API URL for all requests
-const API_URL = "https://be-web-6c4k.onrender.com/api";
+const API_URL = "/api"; // Updated to use relative path for Vercel proxy
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
           password: adminPassword
         };
         
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const response = await fetch(`${API_URL}/auth/login`, { // Will resolve to /api/auth/login
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
         password: password
       };
       
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, { // Will resolve to /api/auth/login
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (userData) => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, { // Will resolve to /api/auth/register
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
