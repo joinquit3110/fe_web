@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack,
-  useToast, Spinner, Button
+  useToast, Spinner, Button, IconButton // Added IconButton
 } from '@chakra-ui/react';
+import { RepeatIcon } from '@chakra-ui/icons'; // Added RepeatIcon
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
 import slytherinLogo from '../asset/Slytherin.png';
@@ -125,9 +126,14 @@ const Leaderboard = () => {
               }}></span>
             </span>
           </Heading>
-          <Button onClick={handleRefresh} isLoading={loading} colorScheme="yellow" variant="outline">
-            Refresh
-          </Button>
+          <IconButton 
+            onClick={handleRefresh} 
+            isLoading={loading} 
+            colorScheme="yellow" 
+            variant="outline"
+            aria-label="Refresh leaderboard"
+            icon={<RepeatIcon />}
+          />
         </Flex>
 
         {loading ? (

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: inequality-web-api
+    name: be-web-6c4k
     env: node
     plan: free
     buildCommand: cd ../be_web && npm install
@@ -18,7 +18,7 @@ services:
       - path: "/*"
         headers:
           - key: "Access-Control-Allow-Origin"
-            value: "https://inequality-web.vercel.app"
+            value: "https://fe-web-lilac.vercel.app"
           - key: "Access-Control-Allow-Methods"
             value: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
           - key: "Access-Control-Allow-Headers"
