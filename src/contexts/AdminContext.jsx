@@ -409,116 +409,67 @@ export const AdminProvider = ({ children }) => {
       const houseUsers = users.filter(user => user.house === house);
       
       if (houseUsers.length === 0) {
-        throw new Error(`No users found in house: ${house}`);
+        console.warn(`No users found locally for house: ${house}. The operation will target users on the backend.`);
       }
       
-      const userIds = houseUsers.map(user => user._id || user.id);
-      
-      // Update points in the database first - this is the critical operation
-      const updatedUserIds = []; // Keep track of successfully updated users
-      
-      for (const userId of userIds) {
-        try {
-          // Get current user's points
-          const userResponse = await axios.get(`${API_URL}/users/${userId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          const user = userResponse.data;
-          const currentPoints = user.magicPoints || 0;
-          const newPoints = Math.max(0, currentPoints + pointsChange); // Ensure points don't go below 0
-          
-          // Update user's points
-          await axios.patch(`${API_URL}/users/${userId}`, 
-            { 
-              magicPoints: newPoints,
-              lastPointsUpdate: new Date().toISOString(),
-              lastUpdateReason: reason || 'House points update' // Make reason optional
-            },
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-          
-          // Add to successful list
-          updatedUserIds.push(userId);
-        } catch (userError) {
-          console.error(`Error updating points for user ${userId}:`, userError);
-          // Continue with other users even if one fails
-        }
+      const userIds = houseUsers.map(user => user._id || user.id).filter(id => id);
+
+      if (userIds.length === 0) {
+        toast({
+          title: 'No Users Found',
+          description: `No users were found locally for house ${house}. Points not updated.`,
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        setLoading(false);
+        return false;
       }
       
-      // Only try to send notification if points were updated successfully
-      if (updatedUserIds.length > 0) {
-        try {
-          // Socket notification approach
-          if (window.socket && typeof window.socket.emit === 'function') {
-            console.log('Sending house_points_update via socket');
-            window.socket.emit('client_house_notification', {
-              house,
-              points: pointsChange,
-              reason: reason || null, // Send reason if provided, otherwise null
-              criteria: null,
-              level: null,
-              newTotal: houseUsers.reduce((total, user) => 
-                total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
-              timestamp: new Date().toISOString()
-            });
+      console.log(`[AdminContext] Updating ${pointsChange} points for ${userIds.length} users in house ${house}. Reason: ${reason}`);
+
+      // Call the backend's bulk-update endpoint
+      const response = await axios.post(`${API_URL}/users/bulk-update`, 
+        { 
+          house,
+          pointsChange,
+          reason: reason || 'House points update by admin',
+          targetUserIdsForHousePoints: userIds
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-          
-          // Dispatch a custom event for local notification display
-          // This ensures notification display even if server sockets fail
-          const notificationEvent = new CustomEvent('house-points-update', {
-            detail: {
-              house,
-              points: pointsChange,
-              reason: reason || null, // Make reason optional
-              criteria: null,
-              level: null,
-              timestamp: new Date().toISOString()
-            }
-          });
-          window.dispatchEvent(notificationEvent);
-          
-          // Force sync for all affected users
-          try {
-            await axios.post(`${API_URL}/users/force-sync`, 
-              { userIds: updatedUserIds },
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-            console.log('Force sync initiated for updated users');
-          } catch (syncError) {
-            console.error('Error initiating sync (non-critical):', syncError);
-          }
-        } catch (postUpdateError) {
-          console.error('Error in post-update operations:', postUpdateError);
-          // Don't throw here - the points were already updated successfully
         }
-      }
-      
-      // Update local state to reflect changes
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          userIds.includes(user._id || user.id) 
-            ? { ...user, magicPoints: Math.max(0, (user.magicPoints || 0) + pointsChange) } 
-            : user
-        )
       );
+
+      if (response.data && response.data.success) {
+        toast({
+          title: 'House Points Updated',
+          description: `${response.data.updated || 0} users in ${house} had their points adjusted by ${pointsChange}. Reason: ${reason}`,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+
+        await fetchUsers();
+
+      } else {
+        throw new Error(response.data.message || 'Failed to update house points via bulk operation.');
+      }
       
-      return updatedUserIds.length > 0;
+      return true;
     } catch (err) {
       console.error('Error updating house points:', err);
-      setError('Failed to update house points: ' + (err.message || 'Unknown error'));
+      setError(err.message || 'Failed to update house points');
+      toast({
+        title: 'Error Updating Points',
+        description: err.message || 'An unknown error occurred.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
       return false;
     } finally {
       setLoading(false);
