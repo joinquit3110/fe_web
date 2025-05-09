@@ -104,18 +104,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (credentials) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Check for admin credentials
+      const adminUsers = ['hungpro', 'vipro'];
+      const adminPassword = '31102004';
+      
+      // Handle login with either {username, password} or {email, password}
+      const username = credentials.username || credentials.email;
+      const password = credentials.password;
+      
+      // Log what's being sent to the server
+      console.log(`[AuthContext] Logging in with username: ${username}`);
+      
+      // Use the proper API endpoint format and send username consistently
       const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include'
+        body: JSON.stringify({ 
+          username: username, 
+          password: password 
+        })
       });
 
       if (!response.ok) {
@@ -126,16 +140,36 @@ export const AuthProvider = ({ children }) => {
       // Parse JSON response properly
       const data = await response.json();
       
+      // Check for admin privileges
+      const isAdminUser = 
+        adminUsers.includes(username) || 
+        data.user.isAdmin === true || 
+        data.user.role === 'admin' || 
+        data.user.house === 'admin';
+      
+      // Make sure isAdmin flag is set in the user object
+      const userData = {
+        ...data.user,
+        isAdmin: isAdminUser
+      };
+      
+      console.log('[AuthContext] Login response:', {
+        username: userData.username,
+        isAdmin: userData.isAdmin,
+        role: userData.role,
+        house: userData.house
+      });
+      
       // Store user data in state and localStorage as objects, not double-stringified
-      setUser(data.user);
+      setUser(userData);
       setToken(data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', data.token); // Store token directly as string
       setIsAuthenticated(true);
       localStorage.setItem('isAuthenticated', 'true');
       
       console.log('Login successful', data);
-      return data; // Return the response data
+      return { ...data, user: userData }; // Return the response data with updated user object
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message);

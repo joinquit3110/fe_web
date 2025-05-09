@@ -29,6 +29,11 @@ import ravenclawImg from '../asset/Ravenclaw.png';
 import hufflepuffImg from '../asset/Hufflepuff.png';
 import hogwartsLogoImg from '../asset/Hogwarts logo.png';
 
+// Define API URL constants
+const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com/api";
+const ADMIN_USERS = ['hungpro', 'vipro'];
+const ADMIN_PASSWORD = '31102004';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -168,6 +173,9 @@ const Login = () => {
       
       if (adminUsers.includes(email) && password === adminPassword) {
         console.log('Admin login detected');
+        
+        // Define API_URL here
+        const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com/api";
         
         try {
           // Use actual backend login to get proper JWT token

@@ -85,7 +85,26 @@ export const AdminProvider = ({ children }) => {
   // Check if current user is an admin
   useEffect(() => {
     if (isAuthenticated && user) {
-      const isAdminUser = ADMIN_USERS.includes(user.username);
+      // Check multiple ways to determine if user is admin
+      const isAdminUser = 
+        // Check username against hardcoded admin list
+        ADMIN_USERS.includes(user.username) ||
+        // Check isAdmin flag from token/user object
+        user.isAdmin === true ||
+        // Check role field
+        user.role === 'admin' ||
+        // Check house field
+        user.house === 'admin';
+      
+      console.log('[AdminContext] Admin check:', { 
+        username: user.username, 
+        isInAdminList: ADMIN_USERS.includes(user.username),
+        isAdminFlag: user.isAdmin,
+        role: user.role,
+        house: user.house,
+        result: isAdminUser
+      });
+      
       setIsAdmin(isAdminUser);
       
       // If admin, fetch users
