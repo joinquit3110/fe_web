@@ -14,26 +14,85 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [token, setToken] = useState(null);
 
+  // Check authentication status on initial mount
   useEffect(() => {
-    // Check local storage for saved auth state
-    const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      const savedUser = localStorage.getItem('user');
-      
-      if (token && savedUser) {
-        setUser(JSON.parse(savedUser));
-        setToken(token);
-        setIsAuthenticated(true);
-        localStorage.setItem('isAuthenticated', 'true');
-      } else {
-        setUser(null);
-        setToken(null);
-        setIsAuthenticated(false);
-        localStorage.setItem('isAuthenticated', 'false');
+    // Function to check authentication status
+    const checkAuth = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Check local storage for saved token and user data
+        const token = localStorage.getItem('token');
+        const savedUser = localStorage.getItem('user');
+        
+        if (token && savedUser) {
+          // Parse user data and set state
+          const userData = JSON.parse(savedUser);
+          setUser(userData);
+          setToken(token);
+          setIsAuthenticated(true);
+          
+          // Update localStorage flags
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('offlineMode', 'false');
+          
+          // Synchronize authentication state with API
+          try {
+            const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (response.ok) {
+              // If verification succeeds, update user with fresh data from server
+              const data = await response.json();
+              if (data.authenticated) {
+                // Update user with fresh data from server
+                const freshUserData = {
+                  ...userData,
+                  ...data,
+                  isAdmin: data.isAdmin || userData.isAdmin
+                };
+                
+                // Update local storage with fresh data
+                localStorage.setItem('user', JSON.stringify(freshUserData));
+                setUser(freshUserData);
+                
+                console.log('[AuthContext] Authentication verified with server:', freshUserData);
+              } else {
+                // Auth verification failed - clear auth state
+                console.warn('[AuthContext] Server rejected token, logging out');
+                clearAuthState();
+              }
+            }
+          } catch (verifyError) {
+            // If verification fails due to network issue, keep the existing auth state
+            // but set offline mode
+            console.warn('[AuthContext] Error verifying token:', verifyError);
+            localStorage.setItem('offlineMode', 'true');
+          }
+        } else {
+          clearAuthState();
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error during auth check:', err);
+        clearAuthState();
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     
+    // Helper to clear auth state
+    const clearAuthState = () => {
+      setUser(null);
+      setToken(null);
+      setIsAuthenticated(false);
+      localStorage.setItem('isAuthenticated', 'false');
+      localStorage.setItem('offlineMode', navigator.onLine ? 'false' : 'true');
+    };
+    
+    // Run the auth check
     checkAuth();
   }, []);
 
@@ -167,6 +226,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.token); // Store token directly as string
       setIsAuthenticated(true);
       localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('offlineMode', 'false'); // Explicitly set online mode on successful login
       
       console.log('Login successful', data);
       return { ...data, user: userData }; // Return the response data with updated user object

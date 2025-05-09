@@ -22,15 +22,15 @@ const getAuthToken = () => {
   if (!token) {
     console.warn('[API] No auth token found in any storage location');
     // For consistency, indicate offline mode if no token found
-    if (!USE_OFFLINE_MODE) {
-      console.log('[API] Switching to offline mode due to missing token');
-      localStorage.setItem('offlineMode', 'true');
-    }
+    localStorage.setItem('offlineMode', 'true');
+    localStorage.setItem('isAuthenticated', 'false');
+    return '';
   } else {
-    // If we have a token, mark as online
+    // If we have a token, mark as online and set authenticated
     localStorage.setItem('offlineMode', 'false');
+    localStorage.setItem('isAuthenticated', 'true');
   }
-  return token || '';
+  return token;
 };
 
 // Helper function to handle API errors

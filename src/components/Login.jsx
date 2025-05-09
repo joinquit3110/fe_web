@@ -134,9 +134,23 @@ const Login = () => {
   // Effect for house logo transition after login
   useEffect(() => {
     if (loginSuccess && userHouse) {
+      // Get user data to determine proper redirect destination
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const isAdminUser = userHouse === 'admin' || 
+                         userData.isAdmin === true || 
+                         userData.role === 'admin' || 
+                         userData.house === 'admin';
+      
       // Delay navigation to allow house animation to be displayed
       const timer = setTimeout(() => {
-        navigate('/dashboard');
+        // Redirect admin users to admin dashboard, regular users to dashboard
+        if (isAdminUser) {
+          console.log('[Login] Redirecting admin user to admin panel');
+          navigate('/admin');
+        } else {
+          console.log('[Login] Redirecting regular user to dashboard');
+          navigate('/dashboard');
+        }
       }, 2500); // Show logo for 2.5 seconds before navigating
       return () => clearTimeout(timer);
     }
@@ -196,15 +210,21 @@ const Login = () => {
             throw new Error(data.message || 'Admin login failed');
           }
           
-          // Verify the token has proper admin flag
-          if (!data.user.isAdmin) {
-            console.warn('User authenticated but without admin privileges');
-          }
+          // Ensure admin flag is properly set
+          const adminUser = {
+            ...data.user,
+            isAdmin: true, // explicitly set admin flag
+            role: data.user.role || 'admin',
+            house: data.user.house || 'admin' 
+          };
           
-          // Store authentication data from server
-          localStorage.setItem('user', JSON.stringify(data.user));
+          // Store enhanced admin user data
+          localStorage.setItem('user', JSON.stringify(adminUser));
           localStorage.setItem('token', data.token);
           localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('offlineMode', 'false'); // Ensure online mode is set
+          
+          console.log('[Login] Admin login successful, user data:', adminUser);
           
           // Set admin house for animation
           setUserHouse('admin');
@@ -224,8 +244,30 @@ const Login = () => {
         password: password
       });
       
+      // Ensure we're in online mode after successful login
+      localStorage.setItem('offlineMode', 'false');
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      // Verify authentication immediately to ensure online status
+      try {
+        const { checkAuthStatus } = await import('../api/magicPointsApi');
+        const authStatus = await checkAuthStatus();
+        console.log('[Login] Auth verification after login:', authStatus);
+        
+        // Force online mode if authentication succeeded
+        if (authStatus.authenticated) {
+          localStorage.setItem('offlineMode', 'false');
+        }
+      } catch (verifyError) {
+        console.warn('[Login] Auth verification error:', verifyError);
+        // Continue with login flow even if verification fails
+      }
+      
       // Get user house for animation
-      if (userData && userData.house) {
+      if (userData && userData.user && userData.user.house) {
+        setUserHouse(userData.user.house.toLowerCase());
+        setLoginSuccess(true);
+      } else if (userData && userData.house) {
         setUserHouse(userData.house.toLowerCase());
         setLoginSuccess(true);
       } else {
