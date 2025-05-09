@@ -20,6 +20,13 @@ export const SocketProvider = ({ children }) => {
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
   const { user, isAuthenticated, setUser } = useAuth();
   
+  // Add reference to track socket initialization state
+  const socketInitializedRef = useRef(false);
+  // Add socket instance tracking ref to prevent multiple initializations
+  const socketInstanceRef = useRef(null);
+  // Track connection cleanup to prevent reconnection loops
+  const isCleaningUpRef = useRef(false);
+  
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
 
@@ -63,12 +70,26 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // Only initialize socket if user is authenticated
     if (!isAuthenticated) {
-      if (socket) {
-        socket.disconnect();
+      if (socketInstanceRef.current) {
+        console.log('[SOCKET] Cleaning up socket due to logout');
+        isCleaningUpRef.current = true;
+        socketInstanceRef.current.disconnect();
         setSocket(null);
+        socketInstanceRef.current = null;
         setIsConnected(false);
         setConnectionQuality('disconnected');
+        socketInitializedRef.current = false;
+        isCleaningUpRef.current = false;
       }
+      return;
+    }
+
+    // Don't reinitialize the socket if it's already connected or in cleanup
+    if (
+      (socketInstanceRef.current && socketInstanceRef.current.connected && socketInitializedRef.current) ||
+      isCleaningUpRef.current
+    ) {
+      console.log('[SOCKET] Socket already connected or cleaning up, skipping initialization');
       return;
     }
     
@@ -81,14 +102,19 @@ export const SocketProvider = ({ children }) => {
       reconnectionAttempts: 10,
       reconnectionDelay: 500,         // Reduced from 1000ms
       reconnectionDelayMax: 3000,     // Reduced from 5000ms
-      timeout: 5000                   // Reduced from 10000ms
+      timeout: 5000,                  // Reduced from 10000ms
+      // Remove multiplex: false to allow socket.io's built-in connection manager to work
     });
+    
+    // Store in ref to track across renders
+    socketInstanceRef.current = socketInstance;
     
     // Set up event handlers
     socketInstance.on('connect', () => {
       console.log('[SOCKET] Connected to server');
       setIsConnected(true);
       setConnectionQuality('good');
+      socketInitializedRef.current = true;
       
       // Authenticate with user ID and house
       if (user) {
@@ -111,69 +137,28 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Disconnected:', reason);
       setIsConnected(false);
       setConnectionQuality('disconnected');
-    });
-    
-    socketInstance.on('reconnect', (attempt) => {
-      console.log(`[SOCKET] Reconnected after ${attempt} attempts`);
-      setIsConnected(true);
-      setConnectionQuality('good');
       
-      // Re-authenticate on reconnect
-      if (user) {
-        socketInstance.emit('authenticate', {
-          userId: user.id || user._id,
-          username: user.username,
-          house: user.house
-        });
-      }
-      
-      // Request a sync after reconnection
-      setTimeout(() => {
-        if (socketInstance.connected) {
-          console.log('[SOCKET] Requesting sync after reconnection');
-          socketInstance.emit('request_sync');
-        }
-      }, 1000);
-    });
-
-    socketInstance.on('reconnect_error', (error) => {
-      console.error('[SOCKET] Reconnection error:', error);
-      setConnectionQuality('poor');
-    });
-
-    socketInstance.on('reconnect_failed', () => {
-      console.log('[SOCKET] Failed to reconnect');
-      setIsConnected(false);
-      setConnectionQuality('disconnected');
-    });
-    
-    // Handle connection status updates
-    socketInstance.on('connection_status', (data) => {
-      console.log('[SOCKET] Connection status update:', data);
-      if (data.connected) {
-        setIsConnected(true);
-        setConnectionQuality('good');
+      // Only reset the initialized flag for certain disconnect reasons
+      if (reason === 'io server disconnect' || reason === 'transport close') {
+        socketInitializedRef.current = false;
       }
     });
-
+    
     // Set the socket instance
     setSocket(socketInstance);
     
-    // Make socket globally accessible for direct component use
-    if (typeof window !== 'undefined') {
-      window.socket = socketInstance;
-    }
-
-    // Cleanup on unmount
+    // Cleanup on unmount or when dependencies change
     return () => {
-      console.log('[SOCKET] Cleaning up socket connection');
-      if (socketInstance) {
-        socketInstance.disconnect();
-        setIsConnected(false);
-      }
+      // In development mode, React strict mode causes double mounting/unmounting
+      // We'll disable the cleanup in useEffect to prevent infinite socket loop
+      // Only clean up on genuine component unmount (not due to React re-rendering)
+      
+      // DO NOT disconnect the socket here - this is causing the reconnection loop
+      // We only want to handle socket disconnection in logout or application close
+      // This makes the socket more stable during React component re-renders
     };
-  }, [isAuthenticated, user]);
-  
+  }, [isAuthenticated, user?.id, user?.username, user?.house]); // Explicit dependencies to prevent unnecessary reconnections
+
   // Implement heartbeat mechanism
   useEffect(() => {
     if (!socket || !isConnected) return;
@@ -379,15 +364,15 @@ export const SocketProvider = ({ children }) => {
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
-  }, [socket, user, isAdminUser, addNotification]);
+  }, [socket, user, addNotification, handleUserUpdate]);
 
-  const handleUserUpdate = (updatedFields) => {
+  const handleUserUpdate = useCallback((updatedFields) => {
     console.log('[SOCKET] Handling user update:', updatedFields);
     setUser(prevUser => ({
       ...prevUser,
       ...updatedFields
     }));
-  };
+  }, [setUser]);
 
   const createHousePointsNotification = (data) => {
     return {
