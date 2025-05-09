@@ -84,9 +84,15 @@ export const AdminProvider = ({ children }) => {
 
   // Check if current user is an admin
   useEffect(() => {
+    // Try to get admin status from multiple sources
+    const adminFlagInSession = sessionStorage.getItem('adminLogin') === 'true';
+    
+    // If we have a user object from context, use that first
     if (isAuthenticated && user) {
       // Check multiple ways to determine if user is admin
       const isAdminUser = 
+        // Check explicit session flag
+        adminFlagInSession ||
         // Check username against hardcoded admin list
         ADMIN_USERS.includes(user.username) ||
         // Check isAdmin flag from token/user object
@@ -96,12 +102,13 @@ export const AdminProvider = ({ children }) => {
         // Check house field
         user.house === 'admin';
       
-      console.log('[AdminContext] Admin check:', { 
+      console.log('[AdminContext] Admin check from context user:', { 
         username: user.username, 
         isInAdminList: ADMIN_USERS.includes(user.username),
         isAdminFlag: user.isAdmin,
         role: user.role,
         house: user.house,
+        adminFlagInSession,
         result: isAdminUser
       });
       

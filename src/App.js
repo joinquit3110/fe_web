@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
@@ -62,6 +62,200 @@ const PrivateRoute = ({ children }) => {
   // Allow bypassing auth in development mode
   if (!isAuthenticated && !isDevelopment) {
     return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+// Admin Route component specifically for admin-only routes
+const AdminRoute = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // ADMIN_USERS hardcoded list for direct checks
+  const ADMIN_USERS = ['hungpro', 'vipro'];
+  
+  // Track if we've attempted to load user from localStorage
+  const [attemptedLocalStorageLoad, setAttemptedLocalStorageLoad] = useState(false);
+  const [loadedAdminData, setLoadedAdminData] = useState(false);
+  
+  // First useEffect to try loading user data from storage if not in context
+  useEffect(() => {
+    if (!attemptedLocalStorageLoad && (!user || !Object.keys(user || {}).length)) {
+      try {
+        console.log('[AdminRoute] User data not found in context, checking storage');
+        
+        // Try session storage first (preferred for admin)
+        let storedUserJson = sessionStorage.getItem('user');
+        if (!storedUserJson) {
+          // Fall back to local storage
+          storedUserJson = localStorage.getItem('user');
+        }
+        
+        if (storedUserJson) {
+          const storedUser = JSON.parse(storedUserJson);
+          console.log('[AdminRoute] Found user data in storage:', 
+            storedUser ? { username: storedUser.username, isAdmin: storedUser.isAdmin } : null);
+        }
+      } catch (err) {
+        console.error('[AdminRoute] Error checking storage:', err);
+      } finally {
+        setAttemptedLocalStorageLoad(true);
+      }
+    }
+  }, [user, attemptedLocalStorageLoad]);
+  
+  // Second useEffect dedicated to checking admin status and loading admin data
+  useEffect(() => {
+    const adminLoginFlag = sessionStorage.getItem('adminLogin') === 'true';
+    
+    // If admin flag is set but we haven't loaded admin data yet
+    if (adminLoginFlag && !loadedAdminData) {
+      try {
+        console.log('[AdminRoute] Admin flag detected, checking admin data');
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!storedUser.isAdmin) {
+          // Force update admin flag
+          storedUser.isAdmin = true;
+          localStorage.setItem('user', JSON.stringify(storedUser));
+          console.log('[AdminRoute] Updated admin flag in stored user data');
+        }
+        
+        setLoadedAdminData(true);
+      } catch (err) {
+        console.error('[AdminRoute] Error updating admin data:', err);
+      }
+    }
+  }, [loadedAdminData]);
+  
+  // Get user from localStorage as fallback
+  let effectiveUser = user;
+  if (!effectiveUser || !Object.keys(effectiveUser || {}).length) {
+    try {
+      const storedUserJson = localStorage.getItem('user');
+      if (storedUserJson) {
+        effectiveUser = JSON.parse(storedUserJson);
+        console.log('[AdminRoute] Using user data from localStorage');
+      }
+    } catch (e) {
+      console.error('[AdminRoute] Error parsing user from localStorage:', e);
+    }
+  }
+  
+  // More robust admin check
+  const isAdmin = effectiveUser && (
+    // Check against hardcoded admin list
+    (effectiveUser.username && ADMIN_USERS.includes(effectiveUser.username)) || 
+    // Check isAdmin flag
+    effectiveUser.isAdmin === true || 
+    // Check role field
+    effectiveUser.role === 'admin' || 
+    // Check house field
+    effectiveUser.house === 'admin'
+  );
+  
+  console.log('[AdminRoute] Checking admin access:', { 
+    isAuthenticated,
+    isAdmin,
+    username: effectiveUser?.username,
+    inAdminList: effectiveUser?.username ? ADMIN_USERS.includes(effectiveUser.username) : false,
+    isAdminFlag: effectiveUser?.isAdmin,
+    role: effectiveUser?.role,
+    house: effectiveUser?.house,
+  });
+  
+  // Check for explicit admin session marker
+  const hasAdminSession = sessionStorage.getItem('adminLogin') === 'true';
+  
+  // Get search params for various checks
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasAdminParam = searchParams.get('admin') === 'true';
+
+  // First check if authenticated, then check if admin
+  if (!isAuthenticated && !isDevelopment) {
+    console.log('[AdminRoute] Not authenticated, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Special handling for admin session restart - if we have admin session marker,
+  // try to refresh the admin data from localStorage
+  if (hasAdminSession && !isAdmin) {
+    console.log('[AdminRoute] Admin session marker found but context not updated yet');
+    
+    // If less than 2 seconds after page load, show loading and wait for context
+    const pageLoadTime = window.performance.timing.navigationStart || 0;
+    const timeSinceLoad = Date.now() - pageLoadTime;
+    
+    if (timeSinceLoad < 2000) {
+      console.log('[AdminRoute] Recently loaded, waiting for context update');
+      return <div>Loading admin interface...</div>;
+    }
+  }
+  
+  // If authenticated but not admin and no admin session, redirect to dashboard
+  if (isAuthenticated && !isAdmin && !hasAdminSession && !isDevelopment && !hasAdminParam) {
+    console.log('[AdminRoute] User is not admin, redirecting to dashboard');
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // If this is coming directly from admin login via redirect marker, clear the marker
+  if (sessionStorage.getItem('adminRedirect') === 'true') {
+    console.log('[AdminRoute] Processing admin redirect');
+    sessionStorage.removeItem('adminRedirect');
+  }
+  
+  // For debugging purposes - allow viewing detailed admin auth state
+  const showDebug = searchParams.get('debug') === 'admin';
+  
+  console.log('[AdminRoute] Successfully granted access to admin route', {
+    path: window.location.pathname,
+    adminUser: effectiveUser ? {
+      username: effectiveUser.username,
+      isAdmin: effectiveUser.isAdmin,
+      role: effectiveUser.role,
+      house: effectiveUser.house
+    } : null,
+    localStorage: {
+      user: localStorage.getItem('user') ? 'present' : 'missing',
+      token: localStorage.getItem('token') ? 'present' : 'missing',
+      isAuthenticated: localStorage.getItem('isAuthenticated')
+    },
+    sessionStorage: {
+      adminLogin: sessionStorage.getItem('adminLogin'),
+      user: sessionStorage.getItem('user') ? 'present' : 'missing',
+      token: sessionStorage.getItem('token') ? 'present' : 'missing'
+    }
+  });
+  
+  // If debug is enabled, include debug information
+  if (showDebug) {
+    return (
+      <div style={{padding: '20px'}}>
+        <div style={{marginBottom: '20px', padding: '10px', background: '#0d47a1', color: 'white'}}>
+          <h3>Admin Authentication Debug</h3>
+          <pre style={{background: '#002171', padding: '10px', overflow: 'auto'}}>
+            {JSON.stringify({
+              user: effectiveUser,
+              isAuthenticated,
+              isAdmin,
+              hasAdminSession: sessionStorage.getItem('adminLogin') === 'true',
+              localStorage: {
+                user: localStorage.getItem('user'),
+                token: localStorage.getItem('token') ? '[PRESENT]' : '[MISSING]',
+                isAuthenticated: localStorage.getItem('isAuthenticated')
+              },
+              sessionStorage: {
+                adminLogin: sessionStorage.getItem('adminLogin'),
+                token: sessionStorage.getItem('token') ? '[PRESENT]' : '[MISSING]'
+              }
+            }, null, 2)}
+          </pre>
+        </div>
+        {children}
+      </div>
+    );
   }
   
   return children;
@@ -240,10 +434,19 @@ const AppContent = () => {
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminUserManagement />
+          </AdminRoute>
+        } />
         <Route path="/admin/house-points" element={
-          <PrivateRoute>
+          <AdminRoute>
             <AdminHousePoints />
-          </PrivateRoute>
+          </AdminRoute>
+        } />
+        {/* Dashboard route - redirects to main app */}
+        <Route path="/dashboard" element={
+          <Navigate to="/" replace />
         } />
         <Route 
           path="/" 

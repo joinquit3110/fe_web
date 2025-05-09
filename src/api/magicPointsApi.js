@@ -398,8 +398,41 @@ export const checkAuthStatus = async () => {
     
     const data = await response.json();
     
-    // Successfully authenticated - ensure we're in online mode
+    // Successfully authenticated - ensure we're in online mode and set authenticated
     localStorage.setItem('offlineMode', 'false');
+    localStorage.setItem('isAuthenticated', 'true');
+    
+    // Also verify admin status and ensure it's set properly
+    if (data.isAdmin) {
+      const storedUserJson = localStorage.getItem('user');
+      if (storedUserJson) {
+        try {
+          const storedUser = JSON.parse(storedUserJson);
+          if (!storedUser.isAdmin) {
+            storedUser.isAdmin = true;
+            localStorage.setItem('user', JSON.stringify(storedUser));
+            sessionStorage.setItem('adminLogin', 'true');
+            console.log('[AUTH] Updated user with admin flag');
+          }
+        } catch (e) {
+          console.error('[AUTH] Error updating stored user:', e);
+        }
+      }
+    }
+    
+    // Dispatch global auth state change event
+    try {
+      const event = new CustomEvent('authStateChange', { 
+        detail: { 
+          isAuthenticated: true, 
+          isAdmin: data.isAdmin,
+          offlineMode: false
+        }
+      });
+      window.dispatchEvent(event);
+    } catch (e) {
+      console.error('[AUTH] Error dispatching auth event:', e);
+    }
     
     return { 
       authenticated: true, 

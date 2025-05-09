@@ -49,11 +49,28 @@ export const AuthProvider = ({ children }) => {
               const data = await response.json();
               if (data.authenticated) {
                 // Update user with fresh data from server
+                const adminUsers = ['hungpro', 'vipro'];
+                const isUserNameAdmin = adminUsers.includes(userData.username);
+                
+                // Create a complete user data object with explicit admin status
                 const freshUserData = {
                   ...userData,
                   ...data,
-                  isAdmin: data.isAdmin || userData.isAdmin
+                  // Use multiple sources to determine admin status
+                  isAdmin: data.isAdmin || 
+                          userData.isAdmin || 
+                          isUserNameAdmin || 
+                          data.role === 'admin' || 
+                          userData.role === 'admin' || 
+                          data.house === 'admin' || 
+                          userData.house === 'admin'
                 };
+                
+                // If we're an admin user, set the admin flag in session storage as well
+                if (freshUserData.isAdmin) {
+                  sessionStorage.setItem('adminLogin', 'true');
+                  console.log('[AuthContext] Set admin session flag for:', freshUserData.username);
+                }
                 
                 // Update local storage with fresh data
                 localStorage.setItem('user', JSON.stringify(freshUserData));
@@ -126,6 +143,49 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('userHouseChanged', handleHouseChange);
     };
   }, [user]);
+
+  // Listen for auth state change events from external sources
+  useEffect(() => {
+    const handleAuthStateChange = (event) => {
+      console.log('[AuthContext] Received auth state change event:', event.detail);
+      
+      if (event.detail) {
+        // Update authentication state based on event
+        if (event.detail.isAuthenticated !== undefined) {
+          setIsAuthenticated(event.detail.isAuthenticated);
+        }
+        
+        // If we have user details, update user state
+        if (event.detail.user) {
+          setUser(event.detail.user);
+          localStorage.setItem('user', JSON.stringify(event.detail.user));
+        }
+        
+        // Handle admin status changes
+        if (event.detail.isAdmin) {
+          // If user exists, ensure admin flag is set
+          const userData = JSON.parse(localStorage.getItem('user') || '{}');
+          if (!userData.isAdmin) {
+            userData.isAdmin = true;
+            localStorage.setItem('user', JSON.stringify(userData));
+          }
+          sessionStorage.setItem('adminLogin', 'true');
+        }
+        
+        // Update offline mode status if available
+        if (event.detail.offlineMode !== undefined) {
+          localStorage.setItem('offlineMode', event.detail.offlineMode ? 'true' : 'false');
+        }
+      }
+    };
+    
+    // Register event listener for auth state changes
+    window.addEventListener('authStateChange', handleAuthStateChange);
+    
+    return () => {
+      window.removeEventListener('authStateChange', handleAuthStateChange);
+    };
+  }, []);
 
   // Add a function to update user's house directly
   const updateUserHouse = async (house) => {
@@ -227,6 +287,14 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('offlineMode', 'false'); // Explicitly set online mode on successful login
+      
+      // If user is admin, set additional flags for robust admin detection
+      if (isAdminUser) {
+        sessionStorage.setItem('adminLogin', 'true');
+        sessionStorage.setItem('user', JSON.stringify(userData)); // Backup in session storage
+        sessionStorage.setItem('token', data.token);
+        console.log('[AuthContext] Admin login detected, set session flags');
+      }
       
       console.log('Login successful', data);
       return { ...data, user: userData }; // Return the response data with updated user object
