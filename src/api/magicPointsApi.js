@@ -21,6 +21,14 @@ const getAuthToken = () => {
   
   if (!token) {
     console.warn('[API] No auth token found in any storage location');
+    // For consistency, indicate offline mode if no token found
+    if (!USE_OFFLINE_MODE) {
+      console.log('[API] Switching to offline mode due to missing token');
+      localStorage.setItem('offlineMode', 'true');
+    }
+  } else {
+    // If we have a token, mark as online
+    localStorage.setItem('offlineMode', 'false');
   }
   return token || '';
 };
@@ -300,13 +308,49 @@ export const getLocalPoints = () => {
   }
 };
 
-// New function to check authentication status
+// Enhanced function to check authentication status
 export const checkAuthStatus = async () => {
   try {
     const token = getAuthToken();
-    if (!token) {
-      return { authenticated: false, reason: 'No token found' };
+    
+    // First, check if offline mode is forced in localStorage
+    const forceOfflineMode = localStorage.getItem('offlineMode') === 'true';
+    if (forceOfflineMode) {
+      console.log('[AUTH] Using offline mode as set in localStorage');
+      return { 
+        authenticated: false, 
+        reason: 'Offline mode is enabled',
+        offlineMode: true
+      };
     }
+    
+    // Check if we have a token
+    if (!token) {
+      console.log('[AUTH] No authentication token found');
+      localStorage.setItem('offlineMode', 'true'); // Set offline mode if no token
+      return { 
+        authenticated: false, 
+        reason: 'No token found',
+        offlineMode: true
+      };
+    }
+    
+    // Check if we're online
+    if (!navigator.onLine) {
+      console.log('[AUTH] Device is offline');
+      localStorage.setItem('offlineMode', 'true');
+      return {
+        authenticated: false,
+        reason: 'Device is offline',
+        offlineMode: true
+      };
+    }
+    
+    console.log('[AUTH] Verifying authentication token with backend');
+    
+    // Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
       method: 'GET',
@@ -314,23 +358,73 @@ export const checkAuthStatus = async () => {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
+      },
+      signal: controller.signal
+    }).catch(err => {
+      if (err.name === 'AbortError') {
+        console.log('[AUTH] Request timed out - switching to offline mode');
+        localStorage.setItem('offlineMode', 'true');
+        return null;
       }
+      throw err;
     });
     
+    clearTimeout(timeoutId);
+    
+    if (!response) {
+      return {
+        authenticated: false,
+        reason: 'Request timed out',
+        offlineMode: true
+      };
+    }
+    
     if (!response.ok) {
+      console.log(`[AUTH] Server returned ${response.status}: ${response.statusText}`);
+      
+      // If authentication failed, mark as offline
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('token'); // Clear invalid token
+        localStorage.setItem('offlineMode', 'true');
+      }
+      
       return { 
         authenticated: false, 
         status: response.status,
-        reason: `Server returned ${response.status}: ${response.statusText}`
+        reason: `Server returned ${response.status}: ${response.statusText}`,
+        offlineMode: response.status === 401 || response.status === 403
       };
     }
     
     const data = await response.json();
-    return { authenticated: true, userId: data.userId };
+    
+    // Successfully authenticated - ensure we're in online mode
+    localStorage.setItem('offlineMode', 'false');
+    
+    return { 
+      authenticated: true, 
+      userId: data.userId, 
+      isAdmin: data.isAdmin,
+      username: data.username,
+      house: data.house 
+    };
   } catch (error) {
+    console.error('[AUTH] Error checking authentication status:', error);
+    
+    // Set offline mode if there was a network error
+    const isNetworkError = error.message && (
+      error.message.includes('Network') || 
+      error.message.includes('Failed to fetch')
+    );
+    
+    if (isNetworkError) {
+      localStorage.setItem('offlineMode', 'true');
+    }
+    
     return { 
       authenticated: false, 
-      reason: `Error checking auth: ${error.message}` 
+      reason: `Error checking auth: ${error.message}`,
+      offlineMode: isNetworkError
     };
   }
 };

@@ -99,11 +99,12 @@ export const MagicPointsProvider = ({ children }) => {
   const [magicPoints, setMagicPoints] = useState(DEFAULT_POINTS);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(navigator.onLine && localStorage.getItem('offlineMode') !== 'true');
   const [pendingChanges, setPendingChanges] = useState(false);
   const [pendingOperations, setPendingOperations] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [syncRetries, setSyncRetries] = useState(0);
+  const [offlineMode, setOfflineMode] = useState(localStorage.getItem('offlineMode') === 'true');
 
   // Track Revelio attempts for each blank - key is blankId, value is whether it's first attempt
   const [revelioAttempts, setRevelioAttempts] = useState({});
@@ -572,21 +573,59 @@ export const MagicPointsProvider = ({ children }) => {
     }
     
     // Set up online/offline event listeners with improved handlers
-    const handleOnline = () => {
-      console.log('[POINTS] Back online, attempting to sync');
-      setIsOnline(true);
-      // Attempt to sync when coming back online
-      if (pendingOperations.length > 0 || pendingChanges) {
-        setTimeout(() => {
-          if (syncToServerRef.current) {
-            syncToServerRef.current();
+    const handleOnline = async () => {
+      // Check if offline mode is forced in localStorage
+      const forcedOfflineMode = localStorage.getItem('offlineMode') === 'true';
+      
+      if (forcedOfflineMode) {
+        console.log('[POINTS] Back online, but offline mode is forced in settings');
+        return;
+      }
+      
+      console.log('[POINTS] Back online, verifying connection to backend');
+      
+      try {
+        // Verify we can actually reach the backend
+        const authStatus = await checkAuthStatus();
+        
+        if (authStatus.authenticated) {
+          console.log('[POINTS] Successfully verified connection to backend');
+          localStorage.setItem('offlineMode', 'false');
+          setOfflineMode(false);
+          setIsOnline(true);
+          
+          // Attempt to sync when coming back online
+          if (pendingOperations.length > 0 || pendingChanges) {
+            setTimeout(() => {
+              if (syncToServerRef.current) {
+                syncToServerRef.current();
+              }
+            }, 1000);
           }
-        }, 1000);
+        } else if (authStatus.offlineMode) {
+          console.log('[POINTS] Backend unreachable, staying in offline mode');
+          localStorage.setItem('offlineMode', 'true');
+          setOfflineMode(true);
+          setIsOnline(false);
+        } else {
+          console.log('[POINTS] Authentication failed but backend is reachable');
+          localStorage.setItem('offlineMode', 'false');
+          setOfflineMode(false);
+          setIsOnline(true);
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('[POINTS] Error verifying online status:', error);
+        localStorage.setItem('offlineMode', 'true');
+        setOfflineMode(true);
+        setIsOnline(false);
       }
     };
     
     const handleOffline = () => {
-      console.log('[POINTS] Device went offline, pausing sync operations');
+      console.log('[POINTS] Device went offline, switching to offline mode');
+      localStorage.setItem('offlineMode', 'true');
+      setOfflineMode(true);
       setIsOnline(false);
     };
     

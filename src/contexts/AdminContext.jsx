@@ -7,7 +7,7 @@ import { useToast } from '@chakra-ui/react'; // Added useToast import
 // Constants
 const ADMIN_USERS = ['hungpro', 'vipro'];
 const ADMIN_PASSWORD = '31102004';
-const API_URL = "https://be-web-6c4k.onrender.com/api";
+const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com/api";
 
 // Create context
 const AdminContext = createContext();
@@ -429,6 +429,22 @@ export const AdminProvider = ({ children }) => {
       }
       
       console.log(`[AdminContext] Updating ${pointsChange} points for ${userIds.length} users in house ${house}. Reason: ${reason}`);
+
+      // Debug the token being used
+      console.log(`[AdminContext] Token prefix: ${token.substring(0, 20)}...`);
+
+      // Verify user authentication status before proceeding
+      const authCheckResponse = await axios.get(`${API_URL}/auth/verify`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log(`[AdminContext] Auth verification result:`, authCheckResponse.data);
+
+      if (!authCheckResponse.data.authenticated) {
+        throw new Error('Authentication verification failed. Please try logging in again.');
+      }
 
       // Call the backend's bulk-update endpoint
       const response = await axios.post(`${API_URL}/users/bulk-update`, 

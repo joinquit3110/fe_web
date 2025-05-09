@@ -84,6 +84,14 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
+    // Check if device is offline
+    const isOffline = localStorage.getItem('offlineMode') === 'true' || !navigator.onLine;
+    if (isOffline) {
+      console.log('[SOCKET] Device is offline, skipping socket connection');
+      setConnectionQuality('disconnected');
+      return;
+    }
+
     // Don't reinitialize the socket if it's already connected or in cleanup
     if (
       (socketInstanceRef.current && socketInstanceRef.current.connected && socketInitializedRef.current) ||
@@ -99,6 +107,10 @@ export const SocketProvider = ({ children }) => {
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
       reconnectionAttempts: 10,
       reconnectionDelay: 500,         // Reduced from 1000ms
       reconnectionDelayMax: 3000,     // Reduced from 5000ms
