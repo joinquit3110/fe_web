@@ -432,6 +432,19 @@ export const AdminProvider = ({ children }) => {
 
       // Debug the token being used
       console.log(`[AdminContext] Token prefix: ${token.substring(0, 20)}...`);
+      
+      // Skip admin operations if using a fake token
+      if (token.startsWith('admin-token-')) {
+        console.error('[AdminContext] Invalid admin token detected (fake client-side token). Please log in properly using the Login component.');
+        toast({
+          title: 'Invalid Admin Token',
+          description: 'You are using a client-side generated token which will not authenticate with the server. Please log in again properly.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        throw new Error('Invalid admin token. Please log in properly.');
+      }
 
       // Verify user authentication status before proceeding
       const authCheckResponse = await axios.get(`${API_URL}/auth/verify`, {
@@ -444,6 +457,19 @@ export const AdminProvider = ({ children }) => {
 
       if (!authCheckResponse.data.authenticated) {
         throw new Error('Authentication verification failed. Please try logging in again.');
+      }
+      
+      // Explicitly check admin status
+      if (!authCheckResponse.data.isAdmin) {
+        console.error('[AdminContext] User is authenticated but lacks admin privileges:', authCheckResponse.data);
+        toast({
+          title: 'Admin Privileges Required',
+          description: 'Your account is authenticated but lacks admin privileges required for this action.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        throw new Error('Admin privileges required for this operation.');
       }
 
       // Call the backend's bulk-update endpoint

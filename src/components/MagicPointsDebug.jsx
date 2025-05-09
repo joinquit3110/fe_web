@@ -181,15 +181,16 @@ const MagicPointsDebug = () => {
         });
         
         if (response.data && response.data.token) {
-          // Add explicit house and role fields to ensure admin privileges
+          // We should trust the server's response for admin status
+          // But for backwards compatibility, ensure admin fields are set
+          const userData = {
+            ...response.data.user,
+            isAdmin: response.data.user.isAdmin === true || response.data.user.role === 'admin' || response.data.user.house === 'admin'
+          };
+          
           const authData = {
             token: response.data.token,
-            user: {
-              ...response.data.user,
-              house: 'admin',
-              role: 'admin',
-              isAdmin: true
-            }
+            user: userData
           };
           
           // Update authentication in context
@@ -198,7 +199,7 @@ const MagicPointsDebug = () => {
           // Also save to localStorage
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('user', JSON.stringify(authData.user));
+          localStorage.setItem('user', JSON.stringify(userData));
           
           toast({
             title: 'Authenticated',

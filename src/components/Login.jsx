@@ -164,31 +164,49 @@ const Login = () => {
     try {
       // Check for admin credentials
       const adminUsers = ['hungpro', 'vipro'];
-      const adminPassword = '3110';
+      const adminPassword = '31102004'; // Updated to match the server's expected admin password
       
       if (adminUsers.includes(email) && password === adminPassword) {
         console.log('Admin login detected');
         
-        // Create a fake admin user object
-        const adminUser = {
-          id: `admin-${email}`,
-          username: email,
-          email: `${email}@hogwarts.admin.edu`,
-          fullName: `Admin ${email.charAt(0).toUpperCase() + email.slice(1)}`,
-          isAdmin: true,
-          role: 'admin',
-          house: 'admin'
-        };
-        
-        // Store admin user in localStorage
-        localStorage.setItem('user', JSON.stringify(adminUser));
-        localStorage.setItem('token', `admin-token-${Date.now()}`);
-        localStorage.setItem('isAuthenticated', 'true');
-        
-        // Set admin house for animation
-        setUserHouse('admin');
-        setLoginSuccess(true);
-        return;
+        try {
+          // Use actual backend login to get proper JWT token
+          const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username: email,
+              password: adminPassword
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Admin login failed');
+          }
+          
+          // Verify the token has proper admin flag
+          if (!data.user.isAdmin) {
+            console.warn('User authenticated but without admin privileges');
+          }
+          
+          // Store authentication data from server
+          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('isAuthenticated', 'true');
+          
+          // Set admin house for animation
+          setUserHouse('admin');
+          setLoginSuccess(true);
+          return;
+          
+        } catch (adminLoginError) {
+          console.error('Admin login API error:', adminLoginError);
+          throw adminLoginError; // Re-throw to be caught by outer catch block
+        }
       }
       
       // Regular user flow
