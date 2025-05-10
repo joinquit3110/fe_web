@@ -472,25 +472,13 @@ const AppContent = () => {
 
 // Wrap App with ChakraProvider first
 const App = () => {
-  // This useEffect ensures all contexts are initialized properly
-  React.useEffect(() => {
-    // Create an initialization event to ensure all components are ready
-    window.dispatchEvent(new CustomEvent('appInitialized', {
-      detail: { timestamp: new Date().toISOString() }
-    }));
-    
-    console.log('[APP] Application initialization triggered');
-  }, []);
-  
   return (
     <ChakraProvider theme={theme}>
       <AuthProvider>
         <AdminProvider>
-          <MagicPointsProvider>
-            <SocketProvider>
-              <AppContent />
-            </SocketProvider>
-          </MagicPointsProvider>
+          <SocketProvider>
+            <AppContent />
+          </SocketProvider>
         </AdminProvider>
       </AuthProvider>
     </ChakraProvider>

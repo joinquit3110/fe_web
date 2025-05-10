@@ -6,7 +6,6 @@ import {
   USE_OFFLINE_MODE,
   checkAuthStatus 
 } from "../api/magicPointsApi";
-import { useAuth } from '../contexts/AuthContext';
 
 // API URL for direct calls
 const API_URL = "https://be-web-6c4k.onrender.com/api";
@@ -105,34 +104,6 @@ export const MagicPointsProvider = ({ children }) => {
   const [pendingOperations, setPendingOperations] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [syncRetries, setSyncRetries] = useState(0);
-  
-  // Track network connectivity status
-  useEffect(() => {
-    // Function to handle online status change
-    const handleOnline = () => {
-      console.log('[POINTS] Network is online');
-      setIsOnline(true);
-    };
-    
-    // Function to handle offline status change
-    const handleOffline = () => {
-      console.log('[POINTS] Network is offline');
-      setIsOnline(false);
-    };
-    
-    // Set initial state
-    setIsOnline(navigator.onLine);
-    
-    // Add event listeners
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Clean up event listeners
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Track Revelio attempts for each blank - key is blankId, value is whether it's first attempt
   const [revelioAttempts, setRevelioAttempts] = useState({});
@@ -530,23 +501,21 @@ export const MagicPointsProvider = ({ children }) => {
     correctBlanks
   ]);
 
-  // Get authentication state from AuthContext
-  const { isAuthenticated: authContextAuthenticated } = useAuth();
-  
-  // Update isAuthenticated state when AuthContext changes
+  // Load authentication state from localStorage
   useEffect(() => {
-    console.log('[POINTS] Auth context state changed:', authContextAuthenticated);
-    setIsAuthenticated(authContextAuthenticated);
-    
-    // Verify authentication and sync if needed when auth state changes
+    const authState = localStorage.getItem('isAuthenticated');
+    setIsAuthenticated(authState === 'true');
+
+    // Verify authentication status with server
     const verifyAuth = async () => {
       try {
-        if (!authContextAuthenticated) return;
-        
         const authStatus = await checkAuthStatus();
         console.log('[POINTS] Auth verification result:', authStatus);
         
         if (authStatus.authenticated) {
+          setIsAuthenticated(true);
+          localStorage.setItem('isAuthenticated', 'true');
+          
           // If authenticated, check for pending operations to auto-sync
           const pendingOps = localStorage.getItem('pendingOperations');
           if (pendingOps && JSON.parse(pendingOps).length > 0) {
@@ -556,22 +525,22 @@ export const MagicPointsProvider = ({ children }) => {
               if (syncToServerRef.current) {
                 syncToServerRef.current();
               }
-            }, 500);
+            }, 1500);
           } else {
             console.log('[POINTS] No pending operations found on load');
           }
         } else {
           console.warn(`[POINTS] Auth verification failed: ${authStatus.reason}`);
+          // Don't immediately set to false - we'll rely on API call failures for that
         }
       } catch (error) {
         console.error('[POINTS] Error verifying auth:', error);
       }
     };
     
-    if (authContextAuthenticated && navigator.onLine) {
+    if (authState === 'true' && navigator.onLine) {
       verifyAuth();
     }
-  }, [authContextAuthenticated]);
 
     // Also load pending operations
     const savedOperations = localStorage.getItem('pendingOperations');

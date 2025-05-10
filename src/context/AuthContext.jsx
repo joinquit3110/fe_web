@@ -16,37 +16,15 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check local storage for saved auth state
-    const checkAuth = async () => {
+    const checkAuth = () => {
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
       
       if (token && savedUser) {
-        try {
-          // First update local state immediately without waiting for API
-          setUser(JSON.parse(savedUser));
-          setToken(token);
-          setIsAuthenticated(true);
-          localStorage.setItem('isAuthenticated', 'true');
-          
-          // Then verify with server in background
-          const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }).catch(err => null); // Catch network errors and continue
-          
-          if (response && response.ok) {
-            const data = await response.json();
-            if (!data.authenticated) {
-              console.warn('[AUTH] Server reports token invalid, logging out');
-              logout();
-            } else {
-              console.log('[AUTH] Token verified with server');
-            }
-          }
-        } catch (error) {
-          console.error('[AUTH] Error in auth check:', error);
-        }
+        setUser(JSON.parse(savedUser));
+        setToken(token);
+        setIsAuthenticated(true);
+        localStorage.setItem('isAuthenticated', 'true');
       } else {
         setUser(null);
         setToken(null);
@@ -131,9 +109,6 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
-      // First set isAuthenticated false to ensure clean state
-      setIsAuthenticated(false);
-      
       const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -151,23 +126,15 @@ export const AuthProvider = ({ children }) => {
       // Parse JSON response properly
       const data = await response.json();
       
-      // Set authentication first before updating other state
-      setIsAuthenticated(true);
-      localStorage.setItem('isAuthenticated', 'true');
-      
       // Store user data in state and localStorage as objects, not double-stringified
       setUser(data.user);
       setToken(data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token); // Store token directly as string
+      setIsAuthenticated(true);
+      localStorage.setItem('isAuthenticated', 'true');
       
       console.log('Login successful', data);
-      
-      // Dispatch an event to notify other components of successful login
-      window.dispatchEvent(new CustomEvent('loginSuccess', {
-        detail: { user: data.user, token: data.token }
-      }));
-      
       return data; // Return the response data
     } catch (err) {
       console.error('Login error:', err);

@@ -48,20 +48,6 @@ export const SocketProvider = ({ children }) => {
       isAdminUser.current = false;
     }
   }, [user]);
-  
-  // Listen for login success event
-  useEffect(() => {
-    const handleLoginSuccess = () => {
-      console.log("[SOCKET] Login success event detected, will initialize socket soon");
-      // Socket will be initialized by the effect that watches isAuthenticated
-    };
-    
-    window.addEventListener('loginSuccess', handleLoginSuccess);
-    
-    return () => {
-      window.removeEventListener('loginSuccess', handleLoginSuccess);
-    };
-  }, []);
 
   // Cleanup old notification keys periodically
   useEffect(() => {
@@ -75,7 +61,7 @@ export const SocketProvider = ({ children }) => {
   // Initialize socket on authentication state change
   useEffect(() => {
     // Only initialize socket if user is authenticated
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -85,26 +71,18 @@ export const SocketProvider = ({ children }) => {
       return;
     }
     
-    // Small delay to ensure Auth is fully processed
-    const initTimeout = setTimeout(() => {
-      console.log('[SOCKET] Initializing socket connection');
-      
-      // Create new socket instance with optimized connection settings
-      const socketInstance = io(SOCKET_URL, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 500,         // Reduced from 1000ms
-        reconnectionDelayMax: 3000,     // Reduced from 5000ms
-        timeout: 5000,                  // Reduced from 10000ms
-        forceNew: true                  // Force a new connection to avoid sharing
-      });
-      
-      // Rest of socket initialization
-      setSocket(socketInstance);
-    }, 100);
+    console.log('[SOCKET] Initializing socket connection');
     
-    return () => clearTimeout(initTimeout);
+    // Create new socket instance with optimized connection settings
+    const socketInstance = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 500,         // Reduced from 1000ms
+      reconnectionDelayMax: 3000,     // Reduced from 5000ms
+      timeout: 5000,                  // Reduced from 10000ms
+      forceNew: true                  // Force a new connection to avoid sharing
+    });
     
     // Set up event handlers
     socketInstance.on('connect', () => {
