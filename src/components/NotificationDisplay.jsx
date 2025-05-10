@@ -177,16 +177,8 @@ const NotificationDisplay = () => {
           setActiveNotification(null);
           processingQueue.current = false;
           
-          // Process the queue after a small delay
-          if (notificationQueue.current.length > 0) {
-            // Note: We're not calling processQueue here to avoid circular dependency
-            // Instead, we'll trigger processing via a state change that useEffect will detect
-            setTimeout(() => {
-              // This state update will trigger the useEffect that processes the queue
-              processingQueue.current = false;
-              setActiveNotification(null);
-            }, 300);
-          }
+          // We'll let the useEffect handle processing the next notification
+          // This breaks the circular dependency between handleDismiss and processQueue
         }, 300); // Animation duration
       } else {
         // Fallback if element not found
@@ -196,18 +188,9 @@ const NotificationDisplay = () => {
         
         setActiveNotification(null);
         processingQueue.current = false;
-        
-        // Process the queue after a small delay
-        if (notificationQueue.current.length > 0) {
-          setTimeout(() => {
-            // This state update will trigger the useEffect that processes the queue
-            processingQueue.current = false;
-            setActiveNotification(null);
-          }, 300);
-        }
       }
     }
-  }, [activeNotification, removeNotification, setActiveNotification, notificationQueue, timerRef]);
+  }, [activeNotification, removeNotification]);
 
   // Removed handleDismiss dependency to break circular reference
   const processQueue = useCallback(() => {
@@ -217,10 +200,19 @@ const NotificationDisplay = () => {
     
     processingQueue.current = true;
     const next = notificationQueue.current.shift();
+    
+    // Safety check for malformed notifications
+    if (!next || typeof next !== 'object') {
+      console.error('[NOTIFICATION] Encountered invalid notification in queue:', next);
+      processingQueue.current = false;
+      return;
+    }
+    
     setActiveNotification(next);
     
     if (timerRef.current) {
       clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
     
     // Determine how long to display this notification
@@ -229,7 +221,7 @@ const NotificationDisplay = () => {
     // For house-related notifications, give a bit more time
     let displayTime = next.duration;
     if (!displayTime) {
-      displayTime = getDurationByType(next.type);
+      displayTime = getDurationByType(next.type || 'info');
       // House notifications get a bit more time
       if (next.isHousePointsUpdate || next.isHouseAssessmentUpdate) {
         displayTime = Math.max(displayTime, 10000); // Minimum 10s for house notifications
@@ -239,21 +231,39 @@ const NotificationDisplay = () => {
     console.log(`[NOTIFICATION] Will auto-dismiss in ${displayTime}ms:`, next.id);
     
     timerRef.current = setTimeout(() => {
-      // Directly calling functions that handleDismiss would call
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      
-      if (next.id) {
-        removeNotification(next.id);
-      }
-      
-      setActiveNotification(null);
-      processingQueue.current = false;
-      
-      if (notificationQueue.current.length > 0) {
-        setTimeout(() => processQueue(), 300);
+      // Add dismissing class for animation
+      const notificationElement = document.querySelector('.notification-container');
+      if (notificationElement) {
+        notificationElement.classList.add('dismissing');
+        
+        // Wait for animation to complete before removing
+        setTimeout(() => {
+          if (next.id) {
+            removeNotification(next.id);
+          }
+          
+          setActiveNotification(null);
+          processingQueue.current = false;
+          
+          // Process the next notification after a brief delay
+          if (notificationQueue.current.length > 0) {
+            setTimeout(() => {
+              processQueue();
+            }, 300);
+          }
+        }, 300); // Animation duration
+      } else {
+        // Direct removal if element not found
+        if (next.id) {
+          removeNotification(next.id);
+        }
+        
+        setActiveNotification(null);
+        processingQueue.current = false;
+        
+        if (notificationQueue.current.length > 0) {
+          setTimeout(() => processQueue(), 300);
+        }
       }
     }, displayTime);
   }, [timerRef, removeNotification, setActiveNotification, notificationQueue, getDurationByType]);
@@ -320,7 +330,9 @@ const NotificationDisplay = () => {
               isPersonal: notification.isPersonalPointsUpdate
             });
             
+            // Enhanced reason extraction for all notification types
             if (fixedNotification.reason === 'System update' || !fixedNotification.reason) {
+              // First check if the message contains an explicit reason after a colon
               if (notification.message && notification.message.includes(':')) {
                 const parts = notification.message.split(':');
                 if (parts.length > 1) {
@@ -329,19 +341,36 @@ const NotificationDisplay = () => {
                 }
               }
               
-              if ((!fixedNotification.reason || fixedNotification.reason === 'System update') && 
-                  notification.isHousePointsUpdate && notification.house) {
-                const houseName = notification.house.charAt(0).toUpperCase() + notification.house.slice(1);
-                fixedNotification.reason = `${houseName} house points update`;
-                console.log('[NOTIFICATION_DEBUG] 2️⃣ Using house default reason:', fixedNotification.reason);
+              // Special handling for house points updates - ensure the reason is always included
+              if (notification.isHousePointsUpdate && notification.house) {
+                if (notification.message && notification.message.includes('points') && notification.message.includes(':')) {
+                  // Extract reason from message format "X points to House: Reason"
+                  const reasonPart = notification.message.split(':')[1];
+                  if (reasonPart && reasonPart.trim()) {
+                    fixedNotification.reason = reasonPart.trim();
+                    console.log('[NOTIFICATION_DEBUG] 2️⃣ Extracted house reason:', fixedNotification.reason);
+                  } 
+                  else if (notification.reason && notification.reason !== 'System update') {
+                    // Use the provided reason if available
+                    fixedNotification.reason = notification.reason;
+                    console.log('[NOTIFICATION_DEBUG] 2️⃣ Using provided house reason:', fixedNotification.reason);
+                  }
+                }
+                // If still no reason found, use default
+                if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
+                  const houseName = notification.house.charAt(0).toUpperCase() + notification.house.slice(1);
+                  fixedNotification.reason = `${houseName} house points update`;
+                  console.log('[NOTIFICATION_DEBUG] 2️⃣ Using house default reason:', fixedNotification.reason);
+                }
               } 
               
-              else if ((!fixedNotification.reason || fixedNotification.reason === 'System update') && 
-                  notification.isPersonalPointsUpdate) {
+              // For personal points updates
+              else if (notification.isPersonalPointsUpdate) {
                 fixedNotification.reason = 'Personal points update';
                 console.log('[NOTIFICATION_DEBUG] 3️⃣ Using personal default reason:', fixedNotification.reason);
               }
               
+              // Generic fallback for any remaining notification
               else if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
                 fixedNotification.reason = notification.pointsChange > 0 ? 'Achievement reward' : 'Point adjustment';
                 console.log('[NOTIFICATION_DEBUG] 4️⃣ Using generic fallback reason');
@@ -367,7 +396,17 @@ const NotificationDisplay = () => {
     return null;
   }
 
-  const { criteria, level } = extractCriteriaAndLevel(activeNotification);
+  // Extract criteria and level with error handling
+  let criteria = null;
+  let level = null;
+  
+  try {
+    const extracted = extractCriteriaAndLevel(activeNotification);
+    criteria = extracted.criteria;
+    level = extracted.level;
+  } catch (error) {
+    console.error('[NOTIFICATION] Error extracting criteria/level:', error);
+  }
 
   const isPointChange = activeNotification.pointsChange !== undefined;
   const pointsValue = isPointChange ? Math.abs(activeNotification.pointsChange) : 0;
@@ -377,7 +416,7 @@ const NotificationDisplay = () => {
   const isHousePoints = Boolean(activeNotification.isHousePointsUpdate);
   const isHouseAssessment = Boolean(activeNotification.isHouseAssessmentUpdate);
   
-  // Get theme colors based on notification house or type
+  // Get theme colors based on notification house or type - don't use useMemo with function dependency
   const houseColors = getHouseColors(activeNotification.house);
 
   return (
@@ -447,11 +486,19 @@ const NotificationDisplay = () => {
           </Flex>
         )}
         
-        {activeNotification.reason && 
-         activeNotification.reason !== 'System update' && 
-         activeNotification.reason.trim() !== '' && (
+        {/* Show reason with better fallback handling */}
+        {(activeNotification.reason && 
+          activeNotification.reason !== 'System update' && 
+          activeNotification.reason.trim() !== '') ? (
           <Text fontSize="xs" fontWeight="medium" color={houseColors.accentColor} mb={2} className="notification-reason">
             Reason: {activeNotification.reason}
+          </Text>
+        ) : isHousePoints && (
+          <Text fontSize="xs" fontWeight="medium" color={houseColors.accentColor} mb={2} className="notification-reason">
+            Reason: {(activeNotification.message?.split(':')?.[1]?.trim()) || 
+                    (activeNotification.reason && activeNotification.reason !== 'System update' ? 
+                     activeNotification.reason : 
+                     `${activeNotification.house?.charAt(0).toUpperCase() + activeNotification.house?.slice(1) || ''} house points update`)}
           </Text>
         )}
         

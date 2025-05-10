@@ -495,10 +495,16 @@ export const SocketProvider = ({ children }) => {
       // Create custom notification with exact house points data
       // Make sure we extract a clean reason for the notification - this is critical
       
-      // Better reason extraction - completely rewritten and enhanced
+      // Enhanced reason extraction - ensure the reason is never lost
       let cleanReason = null;
       if (data.reason) {
         cleanReason = data.reason !== 'System update' ? data.reason : null;
+      }
+      
+      // If no reason provided, create a default reason based on the house
+      if (!cleanReason) {
+        const houseName = data.house.charAt(0).toUpperCase() + data.house.slice(1);
+        cleanReason = `${houseName} ${data.points > 0 ? 'achievement' : 'penalty'}`;
       }
       
       // Log all the details for debugging
@@ -512,14 +518,20 @@ export const SocketProvider = ({ children }) => {
         level: data.level
       });
       
+      // Always include the reason in the message - important for UI display
+      // We format the message with the reason after a colon which helps with extraction
+      const message = cleanReason ? 
+        `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${cleanReason}` :
+        `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}`;
+        
       const notification = {
         id: `house_points_${Date.now()}`,
         type: data.points > 0 ? 'success' : 'warning',
         title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
-        message: `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}${cleanReason ? ': ' + cleanReason : ''}`,
+        message: message,
         timestamp: new Date(),
         pointsChange: data.points,
-        reason: cleanReason, // Use the cleaned reason, NEVER use 'System update'
+        reason: cleanReason, // Always set reason, never null or 'System update'
         criteria: data.criteria || null,
         level: data.level || null,
         house: data.house,
