@@ -235,18 +235,12 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
-      // Check for admin credentials
       const adminUsers = ['hungpro', 'vipro'];
-      const adminPassword = '31102004';
-      
-      // Handle login with either {username, password} or {email, password}
       const username = credentials.username || credentials.email;
       const password = credentials.password;
       
-      // Log what's being sent to the server
       console.log(`[AuthContext] Logging in with username: ${username}`);
       
-      // Use the proper API endpoint format and send username consistently
       const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -258,82 +252,112 @@ export const AuthProvider = ({ children }) => {
         })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+        console.error('[AuthContext] Login failed:', data.message || `HTTP error! status: ${response.status}`);
+        throw new Error(data.message || `Login failed with status: ${response.status}`);
       }
 
-      // Parse JSON response properly
-      const data = await response.json();
-      
-      // Check for admin privileges
-      const isAdminUser = 
-        adminUsers.includes(username) || 
-        data.user.isAdmin === true || 
-        data.user.role === 'admin' || 
-        data.user.house === 'admin';
-      
-      // Make sure isAdmin flag is set in the user object
-      const userData = {
-        ...data.user,
-        isAdmin: isAdminUser
-      };
-      
-      console.log('[AuthContext] Login response:', {
-        username: userData.username,
-        isAdmin: userData.isAdmin,
-        role: userData.role,
-        house: userData.house
-      });
-      
-      // Store user data in state and localStorage as objects, not double-stringified
-      setUser(userData);
-      setToken(data.token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', data.token); // Store token directly as string
-      setIsAuthenticated(true);
+      console.log('[AuthContext] Login successful, user data from server:', data.user);
+      console.log('[AuthContext] Token from server:', data.token);
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('offlineMode', 'false'); // Explicitly set online mode on successful login
+      localStorage.setItem('offlineMode', 'false');
+
+      setUser(data.user);
+      setToken(data.token);
+      setIsAuthenticated(true);
       
-      // If user is admin, set additional flags for robust admin detection
+      const isAdminUser = 
+        (data.user && adminUsers.includes(data.user.username)) || 
+        (data.user && data.user.isAdmin === true) || 
+        (data.user && data.user.role === 'admin') || 
+        (data.user && data.user.house === 'admin');
+
       if (isAdminUser) {
         sessionStorage.setItem('adminLogin', 'true');
-        sessionStorage.setItem('user', JSON.stringify(userData)); // Backup in session storage
-        sessionStorage.setItem('token', data.token);
-        console.log('[AuthContext] Admin login detected, set session flags');
+        if (!data.user.isAdmin) {
+          const updatedUser = { ...data.user, isAdmin: true };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+        console.log('[AuthContext] Admin login confirmed for:', data.user.username);
       }
       
-      console.log('Login successful', data);
-      return { ...data, user: userData }; // Return the response data with updated user object
+      window.dispatchEvent(new CustomEvent('authStateChange', {
+        detail: {
+          isAuthenticated: true,
+          user: data.user,
+          isAdmin: isAdminUser,
+          offlineMode: false
+        }
+      }));
+
+      return { success: true, user: data.user, isAdmin: isAdminUser };
+
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message);
-      throw err;
+      console.error('[AuthContext] Error during login:', err);
+      setError(err.message || 'An unexpected error occurred during login.');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.setItem('isAuthenticated', 'false');
+      setUser(null);
+      setToken(null);
+      setIsAuthenticated(false);
+      return { success: false, error: err.message || 'Login failed' };
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = () => {
+    // Clear local and session storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.setItem('isAuthenticated', 'false');
+    localStorage.setItem('offlineMode', 'false'); // Assuming logout means online
+    sessionStorage.removeItem('adminLogin');
+    sessionStorage.removeItem('adminRedirect');
+    sessionStorage.removeItem('user'); // Clear admin user data from session
+
+    // Reset state variables
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
+    setError(null);
+    // setIsLoading(false); // Not typically set to false on logout, but on auth check
+
+    console.log('[AuthContext] User logged out');
+
+    // Dispatch a global event for auth state change
+    window.dispatchEvent(new CustomEvent('authStateChange', {
+      detail: {
+        isAuthenticated: false,
+        user: null,
+        isAdmin: false,
+        offlineMode: false
+      }
+    }));
+  };
+
+  // Value provided to context consumers
+  const contextValue = {
+    user,
+    token,
+    isAuthenticated,
+    isLoading,
+    error,
+    login,
+    logout, // Make sure logout is exported
+    updateUserHouse,
+    checkAuth: () => useEffect[0] // Expose the checkAuth function if needed directly
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isLoading, 
-      error,
-      token,
-      login, 
-      logout,
-      updateUserHouse
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

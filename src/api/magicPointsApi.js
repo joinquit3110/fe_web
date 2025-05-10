@@ -462,3 +462,35 @@ export const checkAuthStatus = async () => {
     };
   }
 };
+
+// Placeholder function for clearNeedSync
+export const clearNeedSync = async (token) => {
+  console.log('[API] clearNeedSync called. Placeholder implementation.');
+  // TODO: Implement actual logic to clear sync flag on the server
+  // Example:
+  // const response = await fetch(`${BACKEND_URL}/api/user/magic-points/clear-sync-flag`, {
+  //   method: 'POST',
+  //   headers: {
+  //     'Authorization': `Bearer ${token}`
+  //   }
+  // });
+  // handleApiError(response, 'clear need sync');
+  // return response.json();
+  return Promise.resolve({ success: true, message: "Sync flag cleared (simulated)" });
+};
+
+// Placeholder function for checkNeedSync
+export const checkNeedSync = async (token) => {
+  console.log('[API] checkNeedSync called. Placeholder implementation.');
+  // TODO: Implement actual logic to check if sync is needed from the server
+  // Example:
+  // const response = await fetch(`${BACKEND_URL}/api/user/magic-points/check-sync-flag`, {
+  //   headers: {
+  //     'Authorization': `Bearer ${token}`
+  //   }
+  // });
+  // handleApiError(response, 'check need sync');
+  // const data = await response.json();
+  // return data.needsSync; // Assuming API returns { needsSync: boolean }
+  return Promise.resolve(false); // Simulate no sync needed
+};
