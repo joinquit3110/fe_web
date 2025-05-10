@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
@@ -19,6 +19,7 @@ import MagicPointsDebug from './components/MagicPointsDebug';
 import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
+import AdminUserManagement from './components/AdminUserManagement'; // Added import for AdminUserManagement
 import NotificationDisplay from './components/NotificationDisplay';
 import { SocketProvider } from './context/SocketContext';
 // Import the Hogwarts logo image
