@@ -5,6 +5,7 @@
 
 // Backend base URL with the actual Render backend URL
 const BACKEND_URL = 'https://be-web-6c4k.onrender.com'; 
+// Fix: Ensure we're using the correct API domain consistently across the app
 
 // Flag to enable offline mode for development
 const USE_OFFLINE_MODE = false;

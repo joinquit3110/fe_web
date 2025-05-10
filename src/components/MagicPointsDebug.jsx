@@ -40,14 +40,19 @@ const MagicPointsDebug = () => {
   // Check if we're in offline/dev mode
   const isDevMode = false; // Set to false since we're online now
   
+  // Safely get pending operations length with fallback
+  const getSafePendingOperationsLength = () => {
+    if (!debugData) return 0;
+    if (!debugData.pendingOperations) return 0;
+    return Array.isArray(debugData.pendingOperations) ? 
+      debugData.pendingOperations.length : 0;
+  };
+
   // Run debug on initial load with online check and auth verification
   useEffect(() => {
     // First get the current state immediately
     const data = debugPointsState(true); // Silent mode for initial load
     setDebugData(data);
-    
-    // Then check auth status
-    checkServerAuth();
     
     // Set a timer to refresh data again after a short delay
     // This helps after initial page load to catch any asynchronous state updates
@@ -58,6 +63,20 @@ const MagicPointsDebug = () => {
     
     return () => clearTimeout(refreshTimer);
   }, [debugPointsState]);
+  
+  // Separate effect for auth checking
+  useEffect(() => {
+    // Small delay to ensure other initialization is complete
+    const authCheckTimer = setTimeout(() => {
+      try {
+        checkServerAuth();
+      } catch (error) {
+        console.error('[DEBUG] Error running auth check:', error);
+      }
+    }, 500);
+    
+    return () => clearTimeout(authCheckTimer);
+  }, []);
   
   // Enhanced event listener for real-time updates
   useEffect(() => {
@@ -454,12 +473,12 @@ const MagicPointsDebug = () => {
         
         {debugData && (
           <>
-            <Text fontWeight="bold" color="white">Pending Operations: {debugData.pendingOperations.length}</Text>
-            {debugData.pendingOperations.length > 0 && (
+            <Text fontWeight="bold" color="white">Pending Operations: {getSafePendingOperationsLength()}</Text>
+            {getSafePendingOperationsLength() > 0 && (
               <Box bg="gray.700" p={2} borderRadius="md" fontSize="sm">
-                <Code bg="gray.700" color="green.300">{JSON.stringify(debugData.pendingOperations.slice(0, 5), null, 2)}</Code>
-                {debugData.pendingOperations.length > 5 && (
-                  <Text color="gray.300">...and {debugData.pendingOperations.length - 5} more</Text>
+                <Code bg="gray.700" color="green.300">{JSON.stringify((debugData.pendingOperations || []).slice(0, 5), null, 2)}</Code>
+                {getSafePendingOperationsLength() > 5 && (
+                  <Text color="gray.300">...and {getSafePendingOperationsLength() - 5} more</Text>
                 )}
               </Box>
             )}

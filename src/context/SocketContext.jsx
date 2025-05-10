@@ -116,8 +116,20 @@ export const SocketProvider = ({ children }) => {
         
         // Dispatch an event that other components can listen to
         window.dispatchEvent(new CustomEvent('socketConnected', { 
-          detail: { authenticated: true }
+          detail: { 
+            authenticated: true,
+            userId: user.id || user._id,
+            username: user.username,
+            timestamp: new Date().toISOString() 
+          }
         }));
+        
+        // Also verify authentication with the server
+        setTimeout(() => {
+          if (socketInstance.connected) {
+            socketInstance.emit('verify_auth', { userId: user.id || user._id });
+          }
+        }, 500);
       }
     });
     

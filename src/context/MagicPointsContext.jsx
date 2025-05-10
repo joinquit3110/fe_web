@@ -18,6 +18,7 @@ export const MagicPointsProvider = ({ children }) => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [loadingPoints, setLoadingPoints] = useState(true);
   const [connectionRetries, setConnectionRetries] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Add debug logging for context initialization
   useEffect(() => {
@@ -30,6 +31,29 @@ export const MagicPointsProvider = ({ children }) => {
     });
   }, [socketContext, socket, isConnected, authContext, isAuthenticated, token]);
 
+  // Initialize context and handle potential errors
+  useEffect(() => {
+    try {
+      // Mark initialization successful
+      setIsInitialized(true);
+      
+      // Let other components know we're ready
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('magicPointsContextReady', {
+          detail: { timestamp: new Date().toISOString() }
+        }));
+      }
+    } catch (error) {
+      console.error('[MAGIC] Context initialization error:', error);
+      
+      // Try to recover
+      setTimeout(() => {
+        console.log('[MAGIC] Attempting context recovery');
+        if (!isInitialized) setIsInitialized(true);
+      }, 1500);
+    }
+  }, []);
+
   // Fetch points from the server
   const fetchPoints = useCallback(async () => {
     if (!isAuthenticated || !token) {
@@ -39,28 +63,79 @@ export const MagicPointsProvider = ({ children }) => {
     
     try {
       setLoadingPoints(true);
-      const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/points/balance`, {
+      // Use the consistent backend URL to avoid CORS issues
+      const BACKEND_URL = 'https://be-web-6c4k.onrender.com';
+      
+      // Set a timeout to handle stalled requests
+      let timeoutId;
+      const controller = new AbortController();
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          reject(new Error('Request timeout'));
+        }, 10000); // 10 seconds timeout
+      });
+      
+      // Create the fetch promise with proper error handling
+      const fetchPromise = fetch(`${BACKEND_URL}/api/points/balance`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
+        signal: controller.signal
       });
+      
+      // Use Promise.race to handle whichever completes first
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+      clearTimeout(timeoutId); // Clear timeout if fetch completes first
       
       if (response.ok) {
         const data = await response.json();
         setPoints(data.points || 0);
         setLastUpdate(new Date());
+        
+        // Dispatch successful fetch event
+        window.dispatchEvent(new CustomEvent('pointsFetchSuccess', {
+          detail: { points: data.points, timestamp: new Date().toISOString() }
+        }));
       } else {
-        console.error('Failed to fetch points:', response.status);
+        console.error('[MAGIC] Failed to fetch points:', response.status);
+        // Try to get error details
+        try {
+          const errorData = await response.json();
+          console.error('[MAGIC] Error details:', errorData);
+        } catch (parseError) {
+          console.error('[MAGIC] Could not parse error response');
+        }
       }
     } catch (error) {
-      console.error('Error fetching points:', error);
+      console.error('[MAGIC] Error fetching points:', error);
+      // If error is a CORS error or network failure, try socket instead
+      if (socket && isConnected && (error.name === 'TypeError' || error.name === 'AbortError')) {
+        console.log('[MAGIC] Trying socket fallback for points fetch');
+        socket.emit('get_points');
+      }
     } finally {
       setLoadingPoints(false);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, socket, isConnected]);
 
   // Enhanced debug function for points state
   const debugPointsState = useCallback((silent = false) => {
+    // Get pending operations from localStorage if they exist
+    let pendingOps = [];
+    try {
+      const storedOps = localStorage.getItem('pendingOperations');
+      if (storedOps) {
+        pendingOps = JSON.parse(storedOps);
+        if (!Array.isArray(pendingOps)) pendingOps = [];
+      }
+    } catch (e) {
+      console.error('[MAGIC] Error parsing pending operations:', e);
+      pendingOps = [];
+    }
+
     const debugData = {
       magicPoints: points,
       isOnline: isConnected,
@@ -69,6 +144,7 @@ export const MagicPointsProvider = ({ children }) => {
       lastSynced: lastUpdate ? lastUpdate.toISOString() : null,
       isSyncing: loadingPoints,
       retryAttempts: connectionRetries,
+      pendingOperations: pendingOps,
     };
     
     if (!silent) {
