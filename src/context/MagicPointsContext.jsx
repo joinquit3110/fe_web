@@ -163,6 +163,45 @@ export const MagicPointsProvider = ({ children }) => {
     console.log('[MagicPointsContext] Revelio attempts and correct blanks reset.');
   }, []);
   
+  // Add the missing debugPointsState function
+  const debugPointsState = useCallback((silent = false) => {
+    if (!silent) {
+      console.log('[MagicPointsContext] Debug state requested:');
+      console.log('  - Magic Points:', magicPoints);
+      console.log('  - Online Status:', isOnline);
+      console.log('  - Offline Mode:', offlineMode);
+      console.log('  - Authenticated:', isAuthenticated_MagicPoints);
+      console.log('  - Syncing:', isSyncing);
+      console.log('  - Last Synced:', lastSynced);
+      console.log('  - Pending Operations:', pendingOperations.length);
+      console.log('  - Sync Retries:', syncRetries);
+    }
+    
+    return {
+      magicPoints,
+      isOnline,
+      offlineMode,
+      isAuthenticated: isAuthenticated_MagicPoints,
+      isSyncing,
+      lastSynced,
+      pendingOperations,
+      syncRetries,
+      revelioAttempts,
+      correctBlanks
+    };
+  }, [
+    magicPoints,
+    isOnline,
+    offlineMode,
+    isAuthenticated_MagicPoints,
+    isSyncing,
+    lastSynced,
+    pendingOperations,
+    syncRetries,
+    revelioAttempts,
+    correctBlanks
+  ]);
+  
   // Periodically check for sync needs or when online status changes
   useEffect(() => {
     const check = async () => {
@@ -211,8 +250,7 @@ export const MagicPointsProvider = ({ children }) => {
     syncToServer,    // Might be useful for advanced scenarios, but forceSync is preferred
     forceSync,
     forceSyncWithDebug,
-    // debugPointsState, // For debugging, can be exposed if needed
-    // checkServerPoints, // Internal utility
+    debugPointsState, // Now exposed properly
     resetPoints,
     resetRevelioAttempts: resetRevelioAttemptsFunction
   };

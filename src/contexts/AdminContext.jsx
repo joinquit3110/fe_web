@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.jsx'; // Corrected import to use the event-driven AuthContext and ensure .jsx extension
-import { useMagicPoints } from '../context/MagicPointsContext.jsx'; // Corrected import to ensure .jsx extension
+import { useMagicPoints } from '../context/MagicPointsContext'; // Import without .jsx extension
 import axios from 'axios';
 import { useToast } from '@chakra-ui/react'; // Added useToast import
 
@@ -23,13 +23,30 @@ export const useAdmin = () => {
 
 export const AdminProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth(); // Now from ../context/AuthContext.jsx
+  
+  // Safe access to magicPoints context with fallback in case of errors
+  let magicPointsContext = {};
+  try {
+    magicPointsContext = useMagicPoints() || {};
+  } catch (error) {
+    console.warn('[AdminContext] Error accessing MagicPointsContext:', error.message);
+    // Provide default empty functions as fallback
+    magicPointsContext = {
+      magicPoints: 100,
+      forceSync: () => console.warn('[AdminContext] forceSync called but MagicPointsContext not available'),
+      forceSyncWithDebug: () => console.warn('[AdminContext] forceSyncWithDebug called but MagicPointsContext not available'),
+      resetRevelioAttempts: () => console.warn('[AdminContext] resetRevelioAttempts called but MagicPointsContext not available'),
+      resetPoints: () => console.warn('[AdminContext] resetPoints called but MagicPointsContext not available')
+    };
+  }
+  
   const { 
     magicPoints, 
     forceSync, 
     forceSyncWithDebug, 
     resetRevelioAttempts, 
-    resetPoints 
-  } = useMagicPoints();
+    resetPoints
+  } = magicPointsContext;
   const toast = useToast(); // Initialized useToast
 
   const [isAdmin, setIsAdmin] = useState(false);

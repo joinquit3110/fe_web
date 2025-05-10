@@ -39,13 +39,33 @@ const MagicPointsDebug = () => {
 
   // Run debug on initial load - only log once when component mounts
   useEffect(() => {
-    const data = debugPointsState(true); // Silent mode for initial load
-    setDebugData(data);
+    if (typeof debugPointsState === 'function') {
+      try {
+        const data = debugPointsState(true); // Silent mode for initial load
+        setDebugData(data);
+      } catch (error) {
+        console.error('[MagicPointsDebug] Error calling debugPointsState:', error);
+        setDebugData({
+          magicPoints: magicPoints || 0,
+          isOnline: isOnline || navigator.onLine,
+          offlineMode: isOfflineMode || false,
+          error: 'Failed to get debug data'
+        });
+      }
+    } else {
+      console.warn('[MagicPointsDebug] debugPointsState function not available');
+      setDebugData({
+        magicPoints: magicPoints || 0,
+        isOnline: isOnline || navigator.onLine,
+        offlineMode: isOfflineMode || false,
+        error: 'debugPointsState function not available'
+      });
+    }
     
     if (isDevMode) {
       console.log("Developer mode is active");
     }
-  }, [debugPointsState]);
+  }, [debugPointsState, magicPoints, isOnline, isOfflineMode]);
   
   // Listen for magic points updates from socket events
   useEffect(() => {

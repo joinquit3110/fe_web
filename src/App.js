@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-// Changed: Removed alias for BrowserRouter, will use BrowserRouter directly
+// No need to alias BrowserRouter
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
