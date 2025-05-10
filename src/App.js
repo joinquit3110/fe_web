@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
@@ -602,9 +602,9 @@ const App = () => {
         <SocketProvider> {/* SocketProvider might depend on AuthContext */}
           <AdminProvider> {/* AdminProvider might depend on AuthContext */}
             <MagicPointsProvider>
-              <Router>
+              <BrowserRouter>
                 <AppContent />
-              </Router>
+              </BrowserRouter>
             </MagicPointsProvider>
           </AdminProvider>
         </SocketProvider>
