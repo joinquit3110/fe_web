@@ -193,28 +193,58 @@ const NotificationDisplay = () => {
             isHousePointsUpdate: notification.isHousePointsUpdate
           });
           
-          // Ensure house points notifications have correct data
-          if (notification.message && notification.message.includes('points') && 
-              notification.house && notification.pointsChange) {
-            console.log('[NOTIFICATION_DEBUG] Processing house points notification:', fixedNotification);
+          // Log notification type for debugging
+          let notificationType = "standard";
+          if (notification.isHousePointsUpdate) notificationType = "house points";
+          if (notification.isPersonalPointsUpdate) notificationType = "personal points";
+          console.log(`[NOTIFICATION_DEBUG] Processing ${notificationType} notification:`, fixedNotification);
+          
+          // Ensure points notifications have correct data
+          if (notification.pointsChange !== undefined) {
+            // Extended debug logging
+            console.log('[NOTIFICATION_DEBUG] Full notification details:', {
+              id: notification.id,
+              type: notification.type,
+              message: notification.message, 
+              reason: notification.reason,
+              house: notification.house,
+              isHousePoints: notification.isHousePointsUpdate,
+              isPersonal: notification.isPersonalPointsUpdate
+            });
             
-            // Make sure the reason is displayed correctly - improved extraction
+            // Make sure the reason is displayed correctly - improved extraction with better priority
             if (fixedNotification.reason === 'System update' || !fixedNotification.reason) {
-              // Try to extract reason from message if it contains a colon
+              // Try different ways to get a reason, in priority order
+              
+              // 1. First try to extract from message if it has a colon
               if (notification.message && notification.message.includes(':')) {
                 const parts = notification.message.split(':');
                 if (parts.length > 1) {
                   fixedNotification.reason = parts[1].trim();
-                  console.log('[NOTIFICATION_DEBUG] Extracted reason from message:', fixedNotification.reason);
+                  console.log('[NOTIFICATION_DEBUG] 1️⃣ Extracted reason from message:', fixedNotification.reason);
                 }
               }
               
-              // If still no reason, check if this is a house points notification
+              // 2. For house points specifically, check original reason field from socket data
               if ((!fixedNotification.reason || fixedNotification.reason === 'System update') && 
                   notification.isHousePointsUpdate && notification.house) {
-                // For house notifications without reason, use a better default
-                fixedNotification.reason = notification.house + ' house points update';
-                console.log('[NOTIFICATION_DEBUG] Using house default reason:', fixedNotification.reason);
+                // Get house name with proper capitalization
+                const houseName = notification.house.charAt(0).toUpperCase() + notification.house.slice(1);
+                fixedNotification.reason = `${houseName} house points update`;
+                console.log('[NOTIFICATION_DEBUG] 2️⃣ Using house default reason:', fixedNotification.reason);
+              } 
+              
+              // 3. For personal points, use generic reason 
+              else if ((!fixedNotification.reason || fixedNotification.reason === 'System update') && 
+                  notification.isPersonalPointsUpdate) {
+                fixedNotification.reason = 'Personal points update';
+                console.log('[NOTIFICATION_DEBUG] 3️⃣ Using personal default reason:', fixedNotification.reason);
+              }
+              
+              // 4. Last resort - use something generic
+              else if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
+                fixedNotification.reason = notification.pointsChange > 0 ? 'Achievement reward' : 'Point adjustment';
+                console.log('[NOTIFICATION_DEBUG] 4️⃣ Using generic fallback reason');
               }
             }
             

@@ -333,13 +333,14 @@ export const SocketProvider = ({ children }) => {
               id: `points_update_${Date.now()}`,
               type: pointsDiff > 0 ? 'success' : 'warning',
               title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
-              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}`,
+              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}${reason ? ': ' + reason : ''}`,
               timestamp: new Date(),
               pointsChange: pointsDiff,
               reason: reason, // Don't use 'System update' as default
               criteria: criteria,
               level: level,
-              house: user.house
+              house: user.house,
+              isPersonalPointsUpdate: true // Mark as personal points notification to distinguish from house points
             };
             
             // Dispatch an event to update the debug menu
@@ -404,50 +405,79 @@ export const SocketProvider = ({ children }) => {
         
         // Also dispatch a debug event to ensure debug panel is updated
         // Make sure we're passing accurate house points data to update the debug menu
+        const extractedReason = data.reason && data.reason !== 'System update' ? data.reason : null;
+        
+        // Log detailed debug info about the event being dispatched
+        console.log('[SOCKET] Dispatching debug event for house points with reason:', extractedReason);
+        
         const debugEvent = new CustomEvent('magicPointsUIUpdate', {
           detail: { 
             source: 'housePointsUpdate',
             timestamp: new Date().toISOString(),
             points: data.points,
-            reason: data.reason || null,
+            reason: extractedReason, // Use the extracted reason
             delta: data.points, // Include delta for better debug display
             house: data.house,  // Include house info
             criteria: data.criteria || null,
-            level: data.level || null
+            level: data.level || null,
+            isHousePointsUpdate: true // Mark as house points update for filtering
           }
         });
         window.dispatchEvent(debugEvent);
         
         // Also dispatch a regular magicPointsUpdated event to ensure all handlers receive the update
+        // Fix: Include the reason, criteria, level, and delta in the regular update for consistency
+        // Note: extractedReason is already defined above
         const regularUpdate = new CustomEvent('magicPointsUpdated', {
           detail: { 
             points: data.points,
             source: 'housePointsUpdate',
             timestamp: new Date().toISOString(),
-            house: data.house
+            house: data.house,
+            reason: extractedReason, // Include the reason
+            delta: data.points, // Include the delta
+            criteria: data.criteria || null,
+            level: data.level || null,
+            isHousePointsUpdate: true // Mark as house points notification
           }
         });
         window.dispatchEvent(regularUpdate);
       }
       
       // Create custom notification with exact house points data
-      // Make sure we extract the correct reason for the notification
-      const extractedReason = data.reason && data.reason !== 'System update' ? data.reason : null;
+      // Make sure we extract a clean reason for the notification - this is critical
       
-      console.log('[SOCKET] House points notification - extracted reason:', extractedReason, 'from original:', data.reason);
+      // Better reason extraction - completely rewritten and enhanced
+      let cleanReason = null;
+      if (data.reason) {
+        cleanReason = data.reason !== 'System update' ? data.reason : null;
+      }
+      
+      // Log all the details for debugging
+      console.log('[SOCKET] House points notification - extracted reason:', cleanReason, 'from original:', data.reason);
+      console.log('[SOCKET] House points full data:', {
+        house: data.house,
+        points: data.points,
+        originalReason: data.reason,
+        cleanReason: cleanReason,
+        criteria: data.criteria,
+        level: data.level
+      });
       
       const notification = {
         id: `house_points_${Date.now()}`,
         type: data.points > 0 ? 'success' : 'warning',
         title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
-        message: `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}${extractedReason ? ': ' + extractedReason : ''}`,
+        message: `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}${cleanReason ? ': ' + cleanReason : ''}`,
         timestamp: new Date(),
         pointsChange: data.points,
-        reason: extractedReason, // Use the cleaned up reason, not "System update"
+        reason: cleanReason, // Use the cleaned reason, NEVER use 'System update'
         criteria: data.criteria || null,
         level: data.level || null,
         house: data.house,
-        isHousePointsUpdate: true // Mark as house points notification
+        isHousePointsUpdate: true, // Mark as house points notification
+        // Add more explicit flags to help the notification system
+        isPersonalPointsUpdate: false
       };
         
       addNotification(notification);

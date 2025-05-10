@@ -58,8 +58,15 @@ const MagicPointsDebug = () => {
           points: event.detail.points,
           source: event.detail.source,
           reason: event.detail.reason,
-          delta: event.detail.delta
+          delta: event.detail.delta,
+          isHousePointsUpdate: event.detail.isHousePointsUpdate,
+          house: event.detail.house
         });
+        
+        // Special handling for house points updates
+        if (event.detail.isHousePointsUpdate) {
+          console.log('[DEBUG] This is a house points update for:', event.detail.house);
+        }
         
         setDebugData(prevData => ({
           ...prevData,
@@ -68,11 +75,19 @@ const MagicPointsDebug = () => {
           lastUpdateSource: event.detail.source || 'event',
           lastUpdateOperation: event.detail.operation || 'unknown',
           lastUpdateDelta: event.detail.delta || 0,
-          lastUpdateReason: event.detail.reason || prevData.lastUpdateReason || null
+          lastUpdateReason: event.detail.reason || prevData.lastUpdateReason || null,
+          housePointsUpdate: event.detail.isHousePointsUpdate ? {
+            house: event.detail.house,
+            points: event.detail.points,
+            timestamp: new Date().toISOString()
+          } : prevData.housePointsUpdate
         }));
         
         // Update localStorage to ensure consistency
-        localStorage.setItem('magicPoints', event.detail.points);
+        // Only do this for personal points, not house points
+        if (!event.detail.isHousePointsUpdate) {
+          localStorage.setItem('magicPoints', event.detail.points);
+        }
         
         // Force a full refresh of debug data after a brief timeout
         setTimeout(() => {
@@ -81,7 +96,8 @@ const MagicPointsDebug = () => {
             ...freshData, 
             lastUpdate: prev.lastUpdate, 
             lastUpdateSource: prev.lastUpdateSource,
-            lastUpdateReason: prev.lastUpdateReason
+            lastUpdateReason: prev.lastUpdateReason,
+            housePointsUpdate: prev.housePointsUpdate
           }));
         }, 100);
       } else {
