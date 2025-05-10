@@ -127,11 +127,19 @@ export const AuthProvider = ({ children }) => {
         data.user.isAdmin = false;
       }
       
+      // Store in localStorage, order matters - set most important flag last
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('isAuthenticated', 'true');
+      
+      // Update state before setting localStorage authenticated flag
       setUser(data.user);
       setIsAuthenticated(true);
+      
+      // Set authenticated flag last to ensure all data is ready
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      // Dispatch an event to notify other contexts of the authentication change
+      window.dispatchEvent(new Event('authStateChanged'));
       
       return data.user;
     } catch (error) {

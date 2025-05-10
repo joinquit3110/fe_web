@@ -46,7 +46,7 @@ const MagicPointsDebug = () => {
     setDebugData(data);
   }, [debugPointsState]);
   
-  // Listen for magic points updates from socket events
+  // Listen for magic points updates from socket events - improved with direct state updates
   useEffect(() => {
     const handlePointsUpdate = (event) => {
       console.log('[DEBUG] Received magicPointsUpdated event:', event.detail);
@@ -74,6 +74,19 @@ const MagicPointsDebug = () => {
       window.removeEventListener('magicPointsUIUpdate', handlePointsUpdate);
     };
   }, [debugPointsState]);
+  
+  // Also update immediately when magicPoints changes in the context
+  useEffect(() => {
+    setDebugData(prevData => ({
+      ...prevData,
+      magicPoints,
+      isOnline,
+      isAuthenticated,
+      isSyncing,
+      lastSynced,
+      pendingOperations: pendingOperations || []
+    }));
+  }, [magicPoints, isOnline, isAuthenticated, isSyncing, lastSynced, pendingOperations]);
   
   // Refresh debug data every 2 seconds (silently)
   useEffect(() => {

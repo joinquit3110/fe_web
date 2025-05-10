@@ -180,10 +180,15 @@ const Login = () => {
           house: 'admin'
         };
         
-        // Store admin user in localStorage
+        // Store admin user in localStorage with proper event triggering
         localStorage.setItem('user', JSON.stringify(adminUser));
         localStorage.setItem('token', `admin-token-${Date.now()}`);
+        
+        // Set isAuthenticated last to ensure all data is ready
         localStorage.setItem('isAuthenticated', 'true');
+        
+        // Trigger a custom event for other contexts to detect the authentication change
+        window.dispatchEvent(new Event('authStateChanged'));
         
         // Set admin house for animation
         setUserHouse('admin');
@@ -198,12 +203,18 @@ const Login = () => {
         password: password
       });
       
+      // Explicitly trigger authentication state change event
+      window.dispatchEvent(new Event('authStateChanged'));
+      
       // Get user house for animation
       if (userData && userData.house) {
         setUserHouse(userData.house.toLowerCase());
         setLoginSuccess(true);
       } else {
-        navigate('/dashboard');
+        // Brief timeout to allow contexts to update before navigation
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 300);
       }
     } catch (error) {
       console.error('Login form error:', error);

@@ -501,11 +501,58 @@ export const MagicPointsProvider = ({ children }) => {
     correctBlanks
   ]);
 
-  // Load authentication state from localStorage
+  // Load authentication state from localStorage - improved to detect real-time changes
   useEffect(() => {
+    // Initial check from localStorage
     const authState = localStorage.getItem('isAuthenticated');
     setIsAuthenticated(authState === 'true');
 
+    // Watch localStorage for changes to authentication status
+    const handleStorageChange = (e) => {
+      if (e.key === 'isAuthenticated' || e.key === 'token' || e.key === 'user') {
+        const currentAuthState = localStorage.getItem('isAuthenticated');
+        console.log('[POINTS] Auth state change detected via storage:', currentAuthState);
+        setIsAuthenticated(currentAuthState === 'true');
+      }
+    };
+    
+    // Also listen for direct auth state change event
+    const handleAuthStateChanged = () => {
+      const currentAuthState = localStorage.getItem('isAuthenticated');
+      console.log('[POINTS] Auth state change detected via event:', currentAuthState);
+      setIsAuthenticated(currentAuthState === 'true');
+      
+      // If now authenticated, check for sync needs
+      if (currentAuthState === 'true') {
+        // Check for pending operations to auto-sync
+        const pendingOps = localStorage.getItem('pendingOperations');
+        if (pendingOps && JSON.parse(pendingOps).length > 0) {
+          console.log('[POINTS] Found pending operations on auth state change, triggering auto-sync');
+          setTimeout(() => {
+            if (syncToServerRef.current) {
+              syncToServerRef.current();
+            }
+          }, 1000);
+        }
+      }
+    };
+    
+    // Add storage event listener
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Listen for custom auth state change events
+    window.addEventListener('authStateChanged', handleAuthStateChanged);
+    
+    // Also set up a MutationObserver to watch for direct localStorage changes
+    // that don't trigger storage events (same window updates)
+    const localStorageObserver = setInterval(() => {
+      const currentAuthState = localStorage.getItem('isAuthenticated');
+      if ((currentAuthState === 'true') !== isAuthenticated) {
+        console.log('[POINTS] Auth state change detected via polling:', currentAuthState);
+        setIsAuthenticated(currentAuthState === 'true');
+      }
+    }, 1000);
+    
     // Verify authentication status with server
     const verifyAuth = async () => {
       try {
@@ -541,6 +588,13 @@ export const MagicPointsProvider = ({ children }) => {
     if (authState === 'true' && navigator.onLine) {
       verifyAuth();
     }
+    
+    // Clean up event listeners and intervals
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authStateChanged', handleAuthStateChanged);
+      clearInterval(localStorageObserver);
+    };
 
     // Also load pending operations
     const savedOperations = localStorage.getItem('pendingOperations');
