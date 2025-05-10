@@ -107,7 +107,7 @@ const MagicPointsDebug = () => {
       window.removeEventListener('authStatusVerified', handleContextUpdate);
       window.removeEventListener('magicPointsContextUpdate', handleContextUpdate);
     };
-  }, [debugPointsState]);
+  }, [debugPointsState, magicPoints]);
   
   // Update immediately when any context values change
   useEffect(() => {

@@ -494,6 +494,7 @@ export const SocketProvider = ({ children }) => {
       
       // Also notify the MagicPointsContext via a custom event
       if (typeof window !== 'undefined') {
+        // Event for general points updates
         const pointsEvent = new CustomEvent('magicPointsUpdated', {
           detail: {
             points: newPoints,
@@ -505,6 +506,18 @@ export const SocketProvider = ({ children }) => {
         });
         console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
         window.dispatchEvent(pointsEvent);
+        
+        // Event specifically for debug menu updates
+        const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+          detail: {
+            points: newPoints,
+            source: 'socketUpdate',
+            delta: newPoints - oldPoints,
+            timestamp: new Date().toISOString()
+          }
+        });
+        console.log('[SOCKET] Dispatching magicPointsUIUpdate event for debug menu:', newPoints);
+        window.dispatchEvent(uiUpdateEvent);
       }
     }
   };
