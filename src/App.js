@@ -74,6 +74,15 @@ const AdminRoute = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Clear adminRedirect marker from sessionStorage (if it was set during login)
+  // This useEffect is moved to the top to ensure it's always called.
+  useEffect(() => {
+    if (sessionStorage.getItem('adminRedirect') === 'true') {
+      console.log('[AdminRoute] Clearing adminRedirect marker.');
+      sessionStorage.removeItem('adminRedirect');
+    }
+  }, []); // Runs once on mount
+
   const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   const ADMIN_USERS = ['hungpro', 'vipro'];
 
@@ -152,14 +161,6 @@ const AdminRoute = ({ children }) => {
     console.log(`[AdminRoute] Authenticated but not a privileged admin (isPrivilegedAdmin: ${isPrivilegedAdmin}). Redirecting to dashboard.`);
     return <Navigate to="/dashboard" replace />;
   }
-
-  // Clear adminRedirect marker from sessionStorage (if it was set during login)
-  useEffect(() => {
-    if (sessionStorage.getItem('adminRedirect') === 'true') {
-      console.log('[AdminRoute] Clearing adminRedirect marker.');
-      sessionStorage.removeItem('adminRedirect');
-    }
-  }, []); // Runs once on mount or if the logic needs to be tied to specific conditions
 
   // Debug information
   const searchParamsForDebug = new URLSearchParams(location.search);
