@@ -118,22 +118,14 @@ const MagicPointsDebug = () => {
       }));
     };
     
-    const handleUIUpdate = (event) => {
-      console.log('[DEBUG] Received UI update event:', event.detail);
-      const data = debugPointsState(true); // Silent mode for automatic updates
-      setDebugData(data);
-    };
-    
     window.addEventListener('magicPointsUpdated', handlePointsUpdate);
     window.addEventListener('serverSyncCompleted', handleSyncCompleted);
-    window.addEventListener('magicPointsUIUpdate', handleUIUpdate);
     window.addEventListener('authVerified', handleAuthUpdate);
     window.addEventListener('socketConnected', handleSocketUpdate);
     
     return () => {
       window.removeEventListener('magicPointsUpdated', handlePointsUpdate);
       window.removeEventListener('serverSyncCompleted', handleSyncCompleted);
-      window.removeEventListener('magicPointsUIUpdate', handleUIUpdate);
       window.removeEventListener('authVerified', handleAuthUpdate);
       window.removeEventListener('socketConnected', handleSocketUpdate);
     };

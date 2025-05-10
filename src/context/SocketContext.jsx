@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from './AuthContext';
 
 // Backend URL for socket connection
 const SOCKET_URL = "https://be-web-6c4k.onrender.com";
