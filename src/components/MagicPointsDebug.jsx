@@ -40,13 +40,26 @@ const MagicPointsDebug = () => {
   // Check if we're in offline/dev mode
   const isDevMode = false; // Set to false since we're online now
   
-  // Run debug on initial load
+  // Run debug on initial load with online check and auth verification
   useEffect(() => {
+    // First get the current state immediately
     const data = debugPointsState(true); // Silent mode for initial load
     setDebugData(data);
+    
+    // Then check auth status
+    checkServerAuth();
+    
+    // Set a timer to refresh data again after a short delay
+    // This helps after initial page load to catch any asynchronous state updates
+    const refreshTimer = setTimeout(() => {
+      const updatedData = debugPointsState(true);
+      setDebugData(updatedData);
+    }, 1500);
+    
+    return () => clearTimeout(refreshTimer);
   }, [debugPointsState]);
   
-  // Listen for magic points updates from socket events
+  // Enhanced event listener for real-time updates
   useEffect(() => {
     const handlePointsUpdate = (event) => {
       console.log('[DEBUG] Received magicPointsUpdated event:', event.detail);
@@ -64,14 +77,65 @@ const MagicPointsDebug = () => {
       }
     };
     
+    const handleSyncCompleted = () => {
+      console.log('[DEBUG] Received serverSyncCompleted event');
+      const data = debugPointsState(true); // Silent mode for automatic updates
+      setDebugData(data);
+    };
+    
+    const handleAuthUpdate = (event) => {
+      console.log('[DEBUG] Received auth update event:', event.detail);
+      setDebugData(prevData => ({
+        ...prevData,
+        isAuthenticated: event.detail.authenticated
+      }));
+      
+      // Update auth status
+      if (event.detail.authenticated) {
+        setAuthStatus({
+          authenticated: true,
+          userId: event.detail.userId,
+          wasRetry: event.detail.wasRetry
+        });
+        
+        // Show toast for retry success
+        if (event.detail.wasRetry) {
+          toast({
+            title: 'Authentication Verified',
+            description: 'Auth state verified after retry',
+            status: 'success',
+            duration: 3000,
+          });
+        }
+      }
+    };
+    
+    const handleSocketUpdate = (event) => {
+      console.log('[DEBUG] Received socket connection event:', event.detail);
+      setDebugData(prevData => ({
+        ...prevData,
+        isOnline: true
+      }));
+    };
+    
+    const handleUIUpdate = (event) => {
+      console.log('[DEBUG] Received UI update event:', event.detail);
+      const data = debugPointsState(true); // Silent mode for automatic updates
+      setDebugData(data);
+    };
+    
     window.addEventListener('magicPointsUpdated', handlePointsUpdate);
-    window.addEventListener('serverSyncCompleted', handlePointsUpdate);
-    window.addEventListener('magicPointsUIUpdate', handlePointsUpdate);
+    window.addEventListener('serverSyncCompleted', handleSyncCompleted);
+    window.addEventListener('magicPointsUIUpdate', handleUIUpdate);
+    window.addEventListener('authVerified', handleAuthUpdate);
+    window.addEventListener('socketConnected', handleSocketUpdate);
     
     return () => {
       window.removeEventListener('magicPointsUpdated', handlePointsUpdate);
-      window.removeEventListener('serverSyncCompleted', handlePointsUpdate);
-      window.removeEventListener('magicPointsUIUpdate', handlePointsUpdate);
+      window.removeEventListener('serverSyncCompleted', handleSyncCompleted);
+      window.removeEventListener('magicPointsUIUpdate', handleUIUpdate);
+      window.removeEventListener('authVerified', handleAuthUpdate);
+      window.removeEventListener('socketConnected', handleSocketUpdate);
     };
   }, [debugPointsState]);
   

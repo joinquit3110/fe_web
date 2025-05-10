@@ -90,9 +90,22 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(adminUser));
         localStorage.setItem('isAuthenticated', 'true');
         
+        // Also store in service worker accessible storage if available
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            action: 'store_auth_token',
+            token: data.token
+          });
+        }
+        
         // Update state
         setUser(adminUser);
         setIsAuthenticated(true);
+        
+        // Dispatch auth event to notify components
+        window.dispatchEvent(new CustomEvent('authStateChanged', { 
+          detail: { authenticated: true, user: adminUser }
+        }));
         
         return adminUser;
       }
@@ -130,8 +143,22 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('isAuthenticated', 'true');
+      
+      // Also store in service worker accessible storage if available
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          action: 'store_auth_token',
+          token: data.token
+        });
+      }
+      
       setUser(data.user);
       setIsAuthenticated(true);
+      
+      // Dispatch auth event to notify components
+      window.dispatchEvent(new CustomEvent('authStateChanged', { 
+        detail: { authenticated: true, user: data.user }
+      }));
       
       return data.user;
     } catch (error) {
