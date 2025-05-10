@@ -109,6 +109,8 @@ export const MagicPointsProvider = ({ children }) => {
   const [revelioAttempts, setRevelioAttempts] = useState({});
   // Track correctly answered blanks to avoid double counting
   const [correctBlanks, setCorrectBlanks] = useState({});
+  // Ref to track previous authentication state for polling checks
+  const prevAuthStateRef = useRef(false);
 
   // Create refs for function references to avoid circular dependencies
   const syncToServerRef = useRef(null);
@@ -568,16 +570,18 @@ export const MagicPointsProvider = ({ children }) => {
     
     // Also set up a poller to watch for direct localStorage changes
     // that don't trigger storage events (same window updates)
-    const prevAuthState = useRef(isAuthenticated);
+    // Initialize the ref with current auth state
+    prevAuthStateRef.current = isAuthenticated;
+    
     const localStorageObserver = setInterval(() => {
       const currentAuthState = localStorage.getItem('isAuthenticated');
       const currentAuthBool = currentAuthState === 'true';
       
       // Only log and update if the authentication state has actually changed
-      if (currentAuthBool !== prevAuthState.current) {
+      if (currentAuthBool !== prevAuthStateRef.current) {
         console.log('[POINTS] Auth state change detected via polling:', currentAuthState);
         setIsAuthenticated(currentAuthBool);
-        prevAuthState.current = currentAuthBool;
+        prevAuthStateRef.current = currentAuthBool;
       }
     }, 5000); // Increased from 3s to 5s to further reduce unnecessary polling
     
