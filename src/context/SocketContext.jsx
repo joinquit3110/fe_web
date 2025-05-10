@@ -276,6 +276,22 @@ export const SocketProvider = ({ children }) => {
       
       if (data.type === 'user_update' && data.data?.updatedFields) {
         handleUserUpdate(data.data.updatedFields);
+        
+        // Check if magic points were updated directly in the updatedFields
+        if (data.data.updatedFields.magicPoints !== undefined) {
+          const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
+          if (!isNaN(newPoints)) {
+            // Dispatch an event to update the debug menu directly
+            const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+              detail: { 
+                points: newPoints,
+                source: 'socketFieldsUpdate',
+                timestamp: new Date().toISOString()
+              }
+            });
+            window.dispatchEvent(uiUpdateEvent);
+          }
+        }
       }
       
       // Convert sync_update with points change messages to notifications
@@ -283,8 +299,7 @@ export const SocketProvider = ({ children }) => {
         console.log('[SOCKET] Converting point update to notification:', data);
         
         // Parse points value from message
-        const pointsMatch = data.message.match(/updated to (\d+)/);
-        if (pointsMatch && pointsMatch[1] && user) {
+        const pointsMatch = data.message.match(/updated to (\d+)/);          if (pointsMatch && pointsMatch[1] && user) {
           const newPoints = parseInt(pointsMatch[1], 10);
           const oldPoints = user.magicPoints || 0;
           const pointsDiff = newPoints - oldPoints;
@@ -310,6 +325,18 @@ export const SocketProvider = ({ children }) => {
               level: level,
               house: user.house
             };
+            
+            // Dispatch an event to update the debug menu
+            const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+              detail: { 
+                points: newPoints,
+                source: 'socketUpdate',
+                timestamp: new Date().toISOString(),
+                delta: pointsDiff,
+                reason: reason || 'System update'
+              }
+            });
+            window.dispatchEvent(uiUpdateEvent);
             
             addNotification(notification);
           }

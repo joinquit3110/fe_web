@@ -566,15 +566,16 @@ export const MagicPointsProvider = ({ children }) => {
     // Listen for custom auth state change events
     window.addEventListener('authStateChanged', handleAuthStateChanged);
     
-    // Also set up a MutationObserver to watch for direct localStorage changes
+    // Also set up a poller to watch for direct localStorage changes
     // that don't trigger storage events (same window updates)
     const localStorageObserver = setInterval(() => {
       const currentAuthState = localStorage.getItem('isAuthenticated');
-      if ((currentAuthState === 'true') !== isAuthenticated) {
+      const authChanged = (currentAuthState === 'true') !== isAuthenticated;
+      if (authChanged) {
         console.log('[POINTS] Auth state change detected via polling:', currentAuthState);
         setIsAuthenticated(currentAuthState === 'true');
       }
-    }, 1000);
+    }, 3000); // Increased from 1s to 3s to reduce unnecessary polling
     
     // Verify authentication status with server
     const verifyAuth = async () => {
