@@ -19,7 +19,7 @@ import {
   Image
 } from '@chakra-ui/react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/HarryPotter.css';
 import '../styles/LoginHogwarts.css';
 // Import house logo images
