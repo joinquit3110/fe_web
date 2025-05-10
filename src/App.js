@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
 import TabNavigation from "./components/TabNavigation";
@@ -10,19 +10,17 @@ import katex from 'katex';
 import './styles/App.css';
 import './styles/HarryPotter.css';
 // Fix AuthContext import
-import { AuthProvider, useAuth } from './context/AuthContext.jsx'; // Corrected import path
-import { AdminProvider } from './contexts/AdminContext.jsx'; // Added .jsx extension
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdminProvider } from './contexts/AdminContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
-// Changed: Added .jsx extension
-import { MagicPointsProvider } from './context/MagicPointsContext.jsx';
+import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
-import AdminUserManagement from './components/AdminUserManagement'; // Added import for AdminUserManagement
 import NotificationDisplay from './components/NotificationDisplay';
-import { SocketProvider } from './context/SocketContext.jsx'; // Added .jsx extension
+import { SocketProvider } from './context/SocketContext';
 // Import the Hogwarts logo image
 import hogwartsLogoImg from './asset/Hogwarts logo.png';
 
@@ -58,136 +56,14 @@ const theme = extendTheme({
 
 // Private Route component for protected routes
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth(); // Added isLoading
-  const location = useLocation(); // For passing redirect state
+  const { isAuthenticated } = useAuth();
   const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  // Wait for authentication to load, unless in development mode (where we might bypass auth)
-  if (isLoading && !isDevelopment) {
-    // You can replace this with a more sophisticated loading spinner
-    return <div>Loading authentication...</div>;
-  }
-
-  // If not authenticated (and not in development mode allowing bypass), redirect to login
+  
+  // Allow bypassing auth in development mode
   if (!isAuthenticated && !isDevelopment) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // If authenticated or in development bypass, render the children
-  return children;
-};
-
-// Admin Route component specifically for admin-only routes
-const AdminRoute = ({ children }) => {
-  const { user, isAuthenticated, isLoading } = useAuth(); // Added isLoading
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Clear adminRedirect marker from sessionStorage (if it was set during login)
-  // This useEffect is moved to the top to ensure it's always called.
-  useEffect(() => {
-    if (sessionStorage.getItem('adminRedirect') === 'true') {
-      console.log('[AdminRoute] Clearing adminRedirect marker.');
-      sessionStorage.removeItem('adminRedirect');
-    }
-  }, []); // Runs once on mount
-
-  const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const ADMIN_USERS = ['hungpro', 'vipro'];
-
-  // State for AdminRoute's own determination of admin privileges
-  const [isPrivilegedAdmin, setIsPrivilegedAdmin] = useState(false);
-  const [isCheckingPrivileges, setIsCheckingPrivileges] = useState(true);
-
-  // Effect to determine admin privileges
-  useEffect(() => {
-    // This effect should only run once basic authentication is confirmed (or isLoading is false)
-    if (!isLoading) {
-      setIsCheckingPrivileges(true);
-      let currentUser = user; // User from context
-
-      // Fallback to storage if context user is not yet populated but isAuthenticated might be true
-      // or if we need to verify admin status from storage regardless of context.
-      if (!currentUser && (localStorage.getItem('user') || sessionStorage.getItem('user'))) {
-        try {
-          const storedUserJson = sessionStorage.getItem('user') || localStorage.getItem('user');
-          if (storedUserJson) {
-            currentUser = JSON.parse(storedUserJson);
-            console.log('[AdminRoute] Using user from storage for privilege check:', currentUser?.username);
-          }
-        } catch (e) { console.error("Error parsing stored user in AdminRoute", e); }
-      }
-
-      let adminStatus = false;
-      if (currentUser) {
-        adminStatus = (currentUser.username && ADMIN_USERS.includes(currentUser.username)) ||
-                       currentUser.isAdmin === true ||
-                       currentUser.role === 'admin' ||
-                       currentUser.house === 'admin';
-      }
-
-      // Session storage flag can also grant admin status
-      if (sessionStorage.getItem('adminLogin') === 'true') {
-        adminStatus = true;
-      }
-      
-      // URL parameter can override in development
-      const searchParamsForAdmin = new URLSearchParams(location.search);
-      if (isDevelopment && searchParamsForAdmin.get('admin') === 'true') {
-          adminStatus = true;
-      }
-
-      setIsPrivilegedAdmin(adminStatus);
-      setIsCheckingPrivileges(false);
-      console.log(`[AdminRoute] Privilege check ran. User: ${currentUser?.username}, IsPrivilegedAdmin: ${adminStatus}, Context isAuthenticated: ${isAuthenticated}, Context isLoading: ${isLoading}`);
-    }
-  }, [user, isAuthenticated, isLoading, location.search, isDevelopment]);
-
-
-  // 1. Handle AuthContext loading state
-  if (isLoading) {
-    console.log('[AdminRoute] AuthContext is loading...');
-    return <div>Authenticating...</div>; // Or a spinner component
-  }
-
-  // 2. Handle basic authentication (after AuthContext is done loading)
-  if (!isAuthenticated && !isDevelopment) {
-    console.log(`[AdminRoute] Context reports not authenticated (isAuthenticated: ${isAuthenticated}). Redirecting to login.`);
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // At this point, AuthContext reports user is authenticated OR it's a development bypass for this check.
-  // 3. Handle AdminRoute's own privilege checking state
-  if (isCheckingPrivileges) {
-    console.log('[AdminRoute] Checking admin privileges...');
-    return <div>Verifying admin privileges...</div>;
+    return <Navigate to="/login" replace />;
   }
   
-  // 4. Check derived admin privileges
-  const canBypassAdminPrivilegeCheck = isDevelopment && (new URLSearchParams(location.search).get('admin') === 'true');
-
-  if (!isPrivilegedAdmin && !canBypassAdminPrivilegeCheck) {
-    console.log(`[AdminRoute] Authenticated but not a privileged admin (isPrivilegedAdmin: ${isPrivilegedAdmin}). Redirecting to dashboard.`);
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Debug information
-  const searchParamsForDebug = new URLSearchParams(location.search);
-  const showDebug = searchParamsForDebug.get('debug') === 'admin';
-  if (showDebug) {
-    // ... (existing or new debug output logic) ...
-    console.log('[AdminRoute] Debug Info:', {
-      contextUser: user,
-      contextIsAuthenticated: isAuthenticated,
-      contextIsLoading: isLoading,
-      routeIsPrivilegedAdmin: isPrivilegedAdmin,
-      routeIsCheckingPrivileges: isCheckingPrivileges,
-      localStorageUser: localStorage.getItem('user'),
-      sessionStorageAdminLogin: sessionStorage.getItem('adminLogin'),
-    });
-  }
-
-  console.log(`[AdminRoute] Access GRANTED. Context isAuthenticated: ${isAuthenticated}, Route determined isPrivilegedAdmin: ${isPrivilegedAdmin}`);
   return children;
 };
 
@@ -364,19 +240,10 @@ const AppContent = () => {
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={
-          <AdminRoute>
-            <AdminUserManagement />
-          </AdminRoute>
-        } />
         <Route path="/admin/house-points" element={
-          <AdminRoute>
+          <PrivateRoute>
             <AdminHousePoints />
-          </AdminRoute>
-        } />
-        {/* Dashboard route - redirects to main app */}
-        <Route path="/dashboard" element={
-          <Navigate to="/" replace />
+          </PrivateRoute>
         } />
         <Route 
           path="/" 
@@ -607,17 +474,13 @@ const AppContent = () => {
 const App = () => {
   return (
     <ChakraProvider theme={theme}>
-      <BrowserRouter>
-        <AuthProvider>
+      <AuthProvider>
+        <AdminProvider>
           <SocketProvider>
-            <MagicPointsProvider>
-              <AdminProvider>
-                <AppContent />
-              </AdminProvider>
-            </MagicPointsProvider>
+            <AppContent />
           </SocketProvider>
-        </AuthProvider>
-      </BrowserRouter>
+        </AdminProvider>
+      </AuthProvider>
     </ChakraProvider>
   );
 };

@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
-import { useAuth } from './AuthContext.jsx'; // Ensure this import points to the correct AuthContext
-import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '../contexts/AuthContext';
 
 // Backend URL for socket connection
 const SOCKET_URL = "https://be-web-6c4k.onrender.com";
@@ -9,13 +8,7 @@ const SOCKET_URL = "https://be-web-6c4k.onrender.com";
 // Create context
 const SocketContext = createContext();
 
-export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (context === undefined) {
-    throw new Error('useSocket must be used within a SocketProvider');
-  }
-  return context;
-};
+export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
@@ -24,19 +17,7 @@ export const SocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  
-  // Safely get auth context values with defaults
-  const authContext = useAuth();
-  const user = authContext?.user || null;
-  const isAuthenticated = authContext?.isAuthenticated || false;
-  const setUser = authContext?.setUser || (() => console.warn('[SocketContext] setUser called but not available'));
-  
-  // Add reference to track socket initialization state
-  const socketInitializedRef = useRef(false);
-  // Add socket instance tracking ref to prevent multiple initializations
-  const socketInstanceRef = useRef(null);
-  // Track connection cleanup to prevent reconnection loops
-  const isCleaningUpRef = useRef(false);
+  const { user, isAuthenticated, setUser } = useAuth();
   
   // Track recent notification keys to prevent duplicates
   const recentNotifications = useRef(new Set());
@@ -81,34 +62,12 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // Only initialize socket if user is authenticated
     if (!isAuthenticated) {
-      if (socketInstanceRef.current) {
-        console.log('[SOCKET] Cleaning up socket due to logout');
-        isCleaningUpRef.current = true;
-        socketInstanceRef.current.disconnect();
+      if (socket) {
+        socket.disconnect();
         setSocket(null);
-        socketInstanceRef.current = null;
         setIsConnected(false);
         setConnectionQuality('disconnected');
-        socketInitializedRef.current = false;
-        isCleaningUpRef.current = false;
       }
-      return;
-    }
-
-    // Check if device is offline
-    const isOffline = localStorage.getItem('offlineMode') === 'true' || !navigator.onLine;
-    if (isOffline) {
-      console.log('[SOCKET] Device is offline, skipping socket connection');
-      setConnectionQuality('disconnected');
-      return;
-    }
-
-    // Don't reinitialize the socket if it's already connected or in cleanup
-    if (
-      (socketInstanceRef.current && socketInstanceRef.current.connected && socketInitializedRef.current) ||
-      isCleaningUpRef.current
-    ) {
-      console.log('[SOCKET] Socket already connected or cleaning up, skipping initialization');
       return;
     }
     
@@ -118,22 +77,18 @@ export const SocketProvider = ({ children }) => {
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 10,       // Increased from 5 to 10 attempts
-      reconnectionDelay: 500,         // Reduced from 1000ms to 500ms
-      reconnectionDelayMax: 3000,     // Reduced from 5000ms to 3000ms
-      timeout: 5000,                  // Reduced from 20000ms to 5000ms
-      // Remove multiplex: false to allow socket.io's built-in connection manager to work
+      reconnectionAttempts: 10,
+      reconnectionDelay: 500,         // Reduced from 1000ms
+      reconnectionDelayMax: 3000,     // Reduced from 5000ms
+      timeout: 5000,                  // Reduced from 10000ms
+      forceNew: true                  // Force a new connection to avoid sharing
     });
-    
-    // Store in ref to track across renders
-    socketInstanceRef.current = socketInstance;
     
     // Set up event handlers
     socketInstance.on('connect', () => {
       console.log('[SOCKET] Connected to server');
       setIsConnected(true);
       setConnectionQuality('good');
-      socketInitializedRef.current = true;
       
       // Authenticate with user ID and house
       if (user) {
@@ -156,56 +111,69 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Disconnected:', reason);
       setIsConnected(false);
       setConnectionQuality('disconnected');
-      
-      // Only reset the initialized flag for certain disconnect reasons
-      if (reason === 'io server disconnect' || reason === 'transport close') {
-        socketInitializedRef.current = false;
-      }
     });
     
+    socketInstance.on('reconnect', (attempt) => {
+      console.log(`[SOCKET] Reconnected after ${attempt} attempts`);
+      setIsConnected(true);
+      setConnectionQuality('good');
+      
+      // Re-authenticate on reconnect
+      if (user) {
+        socketInstance.emit('authenticate', {
+          userId: user.id || user._id,
+          username: user.username,
+          house: user.house
+        });
+      }
+      
+      // Request a sync after reconnection
+      setTimeout(() => {
+        if (socketInstance.connected) {
+          console.log('[SOCKET] Requesting sync after reconnection');
+          socketInstance.emit('request_sync');
+        }
+      }, 1000);
+    });
+
+    socketInstance.on('reconnect_error', (error) => {
+      console.error('[SOCKET] Reconnection error:', error);
+      setConnectionQuality('poor');
+    });
+
+    socketInstance.on('reconnect_failed', () => {
+      console.log('[SOCKET] Failed to reconnect');
+      setIsConnected(false);
+      setConnectionQuality('disconnected');
+    });
+    
+    // Handle connection status updates
+    socketInstance.on('connection_status', (data) => {
+      console.log('[SOCKET] Connection status update:', data);
+      if (data.connected) {
+        setIsConnected(true);
+        setConnectionQuality('good');
+      }
+    });
+
     // Set the socket instance
     setSocket(socketInstance);
     
-    // Cleanup on unmount or when dependencies change
+    // Make socket globally accessible for direct component use
+    if (typeof window !== 'undefined') {
+      window.socket = socketInstance;
+    }
+
+    // Cleanup on unmount
     return () => {
-      // Using a more robust cleanup strategy to prevent reconnection loops
-      
-      // Record start of cleanup to prevent reconnection during cleanup
-      const isInCleanup = isCleaningUpRef.current;
-      
-      // Only perform cleanup if not already in progress
-      if (socketInstance && !isInCleanup) {
-        try {
-          console.log('[SOCKET] Cleaning up socket connection');
-          isCleaningUpRef.current = true;
-          
-          // Remove listeners before disconnecting to prevent cleanup triggers
-          socketInstance.off('connect');
-          socketInstance.off('connect_error');
-          socketInstance.off('disconnect');
-          socketInstance.off('reconnect');
-          socketInstance.off('reconnect_error');
-          
-          // IMPORTANT: In React 18 with StrictMode, components mount, unmount, and mount again
-          // This creates socket connection loops. For development, we'll keep the socket
-          // connected but remove our handlers to prevent them from firing during remounts.
-          
-          if (process.env.NODE_ENV === 'production') {
-            // In production, actually disconnect the socket
-            socketInstance.disconnect();
-            console.log('[SOCKET] Socket disconnected during cleanup');
-          } else {
-            console.log('[SOCKET] Development mode - keeping socket but removing handlers');
-          }
-        } catch (error) {
-          console.error('[SOCKET] Error during socket cleanup:', error);
-        } finally {
-          isCleaningUpRef.current = false;
-        }
+      console.log('[SOCKET] Cleaning up socket connection');
+      if (socketInstance) {
+        socketInstance.disconnect();
+        setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user?.id, user?.username, user?.house]); // Explicit dependencies to prevent unnecessary reconnections
-
+  }, [isAuthenticated, user]);
+  
   // Implement heartbeat mechanism
   useEffect(() => {
     if (!socket || !isConnected) return;
@@ -298,29 +266,6 @@ export const SocketProvider = ({ children }) => {
     });
   }, [processNotificationQueue]);
 
-  // Define handleUserUpdate before using it in useEffect dependencies
-  const handleUserUpdate = useCallback((updatedFields) => {
-    console.log('[SOCKET] Handling user update:', updatedFields);
-    setUser(prevUser => ({
-      ...prevUser,
-      ...updatedFields
-    }));
-  }, [setUser]);
-
-  const createHousePointsNotification = (data) => {
-    return {
-      id: `house_points_${Date.now()}`,
-      type: data.points > 0 ? 'success' : 'warning',
-      title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
-      message: `Your house ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points`,
-      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-      reason: data.reason || 'System update',
-      criteria: data.criteria || null,
-      level: data.level || null,
-      house: data.house
-    };
-  };
-
   // Enhanced socket event handlers
   useEffect(() => {
     if (!socket) return;
@@ -381,10 +326,10 @@ export const SocketProvider = ({ children }) => {
         console.log('[SOCKET] Creating notification with data:', {
           house: data.house,
           points: data.points,
-          reason: data.reason || null,
-          criteria: data.criteria || null,
-          level: data.level || null,
-          timestamp: data.timestamp || Date.now()
+          reason: data.reason,
+          criteria: data.criteria,
+          level: data.level,
+          timestamp: data.timestamp
         });
         
         const notification = createHousePointsNotification(data);
@@ -393,36 +338,30 @@ export const SocketProvider = ({ children }) => {
     };
 
     const handleAdminNotification = (data) => {
-      console.log('Admin notification received:', data);
-      // Ensure all relevant fields from the backend are used
+      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) return;
+      
       const notification = {
-        id: data.id || uuidv4(), // Use backend ID or generate one
-        type: 'admin',
-        title: data.title || 'Admin Notification', // Use backend title
+        id: Date.now(),
+        type: data.notificationType || 'info',
         message: data.message,
-        reason: data.reason, // Add reason
-        criteria: data.criteria, // Add criteria
-        level: data.level, // Add level
-        timestamp: data.timestamp || new Date().toISOString(),
-        pointsChange: data.pointsChange, // Include if admin notifications can change points
-        variant: data.variant || 'info', // Default to info, or use backend-provided variant
-      };
-      addNotification(notification);
-    };
-
-    const handleGlobalAnnouncement = (data) => {
-      console.log('[SOCKET] Received global announcement:', data);
-      const notification = {
-        id: data.id || `announcement_${Date.now()}`,
-        type: 'announcement',
-        title: data.title || 'Global Announcement',
-        message: data.message,
-        timestamp: data.timestamp ? new Date(data.timestamp) : new Date()
+        timestamp: new Date()
       };
       
       addNotification(notification);
     };
 
+    const handleGlobalAnnouncement = (data) => {
+      const notification = {
+        id: Date.now(),
+        type: 'announcement',
+        message: `ANNOUNCEMENT: ${data.message}`,
+        timestamp: new Date()
+      };
+      
+      addNotification(notification);
+    };
+
+    // Register event handlers
     socket.on('sync_update', handleSyncUpdate);
     socket.on('house_points_update', handleHousePointsUpdate);
     socket.on('admin_notification', handleAdminNotification);
@@ -434,17 +373,161 @@ export const SocketProvider = ({ children }) => {
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
-  }, [socket, user, addNotification, handleUserUpdate]);
+  }, [socket, user, isAdminUser.current, addNotification]);
+
+  // Helper to create house points notification
+  const createHousePointsNotification = (data) => {
+    const pointsChange = data.points;
+    const isPositive = pointsChange > 0;
+    const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
+    
+    return {
+      id: uniqueId,
+      type: isPositive ? 'success' : 'warning',
+      title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+      message: formatHousePointsMessage(data),
+      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+      pointsChange,
+      reason: data.reason,
+      criteria: data.criteria,
+      level: data.level,
+      source: 'house_points_update',
+      house: data.house
+    };
+  };
+
+  // Helper to format house points message
+  const formatHousePointsMessage = (data) => {
+    // Start with base message
+    let message = `House ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points!`;
+    
+    // Add total if available
+    if (data.newTotal !== undefined) {
+      message += ` New total: ${data.newTotal}`;
+    }
+    
+    // Add reason, criteria, level in a consistent format
+    const details = [];
+    
+    if (data.reason && data.reason !== 'Admin action' && data.reason.trim() !== '') {
+      details.push(`Reason: ${data.reason}`);
+    }
+    
+    if (data.criteria && data.criteria !== null) {
+      details.push(`Criteria: ${data.criteria}`);
+    }
+    
+    if (data.level && data.level !== null) {
+      details.push(`Level: ${data.level}`);
+    }
+    
+    // Join all details with periods
+    if (details.length > 0) {
+      message += `. ${details.join('. ')}`;
+    }
+    
+    return message;
+  };
+
+  // Helper to handle user updates
+  const handleUserUpdate = (updatedFields) => {
+    if (updatedFields.house && user && setUser) {
+      handleHouseUpdate(updatedFields.house);
+    }
+    
+    if (updatedFields.magicPoints !== undefined) {
+      handleMagicPointsUpdate(updatedFields);
+    }
+  };
+
+  // Helper to handle house updates
+  const handleHouseUpdate = (newHouse) => {
+    if (user && setUser) {
+      setUser(prev => ({
+        ...prev,
+        house: newHouse,
+        previousHouse: prev.house
+      }));
+    }
+  };
+
+  // Helper to handle magic points updates
+  const handleMagicPointsUpdate = (updatedFields) => {
+    if (user && setUser) {
+      const oldPoints = user.magicPoints || 0;
+      const newPoints = updatedFields.magicPoints;
+      
+      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
+      
+      // Update the user object
+      setUser(prev => ({
+        ...prev,
+        magicPoints: newPoints
+      }));
+      
+      // Also notify the MagicPointsContext via a custom event
+      if (typeof window !== 'undefined') {
+        const pointsEvent = new CustomEvent('magicPointsUpdated', {
+          detail: {
+            points: newPoints,
+            source: 'serverSync',
+            immediate: true,
+            oldPoints: oldPoints,
+            timestamp: new Date().toISOString()
+          }
+        });
+        console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
+        window.dispatchEvent(pointsEvent);
+      }
+    }
+  };
+
+  // Method to send a message to the server
+  const sendMessage = useCallback((eventName, data) => {
+    if (socket && isConnected) {
+      socket.emit(eventName, data);
+      return true;
+    }
+    return false;
+  }, [socket, isConnected]);
+
+  // Method to request an immediate sync from server
+  const requestSync = useCallback(() => {
+    if (socket && isConnected) {
+      console.log('[SOCKET] Manually requesting data sync');
+      socket.emit('request_sync');
+      return true;
+    }
+    
+    console.log('[SOCKET] Cannot request sync - not connected');
+    return false;
+  }, [socket, isConnected]);
+
+  // Method to clear notifications
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  // Method to remove a specific notification
+  const removeNotification = useCallback((notificationId) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+  }, []);
 
   return (
-    <SocketContext.Provider value={{
-      socket,
-      isConnected,
-      lastMessage,
-      notifications,
-      connectionQuality,
-      addNotification
-    }}>
+    <SocketContext.Provider
+      value={{
+        socket,
+        isConnected,
+        connectionQuality,
+        lastMessage,
+        notifications,
+        lastHeartbeat,
+        sendMessage,
+        requestSync,
+        clearNotifications,
+        removeNotification
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );

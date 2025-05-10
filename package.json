@@ -12,7 +12,6 @@
     "dev": "react-scripts start"
   },
   "dependencies": {
-    "@chakra-ui/icons": "^2.1.1",
     "@chakra-ui/react": "^2.8.0",
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^7.0.2",
@@ -31,6 +30,7 @@
     "react-image-crop": "^10.1.5",
     "react-latex-next": "^2.2.0",
     "react-router-dom": "^6.11.2",
+    "react-scripts": "5.0.1",
     "socket.io-client": "^4.8.1",
     "web-vitals": "^2.1.4"
   },
@@ -54,8 +54,5 @@
       "last 1 safari version"
     ]
   },
-  "proxy": null,
-  "devDependencies": {
-    "react-scripts": "^5.0.1"
-  }
+  "proxy": null
 }

@@ -9,11 +9,12 @@ import { useAdmin } from '../contexts/AdminContext';
 import axios from 'axios';
 
 // Get API URL and admin credentials from AdminContext
-const API_URL = "/api"; // Updated to use relative path for Vercel proxy
+const API_URL = "https://be-web-6c4k.onrender.com/api";
 const ADMIN_USERS = ['hungpro', 'vipro'];
 const ADMIN_PASSWORD = '31102004';
 
 const MagicPointsDebug = () => {
+  const { isAdmin } = useAdmin();
   const { 
     magicPoints,
     isOnline,
@@ -35,39 +36,15 @@ const MagicPointsDebug = () => {
   const [authStatus, setAuthStatus] = useState(null);
   const [tokenInput, setTokenInput] = useState('');
   const toast = useToast();
-  const isDevMode = true;
-
-  // Run debug on initial load - only log once when component mounts
+  
+  // Check if we're in offline/dev mode
+  const isDevMode = false; // Set to false since we're online now
+  
+  // Run debug on initial load
   useEffect(() => {
-    console.log("Developer mode is active");
-    // First check if debugPointsState exists and is a function
-    if (debugPointsState && typeof debugPointsState === 'function') {
-      try {
-        const data = debugPointsState(true); // Silent mode for initial load
-        setDebugData(data);
-      } catch (error) {
-        console.error('[MagicPointsDebug] Error calling debugPointsState:', error);
-        setDebugData({
-          magicPoints: magicPoints || 0,
-          isOnline: isOnline || navigator.onLine,
-          offlineMode: isOfflineMode || false,
-          error: 'Failed to get debug data'
-        });
-      }
-    } else {
-      console.warn('[MagicPointsDebug] debugPointsState function not available');
-      setDebugData({
-        magicPoints: magicPoints || 0,
-        isOnline: typeof isOnline === 'boolean' ? isOnline : navigator.onLine,
-        offlineMode: typeof isOfflineMode === 'boolean' ? isOfflineMode : false,
-        error: 'debugPointsState function not available'
-      });
-    }
-    
-    if (isDevMode) {
-      console.log("Developer mode is active");
-    }
-  }, [debugPointsState, magicPoints, isOnline, isOfflineMode]);
+    const data = debugPointsState(true); // Silent mode for initial load
+    setDebugData(data);
+  }, [debugPointsState]);
   
   // Listen for magic points updates from socket events
   useEffect(() => {
@@ -110,6 +87,11 @@ const MagicPointsDebug = () => {
     }
   }, [showDebug, debugPointsState]);
   
+  // Early return for admin users, but only AFTER all hooks are defined
+  if (isAdmin) {
+    return null;
+  }
+  
   const handleForceSync = async () => {
     try {
       await forceSync();
@@ -141,44 +123,20 @@ const MagicPointsDebug = () => {
     localStorage.removeItem('correctBlanks');
     localStorage.removeItem('pendingOperations');
     localStorage.removeItem('syncRetryCount');
-    toast({
-      title: 'Local Storage Cleared',
-      description: 'Local storage cleared. Please refresh the page.',
-      status: 'info',
-      duration: 3000,
-      isClosable: true,
-    });
+    alert('Local storage cleared. Please refresh the page.');
   };
   
   const handleResetPoints = async () => {
     try {
       const success = await resetPoints();
       if (success) {
-        toast({
-          title: 'Points Reset',
-          description: 'Points reset to 100. Syncing with server...',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
+        alert('Points reset to 100. Syncing with server...');
       } else {
-        toast({
-          title: 'Reset Failed',
-          description: 'Failed to reset points. Please try again.',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
+        alert('Failed to reset points. Please try again.');
       }
     } catch (error) {
       console.error('Error resetting points:', error);
-      toast({
-        title: 'Reset Error',
-        description: `Error resetting points: ${error.message}`,
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      alert('Error resetting points: ' + error.message);
     }
   };
   
@@ -186,6 +144,7 @@ const MagicPointsDebug = () => {
     if (isAuthenticated) {
       updateAuthentication(null); // logout
       localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('user'); // Also remove user object
       
@@ -203,16 +162,15 @@ const MagicPointsDebug = () => {
         });
         
         if (response.data && response.data.token) {
-          // We should trust the server's response for admin status
-          // But for backwards compatibility, ensure admin fields are set
-          const userData = {
-            ...response.data.user,
-            isAdmin: response.data.user.isAdmin === true || response.data.user.role === 'admin' || response.data.user.house === 'admin'
-          };
-          
+          // Add explicit house and role fields to ensure admin privileges
           const authData = {
             token: response.data.token,
-            user: userData
+            user: {
+              ...response.data.user,
+              house: 'admin',
+              role: 'admin',
+              isAdmin: true
+            }
           };
           
           // Update authentication in context
@@ -220,8 +178,9 @@ const MagicPointsDebug = () => {
           
           // Also save to localStorage
           localStorage.setItem('token', response.data.token);
+          localStorage.setItem('authToken', response.data.token);
           localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('user', JSON.stringify(authData.user));
           
           toast({
             title: 'Authenticated',
@@ -289,6 +248,7 @@ const MagicPointsDebug = () => {
     
     try {
       localStorage.setItem('token', tokenInput.trim());
+      localStorage.setItem('authToken', tokenInput.trim());
       localStorage.setItem('isAuthenticated', 'true');
       
       toast({
@@ -315,7 +275,9 @@ const MagicPointsDebug = () => {
   const handleForceSyncError = () => {
     // Store auth token for debugging
     const currentToken = localStorage.getItem('token');
+    const altToken = localStorage.getItem('authToken');
     console.log('[DEBUG] Current auth token:', currentToken || 'none');
+    console.log('[DEBUG] Alternative auth token:', altToken || 'none');
     
     // Log token details
     if (currentToken) {
@@ -351,38 +313,32 @@ const MagicPointsDebug = () => {
       </Box>
     );
   }
-
+  
   return (
     <Box 
       position="fixed" 
       bottom="10px" 
       right="10px" 
-      zIndex={1000}
+      zIndex={1000} 
       bg="gray.800" 
-      color="white"
-      p={4}
-      borderRadius="md"
-      boxShadow="lg"
-      maxWidth="400px"
-      maxHeight="90vh"
+      boxShadow="lg" 
+      borderRadius="md" 
+      p={4} 
+      maxW="400px"
+      maxH="80vh"
       overflowY="auto"
+      color="white"
     >
-      <VStack align="start" spacing={4}>
-        <HStack justify="space-between" width="100%">
-          <Heading size="md">Magic Points Debug</Heading>
+      <VStack align="stretch" spacing={3}>
+        <HStack justifyContent="space-between">
+          <Heading size="md" color="white">Magic Points Debug</Heading>
           <Button size="xs" onClick={() => setShowDebug(false)}>Close</Button>
         </HStack>
-
+        
         {isDevMode && (
-          <Box mt={2} p={3} borderWidth="1px" borderRadius="md" borderColor="yellow.500" bg="yellow.900" width="100%">
-            <Heading size="sm" color="yellow.300">Developer Mode Active</Heading>
-            <Text fontSize="xs" color="yellow.200" mb={2}>
-              This panel provides additional debugging tools and information.
-            </Text>
-            <Button size="xs" colorScheme="yellow" onClick={handleRefreshDebug}>
-              Refresh Debug Data
-            </Button>
-          </Box>
+          <Badge colorScheme="purple" fontSize="sm" p={1} borderRadius="md" textAlign="center">
+            DEVELOPMENT MODE - Using Local Storage Only
+          </Badge>
         )}
         
         <Divider />
@@ -402,98 +358,90 @@ const MagicPointsDebug = () => {
           </Badge>
         </HStack>
         
-        <Box border="1px solid gray" borderRadius="md" p={2} mt={2} width="100%">
-          <Text fontSize="sm" fontWeight="bold">Current Magic Points:</Text>
-          <Code colorScheme="yellow" fontSize="lg">{debugData?.magicPoints ?? magicPoints ?? 'N/A'}</Code>
-        </Box>
-        
-        <Text fontSize="xs" color="gray.400">Last Synced: {lastSynced ? new Date(lastSynced).toLocaleString() : 'Never'}</Text>
-        
-        <Divider />
-        
-        <Box width="100%">
-          <Heading size="sm" mb={2}>Debug Actions</Heading>
-          <VStack align="start" spacing={2}>
-            <Button onClick={handleForceSync} size="sm" colorScheme="blue" width="full">
-              Force Sync
-            </Button>
-            <Button onClick={handleForceSyncWithDebug} size="sm" colorScheme="teal" width="full">
-              Force Sync With Debug
-            </Button>
-            <Button onClick={handleResetRevelioAttempts} size="sm" colorScheme="orange" width="full">
-              Reset Revelio Attempts
-            </Button>
-            <Button onClick={handleResetPoints} size="sm" colorScheme="green" width="full">
-              Reset Points to 100
-            </Button>
-            <Button onClick={handleClearLocalStorage} size="sm" colorScheme="red" width="full">
-              Clear LocalStorage
-            </Button>
-          </VStack>
-        </Box>
-        
-        <Divider />
-        
-        <Box width="100%">
-          <Heading size="sm" mb={2}>Authentication Debug</Heading>
-          <VStack align="start" spacing={2}>
-            <Button 
-              onClick={handleToggleAuth} 
-              size="sm" 
-              colorScheme={isAuthenticated ? "red" : "green"}
-              width="full"
-            >
-              {isAuthenticated ? "Force Logout" : "Force Login (Admin)"}
-            </Button>
-            <Button onClick={checkServerAuth} size="sm" colorScheme="blue" width="full">
-              Check Server Authentication
-            </Button>
-            <HStack width="full">
-              <Input 
-                placeholder="Enter JWT token" 
-                size="sm" 
-                value={tokenInput} 
-                onChange={(e) => setTokenInput(e.target.value)}
-              />
-              <Button onClick={handleManualTokenSet} size="sm">
-                Set
-              </Button>
-            </HStack>
-            <Button onClick={handleForceSyncError} size="sm" colorScheme="yellow" width="full">
-              Debug Auth Issues
-            </Button>
-          </VStack>
+        <Box>
+          <Text fontWeight="bold" color="white">Current Points: {magicPoints}</Text>
+          <Text fontSize="sm" color="gray.200">Last Synced: {lastSynced || 'Never'}</Text>
+          <Text fontSize="sm" color="gray.200">Auth Token: {localStorage.getItem('token') ? 'Present' : 'Missing'}</Text>
+          <Text fontSize="sm" color="gray.200">Retry Count: {localStorage.getItem('syncRetryCount') || '0'}</Text>
         </Box>
         
         {authStatus && (
+          <Alert 
+            status={authStatus.authenticated ? 'success' : 'error'} 
+            borderRadius="md"
+            size="sm"
+          >
+            <AlertIcon />
+            <Text fontSize="xs">
+              {authStatus.authenticated 
+                ? 'Server authentication verified' 
+                : `Auth failed: ${authStatus.reason || authStatus.error || 'Unknown error'}`}
+            </Text>
+          </Alert>
+        )}
+        
+        {/* Manual token input */}
+        <VStack spacing={1}>
+          <Input 
+            placeholder="Enter JWT token" 
+            size="xs"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            bg="gray.700"
+            color="white"
+            fontSize="xs"
+          />
+          <Button size="xs" colorScheme="purple" onClick={handleManualTokenSet} width="100%">
+            Set Token Manually
+          </Button>
+        </VStack>
+        
+        {debugData && (
           <>
-            <Divider />
-            <Box width="100%">
-              <Heading size="sm" mb={2}>Auth Status</Heading>
-              <Alert status={authStatus.authenticated ? "success" : "error"}>
-                <AlertIcon />
-                {authStatus.authenticated 
-                  ? `Authenticated: ${authStatus.userId}` 
-                  : `Not Authenticated: ${authStatus.reason || authStatus.error || 'Unknown reason'}`
-                }
-              </Alert>
-            </Box>
+            <Text fontWeight="bold" color="white">Pending Operations: {debugData.pendingOperations.length}</Text>
+            {debugData.pendingOperations.length > 0 && (
+              <Box bg="gray.700" p={2} borderRadius="md" fontSize="sm">
+                <Code bg="gray.700" color="green.300">{JSON.stringify(debugData.pendingOperations.slice(0, 5), null, 2)}</Code>
+                {debugData.pendingOperations.length > 5 && (
+                  <Text color="gray.300">...and {debugData.pendingOperations.length - 5} more</Text>
+                )}
+              </Box>
+            )}
           </>
         )}
         
-        {pendingOperations && pendingOperations.length > 0 && (
-          <>
-            <Divider />
-            <Box width="100%">
-              <Heading size="sm" mb={2}>Pending Operations ({pendingOperations.length})</Heading>
-              <Box maxHeight="100px" overflowY="auto" bg="gray.700" p={2} borderRadius="md">
-                <Code as="pre" variant="outline" p={2} fontSize="xs">
-                  {JSON.stringify(pendingOperations, null, 2)}
-                </Code>
-              </Box>
-            </Box>
-          </>
-        )}
+        <HStack wrap="wrap" spacing={2}>
+          <Button size="sm" colorScheme="blue" onClick={handleRefreshDebug}>
+            Refresh
+          </Button>
+          <Button size="sm" colorScheme="green" onClick={handleForceSync}>
+            Force Sync
+          </Button>
+          <Button size="sm" colorScheme="purple" onClick={handleForceSyncWithDebug}>
+            Debug Sync
+          </Button>
+        </HStack>
+        
+        <HStack wrap="wrap" spacing={2}>
+          <Button size="sm" colorScheme="orange" onClick={handleResetRevelioAttempts}>
+            Reset Revelio
+          </Button>
+          <Button size="sm" colorScheme="red" onClick={handleClearLocalStorage}>
+            Clear Storage
+          </Button>
+          <Button size="sm" colorScheme="yellow" onClick={handleResetPoints}>
+            Reset Points
+          </Button>
+        </HStack>
+        
+        <HStack wrap="wrap" spacing={2}>
+          <Button size="sm" colorScheme={isAuthenticated ? "red" : "green"} onClick={handleToggleAuth}>
+            {isAuthenticated ? "Logout" : "Login"}
+          </Button>
+          <Button size="sm" colorScheme="teal" onClick={handleForceSyncError}>
+            Check Auth
+          </Button>
+        </HStack>
       </VStack>
     </Box>
   );

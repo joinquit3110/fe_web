@@ -19,7 +19,7 @@ import {
   Image
 } from '@chakra-ui/react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/HarryPotter.css';
 import '../styles/LoginHogwarts.css';
 // Import house logo images
@@ -28,11 +28,6 @@ import slytherinImg from '../asset/Slytherin.png';
 import ravenclawImg from '../asset/Ravenclaw.png';
 import hufflepuffImg from '../asset/Hufflepuff.png';
 import hogwartsLogoImg from '../asset/Hogwarts logo.png';
-
-// Define API URL constants
-const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com/api";
-const ADMIN_USERS = ['hungpro', 'vipro'];
-const ADMIN_PASSWORD = '31102004';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -134,64 +129,10 @@ const Login = () => {
   // Effect for house logo transition after login
   useEffect(() => {
     if (loginSuccess && userHouse) {
-      // Get user data to determine proper redirect destination
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      
-      // Check admin status through multiple fields
-      const isAdminUser = 
-        userHouse === 'admin' || 
-        userData.isAdmin === true || 
-        userData.role === 'admin' || 
-        userData.house === 'admin' ||
-        (userData.username && ['hungpro', 'vipro'].includes(userData.username));
-      
-      console.log('[Login] Preparing redirect with user data:', {
-        userHouse,
-        isAdmin: userData.isAdmin,
-        role: userData.role, 
-        house: userData.house,
-        username: userData.username,
-        isAdminUser
-      });
-      
-      // Ensure admin flag is consistently set in localStorage
-      if (isAdminUser && !userData.isAdmin) {
-        userData.isAdmin = true;
-        localStorage.setItem('user', JSON.stringify(userData));
-        console.log('[Login] Updated user data with admin flag');
-      }
-      
       // Delay navigation to allow house animation to be displayed
       const timer = setTimeout(() => {
-        // Redirect admin users to admin dashboard, regular users to dashboard
-        if (isAdminUser) {
-          console.log('[Login] Redirecting admin user to admin panel');
-          // Force reload to ensure fresh state for admin panel
-          sessionStorage.setItem('adminLogin', 'true');
-          sessionStorage.setItem('adminRedirect', 'true');
-          sessionStorage.setItem('user', JSON.stringify(userData));
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('offlineMode', 'false');
-          
-          // Explicitly update auth state for immediate visibility
-          try {
-            const event = new CustomEvent('authStateChange', { 
-              detail: { isAuthenticated: true, isAdmin: true }
-            });
-            window.dispatchEvent(event);
-          } catch (e) {
-            console.error('[Login] Error dispatching auth event:', e);
-          }
-          
-          navigate('/admin');
-        } else {
-          console.log('[Login] Redirecting regular user to dashboard');
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('offlineMode', 'false');
-          navigate('/dashboard');
-        }
+        navigate('/dashboard');
       }, 2500); // Show logo for 2.5 seconds before navigating
-      
       return () => clearTimeout(timer);
     }
   }, [loginSuccess, userHouse, navigate]);
@@ -206,22 +147,10 @@ const Login = () => {
     console.log('Enrollment button clicked. Navigating to /register');
   };
 
-  // Reset any previous login state
-  const resetLoginState = () => {
-    // Clear admin flags if previously set
-    sessionStorage.removeItem('adminLogin');
-    sessionStorage.removeItem('adminRedirect');
-    sessionStorage.removeItem('user');
-    sessionStorage.removeItem('token');
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
-    // Reset any previous login state for clean login
-    resetLoginState();
 
     // Save username and password if remember me is selected
     if (rememberMe) {
@@ -235,64 +164,31 @@ const Login = () => {
     try {
       // Check for admin credentials
       const adminUsers = ['hungpro', 'vipro'];
-      const adminPassword = '31102004'; // Updated to match the server's expected admin password
+      const adminPassword = '3110';
       
       if (adminUsers.includes(email) && password === adminPassword) {
         console.log('Admin login detected');
         
-        // Define API_URL here
-        const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com/api";
+        // Create a fake admin user object
+        const adminUser = {
+          id: `admin-${email}`,
+          username: email,
+          email: `${email}@hogwarts.admin.edu`,
+          fullName: `Admin ${email.charAt(0).toUpperCase() + email.slice(1)}`,
+          isAdmin: true,
+          role: 'admin',
+          house: 'admin'
+        };
         
-        try {
-          // Use actual backend login to get proper JWT token
-          const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              username: email,
-              password: adminPassword
-            })
-          });
-          
-          const data = await response.json();
-          
-          if (!response.ok) {
-            throw new Error(data.message || 'Admin login failed');
-          }
-          
-          // Ensure admin flag is properly set
-          const adminUser = {
-            ...data.user,
-            isAdmin: true, // explicitly set admin flag
-            role: data.user.role || 'admin',
-            house: data.user.house || 'admin',
-            username: email // Ensure username is set correctly
-          };
-          
-          // Store enhanced admin user data in multiple locations for redundancy
-          localStorage.setItem('user', JSON.stringify(adminUser));
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('offlineMode', 'false'); // Ensure online mode is set
-          sessionStorage.setItem('adminLogin', 'true'); // Additional flag for redundancy
-          
-          // Also store in session storage as backup
-          sessionStorage.setItem('user', JSON.stringify(adminUser));
-          sessionStorage.setItem('token', data.token);
-          
-          console.log('[Login] Admin login successful, user data:', adminUser);
-          
-          // Set admin house for animation
-          setUserHouse('admin');
-          setLoginSuccess(true);
-          return;
-          
-        } catch (adminLoginError) {
-          console.error('Admin login API error:', adminLoginError);
-          throw adminLoginError; // Re-throw to be caught by outer catch block
-        }
+        // Store admin user in localStorage
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        localStorage.setItem('token', `admin-token-${Date.now()}`);
+        localStorage.setItem('isAuthenticated', 'true');
+        
+        // Set admin house for animation
+        setUserHouse('admin');
+        setLoginSuccess(true);
+        return;
       }
       
       // Regular user flow
@@ -302,45 +198,11 @@ const Login = () => {
         password: password
       });
       
-      // Ensure we're in online mode after successful login
-      localStorage.setItem('offlineMode', 'false');
-      localStorage.setItem('isAuthenticated', 'true');
-      
-      // Verify authentication immediately to ensure online status
-      try {
-        const { checkAuthStatus } = await import('../api/magicPointsApi');
-        const authStatus = await checkAuthStatus();
-        console.log('[Login] Auth verification after login:', authStatus);
-        
-        // Force online mode if authentication succeeded
-        if (authStatus.authenticated) {
-          localStorage.setItem('offlineMode', 'false');
-        }
-      } catch (verifyError) {
-        console.warn('[Login] Auth verification error:', verifyError);
-        // Continue with login flow even if verification fails
-      }
-      
-      // Log to understand the structure
-      console.log('[Login] Regular login response:', userData);
-      
-      // Handle different response structures and extract house information
-      let userHouseValue = null;
-      
-      if (userData && userData.user && userData.user.house) {
-        userHouseValue = userData.user.house.toLowerCase();
-      } else if (userData && userData.house) {
-        userHouseValue = userData.house.toLowerCase();
-      }
-      
-      // If we found a house, set it and trigger the success animation
-      if (userHouseValue) {
-        console.log('[Login] Setting user house to:', userHouseValue);
-        setUserHouse(userHouseValue);
+      // Get user house for animation
+      if (userData && userData.house) {
+        setUserHouse(userData.house.toLowerCase());
         setLoginSuccess(true);
       } else {
-        // If no house information, just redirect directly
-        console.log('[Login] No house information found, redirecting directly to dashboard');
         navigate('/dashboard');
       }
     } catch (error) {

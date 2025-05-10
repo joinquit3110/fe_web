@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const AuthContext = createContext(null);
 
 // Use a consistent API URL for all requests
-const API_URL = "/api"; // Updated to use relative path for Vercel proxy
+const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
           password: adminPassword
         };
         
-        const response = await fetch(`${API_URL}/auth/login`, { // Will resolve to /api/auth/login
+        const response = await fetch(`${API_URL}/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
         password: password
       };
       
-      const response = await fetch(`${API_URL}/auth/login`, { // Will resolve to /api/auth/login
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }) => {
   // Register function
   const register = async (userData) => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, { // Will resolve to /api/auth/register
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -227,8 +227,6 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     error,
-    setUser, // Added setUser
-    setError, // Added setError
     login,
     logout,
     register,
@@ -243,4 +241,10 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

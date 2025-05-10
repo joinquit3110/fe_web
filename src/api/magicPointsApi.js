@@ -9,14 +9,11 @@ const BACKEND_URL = 'https://be-web-6c4k.onrender.com';
 // Flag to enable offline mode for development
 const USE_OFFLINE_MODE = false;
 
-// Export constants and utility functions for use in other modules
+// Export USE_OFFLINE_MODE for use in other modules
 export { USE_OFFLINE_MODE };
 
-/**
- * Helper for getting authentication token
- * @returns {string} The authentication token from storage, or empty string if not found
- */
-export const getAuthToken = () => {
+// Helper for getting authentication token
+const getAuthToken = () => {
   // Try multiple token storage locations
   const token = localStorage.getItem('token') || 
                 localStorage.getItem('authToken') || 
@@ -24,16 +21,8 @@ export const getAuthToken = () => {
   
   if (!token) {
     console.warn('[API] No auth token found in any storage location');
-    // For consistency, indicate offline mode if no token found
-    localStorage.setItem('offlineMode', 'true');
-    localStorage.setItem('isAuthenticated', 'false');
-    return '';
-  } else {
-    // If we have a token, mark as online and set authenticated
-    localStorage.setItem('offlineMode', 'false');
-    localStorage.setItem('isAuthenticated', 'true');
   }
-  return token;
+  return token || '';
 };
 
 // Helper function to handle API errors
@@ -311,49 +300,13 @@ export const getLocalPoints = () => {
   }
 };
 
-// Enhanced function to check authentication status
+// New function to check authentication status
 export const checkAuthStatus = async () => {
   try {
     const token = getAuthToken();
-    
-    // First, check if offline mode is forced in localStorage
-    const forceOfflineMode = localStorage.getItem('offlineMode') === 'true';
-    if (forceOfflineMode) {
-      console.log('[AUTH] Using offline mode as set in localStorage');
-      return { 
-        authenticated: false, 
-        reason: 'Offline mode is enabled',
-        offlineMode: true
-      };
-    }
-    
-    // Check if we have a token
     if (!token) {
-      console.log('[AUTH] No authentication token found');
-      localStorage.setItem('offlineMode', 'true'); // Set offline mode if no token
-      return { 
-        authenticated: false, 
-        reason: 'No token found',
-        offlineMode: true
-      };
+      return { authenticated: false, reason: 'No token found' };
     }
-    
-    // Check if we're online
-    if (!navigator.onLine) {
-      console.log('[AUTH] Device is offline');
-      localStorage.setItem('offlineMode', 'true');
-      return {
-        authenticated: false,
-        reason: 'Device is offline',
-        offlineMode: true
-      };
-    }
-    
-    console.log('[AUTH] Verifying authentication token with backend');
-    
-    // Use AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
       method: 'GET',
@@ -361,194 +314,23 @@ export const checkAuthStatus = async () => {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
-      },
-      signal: controller.signal
-    }).catch(err => {
-      if (err.name === 'AbortError') {
-        console.log('[AUTH] Request timed out - switching to offline mode');
-        localStorage.setItem('offlineMode', 'true');
-        return null;
       }
-      throw err;
     });
     
-    clearTimeout(timeoutId);
-    
-    if (!response) {
-      return {
-        authenticated: false,
-        reason: 'Request timed out',
-        offlineMode: true
-      };
-    }
-    
     if (!response.ok) {
-      console.log(`[AUTH] Server returned ${response.status}: ${response.statusText}`);
-      
-      // If authentication failed, mark as offline
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('token'); // Clear invalid token
-        localStorage.setItem('offlineMode', 'true');
-      }
-      
       return { 
         authenticated: false, 
         status: response.status,
-        reason: `Server returned ${response.status}: ${response.statusText}`,
-        offlineMode: response.status === 401 || response.status === 403
+        reason: `Server returned ${response.status}: ${response.statusText}`
       };
     }
     
     const data = await response.json();
-    
-    // Successfully authenticated - ensure we're in online mode and set authenticated
-    localStorage.setItem('offlineMode', 'false');
-    localStorage.setItem('isAuthenticated', 'true');
-    
-    // Also verify admin status and ensure it's set properly
-    if (data.isAdmin) {
-      const storedUserJson = localStorage.getItem('user');
-      if (storedUserJson) {
-        try {
-          const storedUser = JSON.parse(storedUserJson);
-          if (!storedUser.isAdmin) {
-            storedUser.isAdmin = true;
-            localStorage.setItem('user', JSON.stringify(storedUser));
-            sessionStorage.setItem('adminLogin', 'true');
-            console.log('[AUTH] Updated user with admin flag');
-          }
-        } catch (e) {
-          console.error('[AUTH] Error updating stored user:', e);
-        }
-      }
-    }
-    
-    // Dispatch global auth state change event
-    try {
-      const event = new CustomEvent('authStateChange', { 
-        detail: { 
-          isAuthenticated: true, 
-          isAdmin: data.isAdmin,
-          offlineMode: false
-        }
-      });
-      window.dispatchEvent(event);
-    } catch (e) {
-      console.error('[AUTH] Error dispatching auth event:', e);
-    }
-    
-    return { 
-      authenticated: true, 
-      userId: data.userId, 
-      isAdmin: data.isAdmin,
-      username: data.username,
-      house: data.house 
-    };
+    return { authenticated: true, userId: data.userId };
   } catch (error) {
-    console.error('[AUTH] Error checking authentication status:', error);
-    
-    // Set offline mode if there was a network error
-    const isNetworkError = error.message && (
-      error.message.includes('Network') || 
-      error.message.includes('Failed to fetch')
-    );
-    
-    if (isNetworkError) {
-      localStorage.setItem('offlineMode', 'true');
-    }
-    
     return { 
       authenticated: false, 
-      reason: `Error checking auth: ${error.message}`,
-      offlineMode: isNetworkError
+      reason: `Error checking auth: ${error.message}` 
     };
   }
 };
-
-/**
- * Function to clear the "needs sync" flag on the server
- * @param {string} token - Authentication token
- * @returns {Promise<Object>} - Result of the operation
- */
-export const clearNeedSync = async (token) => {
-  console.log('[API] clearNeedSync called.');
-  
-  if (!token) {
-    console.warn('[API] No token provided to clearNeedSync');
-    return Promise.resolve({ success: false, message: "No authentication token" });
-  }
-  
-  try {
-    // Call the API endpoint to clear the sync flag
-    const response = await fetch(`${BACKEND_URL}/api/user/magic-points/clear-sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!response.ok) {
-      console.warn(`[API] clearNeedSync failed with status ${response.status}`);
-      return { success: false, status: response.status };
-    }
-    
-    // Parse and return the response
-    const data = await response.json();
-    return { success: true, ...data };
-  } catch (error) {
-    console.error('[API] Error in clearNeedSync:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * Function to check if synchronization is needed based on server data
- * @param {string} token - Authentication token
- * @returns {Promise<boolean>} - Whether synchronization is needed
- */
-export const checkNeedSync = async (token) => {
-  console.log('[API] checkNeedSync called.');
-  
-  if (!token) {
-    console.warn('[API] No token provided to checkNeedSync');
-    return false;
-  }
-  
-  try {
-    // Call the API endpoint to check if sync is needed
-    const response = await fetch(`${BACKEND_URL}/api/user/magic-points/check-sync`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!response.ok) {
-      console.warn(`[API] checkNeedSync failed with status ${response.status}`);
-      return false;
-    }
-    
-    // Parse and return the response
-    const data = await response.json();
-    return data.needsSync || false; // Return whether sync is needed
-  } catch (error) {
-    console.error('[API] Error in checkNeedSync:', error);
-    return false; // Default to no sync needed on error
-  }
-};
-
-// No need to re-export everything since we're using named exports throughout the file
-// The following functions are all already exported directly:
-// - getAuthToken
-// - checkAuthStatus
-// - clearNeedSync
-// - checkNeedSync
-// - fetchMagicPoints
-// - updateMagicPoints
-// - syncMagicPointsOperations
-// - isOnline
-// - storePointsLocally
-// - getLocalPoints

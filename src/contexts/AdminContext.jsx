@@ -1,57 +1,29 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext.jsx'; // Corrected import to use the event-driven AuthContext and ensure .jsx extension
-import { useMagicPoints } from '../context/MagicPointsContext.jsx'; // Added .jsx extension for consistency
+import { useAuth } from './AuthContext';
+import { useMagicPoints } from '../context/MagicPointsContext';
 import axios from 'axios';
-import { useToast } from '@chakra-ui/react'; // Added useToast import
 
 // Constants
 const ADMIN_USERS = ['hungpro', 'vipro'];
 const ADMIN_PASSWORD = '31102004';
-const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.com/api";
+const API_URL = "https://be-web-6c4k.onrender.com/api";
 
 // Create context
 const AdminContext = createContext();
 
 // Custom hook to use the admin context
-export const useAdmin = () => {
-  const context = useContext(AdminContext);
-  if (context === undefined) {
-    throw new Error('useAdmin must be used within an AdminProvider');
-  }
-  return context;
-};
+export const useAdmin = () => useContext(AdminContext);
 
 export const AdminProvider = ({ children }) => {
-  const { user, isAuthenticated } = useAuth(); // Now from ../context/AuthContext.jsx
-  
-  // Always call useMagicPoints unconditionally to follow React Hook rules
-  const magicPointsContextValue = useMagicPoints();
-  
-  // Then handle any potential errors after the hook is called
-  let magicPointsContext = {};
-  if (magicPointsContextValue) {
-    magicPointsContext = magicPointsContextValue;
-  } else {
-    console.warn('[AdminContext] MagicPointsContext not available or returned null/undefined');
-    // Provide default empty functions as fallback
-    magicPointsContext = {
-      magicPoints: 100,
-      forceSync: () => console.warn('[AdminContext] forceSync called but MagicPointsContext not available'),
-      forceSyncWithDebug: () => console.warn('[AdminContext] forceSyncWithDebug called but MagicPointsContext not available'),
-      resetRevelioAttempts: () => console.warn('[AdminContext] resetRevelioAttempts called but MagicPointsContext not available'),
-      resetPoints: () => console.warn('[AdminContext] resetPoints called but MagicPointsContext not available')
-    };
-  }
-  
+  const { user, isAuthenticated } = useAuth();
   const { 
     magicPoints, 
     forceSync, 
     forceSyncWithDebug, 
     resetRevelioAttempts, 
-    resetPoints
-  } = magicPointsContext;
-  const toast = useToast(); // Initialized useToast
-
+    resetPoints 
+  } = useMagicPoints();
+  
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -110,58 +82,18 @@ export const AdminProvider = ({ children }) => {
 
   // Check if current user is an admin
   useEffect(() => {
-    console.log('[AdminContext] useEffect for isAdmin check. AuthContext user:', user, 'isAuthenticated:', isAuthenticated);
-    let determinedAdmin = false;
     if (isAuthenticated && user) {
-        if (user.isAdmin) {
-            determinedAdmin = true;
-            console.log('[AdminContext] Admin status confirmed from AuthContext user object (user.isAdmin).');
-        } else if (ADMIN_USERS.includes(user.username)) {
-            console.warn('[AdminContext] User is in ADMIN_USERS list, but user.isAdmin is false in AuthContext. This might indicate an issue with how isAdmin is set during login or authStateChange. User:', user);
-            // Attempt to verify with localStorage as a fallback, but AuthContext should be the source of truth.
-            try {
-                const storedUserString = localStorage.getItem('user');
-                if (storedUserString) {
-                    const storedUser = JSON.parse(storedUserString);
-                    if (storedUser && storedUser.isAdmin && storedUser.username === user.username) {
-                        determinedAdmin = true;
-                        console.log('[AdminContext] Fallback: Confirmed admin via ADMIN_USERS list and matching localStorage admin user.');
-                    } else {
-                         console.log('[AdminContext] Fallback: User in ADMIN_USERS list, but localStorage does not confirm admin status for this specific user or username mismatch.');
-                    }
-                }
-            } catch (e) {
-                console.error('[AdminContext] Fallback: Error parsing localStorage user for admin check', e);
-            }
-        } else {
-            console.log('[AdminContext] User is not admin based on user.isAdmin and not in ADMIN_USERS list.');
-        }
-        
-        // Additional check for sessionStorage.adminLogin as a potential indicator if other checks fail
-        // This is more of a debugging/consistency check.
-        if (!determinedAdmin && sessionStorage.getItem('adminLogin') === 'true' && user && ADMIN_USERS.includes(user.username)) {
-            console.warn('[AdminContext] sessionStorage.adminLogin is true and username is admin, but user.isAdmin was false and not caught by primary checks. This is a significant state inconsistency.');
-            // Consider if determinedAdmin should be true here, but it implies AuthContext is out of sync.
-        }
-
+      const isAdminUser = ADMIN_USERS.includes(user.username);
+      setIsAdmin(isAdminUser);
+      
+      // If admin, fetch users
+      if (isAdminUser) {
+        fetchUsers();
+      }
     } else {
-        console.log('[AdminContext] Not authenticated or no user object from AuthContext for isAdmin check.');
+      setIsAdmin(false);
     }
-
-    if (isAdmin !== determinedAdmin) {
-        console.log(`[AdminContext] Setting isAdmin state from ${isAdmin} to: ${determinedAdmin}`);
-        setIsAdmin(determinedAdmin);
-    }
-
-  }, [isAuthenticated, user, isAdmin]);
-
-  // useEffect to fetch users when isAdmin becomes true and users are not yet loaded.
-  useEffect(() => {
-    if (isAdmin && users.length === 0) {
-      console.log('[AdminContext] isAdmin is true and users not loaded, fetching users.');
-      fetchUsers();
-    }
-  }, [isAdmin, users.length, fetchUsers]);
+  }, [isAuthenticated, user, fetchUsers]);
 
   // Assign house to user in MongoDB with improved handling
   const assignHouse = async (userId, house) => {
@@ -477,109 +409,166 @@ export const AdminProvider = ({ children }) => {
       const houseUsers = users.filter(user => user.house === house);
       
       if (houseUsers.length === 0) {
-        console.warn(`No users found locally for house: ${house}. The operation will target users on the backend.`);
+        throw new Error(`No users found in house: ${house}`);
       }
       
-      const userIds = houseUsers.map(user => user._id || user.id).filter(id => id);
-
-      if (userIds.length === 0) {
-        toast({
-          title: 'No Users Found',
-          description: `No users were found locally for house ${house}. Points not updated.`,
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        setLoading(false);
-        return false;
-      }
+      const userIds = houseUsers.map(user => user._id || user.id);
       
-      console.log(`[AdminContext] Updating ${pointsChange} points for ${userIds.length} users in house ${house}. Reason: ${reason}`);
-
-      // Debug the token being used
-      console.log(`[AdminContext] Token prefix: ${token.substring(0, 20)}...`);
+      // Update points in the database first - this is the critical operation
+      const updatedUserIds = []; // Keep track of successfully updated users
       
-      // Skip admin operations if using a fake token
-      if (token.startsWith('admin-token-')) {
-        console.error('[AdminContext] Invalid admin token detected (fake client-side token). Please log in properly using the Login component.');
-        toast({
-          title: 'Invalid Admin Token',
-          description: 'You are using a client-side generated token which will not authenticate with the server. Please log in again properly.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        throw new Error('Invalid admin token. Please log in properly.');
-      }
-
-      // Verify user authentication status before proceeding
-      const authCheckResponse = await axios.get(`${API_URL}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      for (const userId of userIds) {
+        try {
+          // Get current user's points
+          const userResponse = await axios.get(`${API_URL}/users/${userId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const user = userResponse.data;
+          const currentPoints = user.magicPoints || 0;
+          const newPoints = Math.max(0, currentPoints + pointsChange); // Ensure points don't go below 0
+          
+          // Update user's points
+          await axios.patch(`${API_URL}/users/${userId}`, 
+            { 
+              magicPoints: newPoints,
+              lastPointsUpdate: new Date().toISOString(),
+              lastUpdateReason: reason
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          // Add to successful list
+          updatedUserIds.push(userId);
+        } catch (userError) {
+          console.error(`Error updating points for user ${userId}:`, userError);
+          // Continue with other users even if one fails
         }
-      });
-
-      console.log(`[AdminContext] Auth verification result:`, authCheckResponse.data);
-
-      if (!authCheckResponse.data.authenticated) {
-        throw new Error('Authentication verification failed. Please try logging in again.');
       }
       
-      // Explicitly check admin status
-      if (!authCheckResponse.data.isAdmin) {
-        console.error('[AdminContext] User is authenticated but lacks admin privileges:', authCheckResponse.data);
-        toast({
-          title: 'Admin Privileges Required',
-          description: 'Your account is authenticated but lacks admin privileges required for this action.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        throw new Error('Admin privileges required for this operation.');
-      }
-
-      // Call the backend's bulk-update endpoint
-      const response = await axios.post(`${API_URL}/users/bulk-update`, 
-        { 
-          house,
-          pointsChange,
-          reason: reason || 'House points update by admin',
-          targetUserIdsForHousePoints: userIds
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+      // Only try to send notification if points were updated successfully
+      if (updatedUserIds.length > 0) {
+        try {
+          // Create a notification for users - simplified format for better compatibility
+          const notification = {
+            type: pointsChange > 0 ? 'success' : 'warning',
+            title: pointsChange > 0 ? 'Points Awarded!' : 'Points Deducted!',
+            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${reason}`,
+            targetUsers: [], // Trường bắt buộc - rỗng để gửi cho tất cả người dùng
+            housesAffected: [house], // Trường bắt buộc - chỉ định nhà bị ảnh hưởng
+            // Thêm các trường mở rộng cho frontend
+            house: house,
+            pointsChange: pointsChange,
+            reason: reason || 'House points update'
+          };
+          
+          // Send notification to the backend for real-time delivery
+          // Use a try-catch block specifically for the notification
+          // to prevent notification errors from failing the whole operation
+          try {
+            await axios.post(`${API_URL}/notifications`, notification, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            console.log('House notification sent successfully');
+            
+            // Add direct socket notification using app.locals (if available)
+            try {
+              // Also send a direct socket event if there's an active socket connection
+              if (window.socket && typeof window.socket.emit === 'function') {
+                console.log('Sending house_points_update via socket');
+                window.socket.emit('client_house_notification', {
+                  house,
+                  points: pointsChange,
+                  reason,
+                  criteria: null,
+                  level: null,
+                  newTotal: houseUsers.reduce((total, user) => 
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                });
+              }
+              
+              // Dispatch a custom event for local notification display
+              // This will trigger notification display even if server sockets fail
+              const notificationEvent = new CustomEvent('house-points-update', {
+                detail: {
+                  house,
+                  points: pointsChange,
+                  reason,
+                  criteria: null,
+                  level: null,
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(notificationEvent);
+            } catch (socketError) {
+              console.error('Error with direct socket notification:', socketError);
+              // Socket error shouldn't fail the operation
+            }
+          } catch (notifError) {
+            // Log notification error but don't throw - this shouldn't stop the function
+            console.error('Failed to send notification (non-critical):', notifError);
+            
+            // Client-side fallback: Add notification to local storage for the frontend to pick up
+            try {
+              const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
+              localNotifications.push({
+                ...notification,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                clientFallback: true
+              });
+              localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
+              console.log('Added notification to local fallback system');
+            } catch (fallbackError) {
+              console.error('Failed to store notification in local fallback:', fallbackError);
+            }
           }
+          
+          // Force sync for all affected users
+          // Use the bulk sync endpoint if available
+          try {
+            await axios.post(`${API_URL}/users/force-sync`, 
+              { userIds: updatedUserIds },
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log('Force sync initiated for updated users');
+          } catch (syncError) {
+            console.error('Error initiating sync (non-critical):', syncError);
+          }
+        } catch (postUpdateError) {
+          console.error('Error in post-update operations:', postUpdateError);
+          // Don't throw here - the points were already updated successfully
         }
-      );
-
-      if (response.data && response.data.success) {
-        toast({
-          title: 'House Points Updated',
-          description: `${response.data.updated || 0} users in ${house} had their points adjusted by ${pointsChange}. Reason: ${reason}`,
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-
-        await fetchUsers();
-
-      } else {
-        throw new Error(response.data.message || 'Failed to update house points via bulk operation.');
       }
       
-      return true;
+      // Update local state to reflect changes
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          userIds.includes(user._id || user.id) 
+            ? { ...user, magicPoints: Math.max(0, (user.magicPoints || 0) + pointsChange) } 
+            : user
+        )
+      );
+      
+      return updatedUserIds.length > 0;
     } catch (err) {
       console.error('Error updating house points:', err);
-      setError(err.message || 'Failed to update house points');
-      toast({
-        title: 'Error Updating Points',
-        description: err.message || 'An unknown error occurred.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+      setError('Failed to update house points: ' + (err.message || 'Unknown error'));
       return false;
     } finally {
       setLoading(false);
@@ -662,21 +651,32 @@ export const AdminProvider = ({ children }) => {
         throw new Error('Invalid criteria type');
       }
 
-      // Get the criteria and level labels
+      // Format reason with criteria and level clearly marked for parsing
       const { criteriaLabel, levelLabel } = getCriteriaAndLevelLabels(criteriaType, performanceLevel);
       
       // Make reason optional - only include if provided by user
-      const userReason = details ? details.trim() : null;
+      // Separate the user-provided reason from the system-added criteria and level
+      let userReason = details ? details.trim() : '';
       
-      // Create a system-generated reason with criteria and level
-      const systemInfo = `Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
+      // Format the full message with criteria and level, but keep reason separate
+      let systemInfo = `Criteria: ${criteriaLabel}. Level: ${levelLabel}.`;
       
+      // Create a formatted version with both (for database/backend)
+      let fullFormattedReason = userReason ? 
+        `${userReason}. ${systemInfo}` : 
+        systemInfo;
+      
+      // Keep the full reason with criteria and level in backend data
+      let backendReason = fullFormattedReason;
+
       // Get authentication token
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
       if (!token) {
         throw new Error('Authentication token not found');
       }
+
+      console.log('Sending house points update with formatted reason:', backendReason);
 
       // Filter users by house
       const houseUsers = users.filter(user => user.house === house);
@@ -704,16 +704,12 @@ export const AdminProvider = ({ children }) => {
           const currentPoints = user.magicPoints || 0;
           const newPoints = Math.max(0, currentPoints + pointsChange); // Ensure points don't go below 0
           
-          // Create the final reason that will be stored in the database
-          // If user provided a reason, include it followed by the system info
-          const finalReason = userReason ? `${userReason}. ${systemInfo}` : systemInfo;
-          
           // Update user's points
           await axios.patch(`${API_URL}/users/${userId}`, 
             { 
               magicPoints: newPoints,
               lastPointsUpdate: new Date().toISOString(),
-              lastUpdateReason: finalReason // Use the combined reason
+              lastUpdateReason: backendReason // Use the full reason for database records
             },
             {
               headers: {
@@ -734,33 +730,83 @@ export const AdminProvider = ({ children }) => {
       // Only try to send notification if points were updated successfully
       if (updatedUserIds.length > 0) {
         try {
-          // Direct socket notification approach
-          if (window.socket && typeof window.socket.emit === 'function') {
-            console.log('Sending group criteria house_points_update via socket');
-            window.socket.emit('client_house_notification', {
-              house,
-              points: pointsChange,
-              reason: userReason, // Optional user-provided reason
-              criteria: criteriaLabel,
-              level: levelLabel,
-              newTotal: houseUsers.reduce((total, user) => 
-                total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
-              timestamp: new Date().toISOString()
-            });
-          }
+          // Create a notification for users with the full message including criteria/level info
+          // to ensure it works properly in all network conditions
+          const notification = {
+            type: pointsChange > 0 ? 'success' : 'warning',
+            title: pointsChange > 0 ? 'Group Criteria: Points Awarded!' : 'Group Criteria: Points Deducted!',
+            message: `${Math.abs(pointsChange)} points ${pointsChange > 0 ? 'awarded to' : 'deducted from'} ${house}: ${fullFormattedReason}`,
+            targetUsers: [], // Empty to send to all users
+            housesAffected: [house], // Specify affected house
+            // Additional fields for frontend
+            house: house,
+            pointsChange: pointsChange,
+            criteria: criteriaLabel,
+            level: levelLabel,
+            reason: userReason // Keep simple reason for the display system
+          };
           
-          // Dispatch a custom event for local notification display
-          const notificationEvent = new CustomEvent('house-points-update', {
-            detail: {
-              house,
-              points: pointsChange,
-              reason: userReason, // Optional user-provided reason
-              criteria: criteriaLabel,
-              level: levelLabel,
-              timestamp: new Date().toISOString()
+          // Send notification to the backend for real-time delivery
+          try {
+            await axios.post(`${API_URL}/notifications`, notification, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            console.log('Group criteria notification sent successfully');
+            
+            // Add direct socket notification using app.locals (if available)
+            try {
+              // Also send a direct socket event if there's an active socket connection
+              if (window.socket && typeof window.socket.emit === 'function') {
+                console.log('Sending group criteria house_points_update via socket');
+                window.socket.emit('client_house_notification', {
+                  house,
+                  points: pointsChange,
+                  reason: userReason,
+                  criteria: criteriaLabel,
+                  level: levelLabel,
+                  newTotal: houseUsers.reduce((total, user) => 
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                });
+              }
+              
+              // Dispatch a custom event for local notification display
+              // This will trigger notification display even if server sockets fail
+              const notificationEvent = new CustomEvent('house-points-update', {
+                detail: {
+                  house,
+                  points: pointsChange,
+                  reason: userReason,
+                  criteria: criteriaLabel,
+                  level: levelLabel,
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(notificationEvent);
+            } catch (socketError) {
+              console.error('Error with direct socket notification:', socketError);
+              // Socket error shouldn't fail the operation
             }
-          });
-          window.dispatchEvent(notificationEvent);
+          } catch (notifError) {
+            console.error('Failed to send notification (non-critical):', notifError);
+            
+            // Client-side fallback: Add notification to local storage
+            try {
+              const localNotifications = JSON.parse(localStorage.getItem('pendingNotifications') || '[]');
+              localNotifications.push({
+                ...notification,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                clientFallback: true
+              });
+              localStorage.setItem('pendingNotifications', JSON.stringify(localNotifications));
+              console.log('Added notification to local fallback system');
+            } catch (fallbackError) {
+              console.error('Failed to store notification in local fallback:', fallbackError);
+            }
+          }
           
           // Force sync for all affected users
           try {

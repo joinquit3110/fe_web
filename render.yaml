@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: be-web-6c4k
+    name: inequality-web-api
     env: node
     plan: free
-    buildCommand: cd ../be_web && npm install
-    startCommand: cd ../be_web && npm start
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -18,7 +18,7 @@ services:
       - path: "/*"
         headers:
           - key: "Access-Control-Allow-Origin"
-            value: "https://fe-web-lilac.vercel.app"
+            value: "https://inequality-web.vercel.app"
           - key: "Access-Control-Allow-Methods"
             value: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
           - key: "Access-Control-Allow-Headers"

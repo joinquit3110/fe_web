@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
-import { useAuth } from '../context/AuthContext.jsx'; // Fixed import path to use correct AuthContext
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Table, Thead, Tbody, Tr, Th, Td, Checkbox, 
@@ -10,10 +10,8 @@ import {
   useBreakpointValue, Card, CardBody, 
   Stack, SimpleGrid, useDisclosure, Modal,
   ModalOverlay, ModalContent, ModalHeader,
-  ModalBody, ModalCloseButton, Tooltip,
-  IconButton
+  ModalBody, ModalCloseButton, Tooltip
 } from '@chakra-ui/react';
-import { RepeatIcon } from '@chakra-ui/icons';
 import '../styles/Admin.css';
 
 const AdminUserManagement = () => {
@@ -519,13 +517,13 @@ const AdminUserManagement = () => {
               </Button>
             </Tooltip>
             <Tooltip label="Refresh student data">
-              <IconButton
-                icon={<RepeatIcon />}
+              <Button 
                 onClick={fetchUsers}
                 className="admin-button primary"
                 size="sm"
-                aria-label="Refresh student data"
-              />
+              >
+                Refresh
+              </Button>
             </Tooltip>
           </div>
         </Box>
