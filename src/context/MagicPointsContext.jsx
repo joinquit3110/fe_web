@@ -568,15 +568,18 @@ export const MagicPointsProvider = ({ children }) => {
     
     // Also set up a poller to watch for direct localStorage changes
     // that don't trigger storage events (same window updates)
+    const prevAuthState = useRef(isAuthenticated);
     const localStorageObserver = setInterval(() => {
       const currentAuthState = localStorage.getItem('isAuthenticated');
-      // Kiểm tra có sự thay đổi thực sự trong trạng thái
       const currentAuthBool = currentAuthState === 'true';
-      if (currentAuthBool !== isAuthenticated) {
+      
+      // Only log and update if the authentication state has actually changed
+      if (currentAuthBool !== prevAuthState.current) {
         console.log('[POINTS] Auth state change detected via polling:', currentAuthState);
         setIsAuthenticated(currentAuthBool);
+        prevAuthState.current = currentAuthBool;
       }
-    }, 3000); // Increased from 1s to 3s to reduce unnecessary polling
+    }, 5000); // Increased from 3s to 5s to further reduce unnecessary polling
     
     // Verify authentication status with server
     const verifyAuth = async () => {

@@ -53,13 +53,22 @@ const MagicPointsDebug = () => {
       
       // Directly update debugData with the new points value from the event
       if (event.detail?.points !== undefined) {
+        // Always log the full event details for debugging
+        console.log(`[DEBUG] Point update details:`, {
+          points: event.detail.points,
+          source: event.detail.source,
+          reason: event.detail.reason,
+          delta: event.detail.delta
+        });
+        
         setDebugData(prevData => ({
           ...prevData,
           magicPoints: event.detail.points,
           lastUpdate: new Date().toISOString(),
           lastUpdateSource: event.detail.source || 'event',
           lastUpdateOperation: event.detail.operation || 'unknown',
-          lastUpdateDelta: event.detail.delta || 0
+          lastUpdateDelta: event.detail.delta || 0,
+          lastUpdateReason: event.detail.reason || prevData.lastUpdateReason || null
         }));
         
         // Update localStorage to ensure consistency
@@ -68,7 +77,12 @@ const MagicPointsDebug = () => {
         // Force a full refresh of debug data after a brief timeout
         setTimeout(() => {
           const freshData = debugPointsState(true);
-          setDebugData(prev => ({...freshData, lastUpdate: prev.lastUpdate, lastUpdateSource: prev.lastUpdateSource}));
+          setDebugData(prev => ({
+            ...freshData, 
+            lastUpdate: prev.lastUpdate, 
+            lastUpdateSource: prev.lastUpdateSource,
+            lastUpdateReason: prev.lastUpdateReason
+          }));
         }, 100);
       } else {
         // Fallback to fetching the full state
@@ -119,14 +133,20 @@ const MagicPointsDebug = () => {
       isAuthenticated,
       isSyncing,
       lastSynced,
-      pendingOperations: pendingOperations || []
+      pendingOperations: pendingOperations || [],
+      lastUpdate: new Date().toISOString(),
+      lastUpdateSource: 'contextChange'
     }));
     
     // Dispatch an event to notify that magic points were updated in the UI
     // This helps keep all debug displays in sync
     if (showDebug) {
       window.dispatchEvent(new CustomEvent('magicPointsUIUpdate', {
-        detail: { points: magicPoints }
+        detail: { 
+          points: magicPoints,
+          source: 'contextUpdate',
+          timestamp: new Date().toISOString()
+        }
       }));
     }
   }, [magicPoints, isOnline, isAuthenticated, isSyncing, lastSynced, pendingOperations, showDebug]);
@@ -419,6 +439,12 @@ const MagicPointsDebug = () => {
           <Text fontSize="sm" color="gray.200">Last Synced: {lastSynced || 'Never'}</Text>
           <Text fontSize="sm" color="gray.200">Auth Token: {localStorage.getItem('token') ? 'Present' : 'Missing'}</Text>
           <Text fontSize="sm" color="gray.200">Retry Count: {localStorage.getItem('syncRetryCount') || '0'}</Text>
+          {debugData?.lastUpdateSource && (
+            <Text fontSize="sm" color="yellow.200">
+              Last Update: {debugData.lastUpdateSource} 
+              {debugData.lastUpdateReason ? ` (${debugData.lastUpdateReason})` : ''}
+            </Text>
+          )}
         </Box>
         
         {authStatus && (

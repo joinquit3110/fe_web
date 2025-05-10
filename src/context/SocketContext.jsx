@@ -19,18 +19,11 @@ export const SocketProvider = ({ children }) => {
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
   const { user, isAuthenticated, setUser } = useAuth();
   
-  // Track recent notification keys to prevent duplicates
-  const recentNotifications = useRef(new Set());
-
   // Add admin checking functionality
   const isAdminUser = useRef(false);
-
-  // Add new notification queue with priority
-  const [notificationQueue, setNotificationQueue] = useState([]);
-  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
-  const batchTimeoutRef = useRef(null);
-  const MAX_BATCH_SIZE = 5;
-  const BATCH_TIMEOUT = 100; // ms
+  
+  // Track recent notification keys to prevent duplicates
+  const recentNotifications = useRef(new Set());
 
   // Check if current user is admin when user changes
   useEffect(() => {
@@ -204,6 +197,13 @@ export const SocketProvider = ({ children }) => {
   }, [socket, isConnected, user?.house]);
 
   // Optimize notification processing
+  // Add notification queue state
+  const [notificationQueue, setNotificationQueue] = useState([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const batchTimeoutRef = useRef(null);
+  const MAX_BATCH_SIZE = 5;
+  const BATCH_TIMEOUT = 100; // ms
+  
   const processNotificationQueue = useCallback(() => {
     if (isProcessingQueue || notificationQueue.length === 0) return;
     
@@ -299,18 +299,34 @@ export const SocketProvider = ({ children }) => {
         console.log('[SOCKET] Converting point update to notification:', data);
         
         // Parse points value from message
-        const pointsMatch = data.message.match(/updated to (\d+)/);          if (pointsMatch && pointsMatch[1] && user) {
+        const pointsMatch = data.message.match(/updated to (\d+)/);
+        if (pointsMatch && pointsMatch[1] && user) {
           const newPoints = parseInt(pointsMatch[1], 10);
           const oldPoints = user.magicPoints || 0;
           const pointsDiff = newPoints - oldPoints;
           
           if (pointsDiff !== 0) {
-            // Extract potential reason from data
-            const reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
+            // Extract potential reason from data - look more carefully for a reason
+            let reason = null;
+            
+            // Try to extract reason from the message if present
+            if (data.message && data.message.includes(':')) {
+              const parts = data.message.split(':');
+              if (parts.length >= 2) {
+                reason = parts[1].trim();
+              }
+            }
+            
+            // If no reason found in message, try standard fields
+            if (!reason) {
+              reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
+            }
             
             // Extract criteria/level if available
             const criteria = data.criteria || data.data?.criteria || null;
             const level = data.level || data.data?.level || null;
+            
+            console.log('[SOCKET] Extracted point update reason:', reason);
             
             // Create notification for points change
             const notification = {
@@ -320,7 +336,7 @@ export const SocketProvider = ({ children }) => {
               message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}`,
               timestamp: new Date(),
               pointsChange: pointsDiff,
-              reason: reason || 'System update',
+              reason: reason, // Don't use 'System update' as default
               criteria: criteria,
               level: level,
               house: user.house
@@ -346,26 +362,101 @@ export const SocketProvider = ({ children }) => {
 
     const handleHousePointsUpdate = (data) => {
       console.log('[SOCKET] Received house_points_update:', data);
-      if (isAdminUser.current || user?.house === 'muggle' || !user?.house) return;
       
-      if (data.house === user?.house) {
-        // Log detailed data to verify criteria and level
-        console.log('[SOCKET] Creating notification with data:', {
-          house: data.house,
-          points: data.points,
-          reason: data.reason,
-          criteria: data.criteria,
-          level: data.level,
-          timestamp: data.timestamp
-        });
-        
-        const notification = createHousePointsNotification(data);
-        addNotification(notification);
+      // Ensure we have all the data we need
+      if (!data.house || data.points === undefined) {
+        console.error('[SOCKET] Invalid house points data:', data);
+        return;
       }
+      
+      // Special handling for admin users
+      if (isAdminUser.current) {
+        console.log('[SOCKET] Admin received house points update, displaying notification');
+        // Admin sees all house point changes
+      } else if (!user || user.house === 'muggle' || !user.house || data.house !== user.house) {
+        // Skip notification if user doesn't belong to the house that got points
+        return;
+      }
+      
+      // Log detailed data for debugging
+      console.log('[SOCKET] Creating house points notification with data:', {
+        house: data.house,
+        points: data.points,
+        reason: data.reason,
+        criteria: data.criteria,
+        level: data.level,
+        timestamp: data.timestamp
+      });
+      
+      // Dispatch an event to notify components of house points change
+      if (typeof window !== 'undefined') {
+        const housePointsEvent = new CustomEvent('house-points-update', {
+          detail: {
+            house: data.house,
+            points: data.points,
+            reason: data.reason || 'House points update',
+            criteria: data.criteria,
+            level: data.level,
+            timestamp: new Date().toISOString()
+          }
+        });
+        window.dispatchEvent(housePointsEvent);
+        
+        // Also dispatch a debug event to ensure debug panel is updated
+        // Make sure we're passing accurate house points data to update the debug menu
+        const debugEvent = new CustomEvent('magicPointsUIUpdate', {
+          detail: { 
+            source: 'housePointsUpdate',
+            timestamp: new Date().toISOString(),
+            points: data.points,
+            reason: data.reason || null,
+            delta: data.points, // Include delta for better debug display
+            house: data.house,  // Include house info
+            criteria: data.criteria || null,
+            level: data.level || null
+          }
+        });
+        window.dispatchEvent(debugEvent);
+        
+        // Also dispatch a regular magicPointsUpdated event to ensure all handlers receive the update
+        const regularUpdate = new CustomEvent('magicPointsUpdated', {
+          detail: { 
+            points: data.points,
+            source: 'housePointsUpdate',
+            timestamp: new Date().toISOString(),
+            house: data.house
+          }
+        });
+        window.dispatchEvent(regularUpdate);
+      }
+      
+      // Create custom notification with exact house points data
+      // Make sure we extract the correct reason for the notification
+      const extractedReason = data.reason && data.reason !== 'System update' ? data.reason : null;
+      
+      console.log('[SOCKET] House points notification - extracted reason:', extractedReason, 'from original:', data.reason);
+      
+      const notification = {
+        id: `house_points_${Date.now()}`,
+        type: data.points > 0 ? 'success' : 'warning',
+        title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
+        message: `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}${extractedReason ? ': ' + extractedReason : ''}`,
+        timestamp: new Date(),
+        pointsChange: data.points,
+        reason: extractedReason, // Use the cleaned up reason, not "System update"
+        criteria: data.criteria || null,
+        level: data.level || null,
+        house: data.house,
+        isHousePointsUpdate: true // Mark as house points notification
+      };
+        
+      addNotification(notification);
     };
 
     const handleAdminNotification = (data) => {
-      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) return;
+      if ((data.skipAdmin === true || data.skipAdmin === "true") && isAdminUser.current) {
+        return;
+      }
       
       const notification = {
         id: Date.now(),
@@ -400,7 +491,7 @@ export const SocketProvider = ({ children }) => {
       socket.off('admin_notification', handleAdminNotification);
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
-  }, [socket, user, isAdminUser.current, addNotification]);
+  }, [socket, user, addNotification]);
 
   // Helper to create house points notification
   const createHousePointsNotification = (data) => {
