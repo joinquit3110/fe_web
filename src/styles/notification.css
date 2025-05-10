@@ -1,15 +1,3 @@
-/* General Notification Styles */
-body {
-  overflow-x: hidden; /* Prevent horizontal scroll if notifications are too wide briefly */
-}
-
-/* Base notification container - can be used if not themed */
-.notification-container {
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
 /* Notification Effects */
 .notification-container {
   position: relative;
@@ -17,22 +5,44 @@ body {
   padding: 4px;
   pointer-events: auto;
   transform-origin: center top;
+  animation: notification-entrance 0.5s ease-out forwards;
+}
+
+@keyframes notification-entrance {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Type-specific styling */
 .notification-container.success .magical-notification {
-  background: linear-gradient(to bottom, rgba(32, 40, 80, 0.92), rgba(20, 25, 60, 0.95));
-  border: 2px solid rgba(40, 167, 69, 0.7);
+  background: linear-gradient(to bottom, rgba(122, 10, 10, 0.92), rgba(80, 5, 5, 0.95));
+  border: 2px solid rgba(218, 165, 32, 0.7); /* Gryffindor gold */
 }
 
 .notification-container.warning .magical-notification {
-  background: linear-gradient(to bottom, rgba(50, 30, 40, 0.92), rgba(40, 20, 30, 0.95));
-  border: 2px solid rgba(255, 193, 7, 0.7);
+  background: linear-gradient(to bottom, rgba(5, 77, 35, 0.92), rgba(3, 50, 23, 0.95));
+  border: 2px solid rgba(192, 192, 192, 0.7); /* Slytherin silver */
 }
 
 .notification-container.announcement .magical-notification {
-  background: linear-gradient(to bottom, rgba(40, 40, 90, 0.92), rgba(30, 30, 70, 0.95));
-  border: 2px solid rgba(13, 110, 253, 0.7);
+  background: linear-gradient(to bottom, rgba(10, 30, 90, 0.92), rgba(5, 15, 50, 0.95));
+  border: 2px solid rgba(176, 196, 222, 0.7); /* Ravenclaw bronze/blue */
+}
+
+.notification-container.info .magical-notification {
+  background: linear-gradient(to bottom, rgba(100, 85, 10, 0.92), rgba(70, 60, 5, 0.95));
+  border: 2px solid rgba(50, 50, 50, 0.7); /* Hufflepuff black */
+}
+
+.notification-container.error .magical-notification {
+  background: linear-gradient(to bottom, rgba(60, 10, 15, 0.92), rgba(40, 5, 5, 0.95));
+  border: 2px solid rgba(255, 100, 100, 0.7); /* Error red */
 }
 
 /* Magical Glow Effect */
@@ -49,7 +59,7 @@ body {
   100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
 }
 
-/* Notification Glow Bar */
+/* Enhanced Notification Glow Bar */
 .notification-glow-bar {
   animation: glow-bar-animation 2s infinite;
 }
@@ -60,9 +70,11 @@ body {
   100% { opacity: 0.6; }
 }
 
-/* Notification Title Animation */
+/* Enhanced Notification Title Animation */
 .notification-title {
   animation: title-glow 1.5s infinite;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1px;
 }
 
 @keyframes title-glow {
@@ -71,7 +83,7 @@ body {
   100% { text-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
 }
 
-/* Icon Animation */
+/* Enhanced Icon Animation */
 .notification-icon-container {
   position: relative;
   animation: icon-float 3s ease-in-out infinite;
@@ -93,7 +105,7 @@ body {
   100% { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)); }
 }
 
-/* Magical Sparkles */
+/* Enhanced Magical Sparkles */
 .magical-sparkle {
   position: absolute;
   width: 6px;
@@ -111,27 +123,49 @@ body {
 
 .sparkle-2 {
   bottom: 20%;
-  right: 30%;
+  right: 25%;
   animation: sparkle-float 4s ease-in-out infinite, sparkle-fade 4s infinite 1s;
 }
 
 .sparkle-3 {
-  bottom: 30%;
-  left: 10%;
-  animation: sparkle-float 5s ease-in-out infinite, sparkle-fade 5s infinite 1.5s;
+  top: 40%;
+  left: 15%;
+  animation: sparkle-float 3.5s ease-in-out infinite, sparkle-fade 3.5s infinite 1.5s;
 }
 
 @keyframes sparkle-float {
-  0% { transform: translate(0, 0); }
-  33% { transform: translate(5px, -5px); }
-  66% { transform: translate(-5px, 5px); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
 }
 
 @keyframes sparkle-fade {
-  0% { opacity: 0.2; }
-  50% { opacity: 1; }
-  100% { opacity: 0.2; }
+  0% { opacity: 0.2; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.2; transform: scale(0.6); }
+}
+
+/* House Badge Effects */
+.house-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.house-badge::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 20%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(30deg);
+  animation: badge-shine 3s infinite;
+}
+
+@keyframes badge-shine {
+  0% { left: -60%; }
+  100% { left: 200%; }
 }
 
 /* Responsive adjustments */
@@ -147,6 +181,26 @@ body {
   .notification-icon {
     width: 40px;
     height: 40px;
+  }
+}
+
+/* Mobile Responsiveness Enhancements */
+@media (max-width: 480px) {
+  .notification-container {
+    padding: 2px;
+  }
+  
+  .magical-notification {
+    padding: 10px !important;
+  }
+  
+  .notification-title {
+    font-size: 14px !important;
+  }
+  
+  .points-animation {
+    right: -10px !important;
+    top: -20px !important;
   }
 }
 
@@ -170,22 +224,18 @@ body {
   }
 }
 
-/* Basic content styling */
-.notification-content {
-  /* Basic content styling, e.g., padding */
-  padding: 10px;
+/* Dismiss Animation */
+.notification-container.dismissing {
+  animation: notification-exit 0.3s ease-in forwards;
 }
 
-/* Point change animation (generic, if not using themed) */
-.point-animation img {
-  animation: point-pop 0.5s ease-out;
+@keyframes notification-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
 }
-
-@keyframes point-pop {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* Import HarryPotter.css to apply themed styles */
-@import './HarryPotter.css';

@@ -1,6 +1,5 @@
 /* Harry Potter / Hogwarts Theme CSS */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Marcellus+SC&display=swap');
 
 :root {
   /* Enhanced Harry Potter Theme Colors */
@@ -1553,6 +1552,10 @@ button, input, select, textarea {
 }
 
 .hogwarts-app {
+  background-image: url('https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?auto=format&fit=crop&q=80');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   min-height: 100vh;
   box-sizing: border-box;
   position: relative;
@@ -2596,102 +2599,4 @@ canvas {
   color: #000;
   font-weight: bold;
   box-shadow: 0 4px 8px rgba(211, 166, 37, 0.3);
-}
-
-/* Harry Potter Themed Notification Styles */
-@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Marcellus+SC&display=swap');
-
-.notification-container-hp {
-  font-family: 'Marcellus SC', serif;
-  background-color: #f0e6d2; /* Parchment paper */
-  border: 2px solid #78552b; /* Dark wood border */
-  color: #3a2e1c; /* Dark brown text */
-  box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
-  transition: transform 0.5s ease-out, opacity 0.5s ease-out;
-}
-
-.notification-content-hp {
-  /* Styles for the content area if needed, e.g., padding */
-  padding: 0; /* Reset padding if Chakra components handle it */
-}
-
-.notification-header-hp {
-  background-color: #4e342e; /* Darker wood accent */
-  color: #f0e6d2; /* Parchment text on dark background */
-  padding: 8px 12px;
-  border-bottom: 1px solid #78552b;
-}
-
-.notification-header-hp .chakra-heading {
-  font-family: 'IM Fell English SC', serif;
-  font-size: 1.2em;
-}
-
-.notification-body-hp {
-  padding: 12px;
-}
-
-.notification-points-hp {
-  font-weight: bold;
-  font-size: 1.1em;
-}
-
-.notification-reason-hp {
-  font-style: italic;
-  font-size: 0.9em;
-  color: #5d4037; /* Slightly lighter brown for reason */
-}
-
-/* House-specific styles */
-.notification-house-gryffindor {
-  border-left: 5px solid #ae0001; /* Gryffindor Scarlet */
-}
-.notification-house-gryffindor .notification-header-hp {
-  background-color: #7f0000; 
-  color: #d3a625; /* Gold */
-}
-
-.notification-house-hufflepuff {
-  border-left: 5px solid #f0c75e; /* Hufflepuff Yellow */
-}
-.notification-house-hufflepuff .notification-header-hp {
-  background-color: #e7b000;
-  color: #333; /* Black */
-}
-
-.notification-house-ravenclaw {
-  border-left: 5px solid #222f5b; /* Ravenclaw Blue */
-}
-.notification-house-ravenclaw .notification-header-hp {
-  background-color: #0e1a40;
-  color: #946b2d; /* Bronze */
-}
-
-.notification-house-slytherin {
-  border-left: 5px solid #2a623d; /* Slytherin Green */
-}
-.notification-house-slytherin .notification-header-hp {
-  background-color: #1a472a;
-  color: #aaaaaa; /* Silver */
-}
-
-/* Animation for point changes */
-.point-animation .notification-points-hp {
-  animation: pulse-points 0.5s ease-out;
-}
-
-@keyframes pulse-points {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-/* Mobile Friendliness */
-@media (max-width: 600px) {
-  .notification-container-hp {
-    right: 10px !important; /* Override inline style for smaller screens */
-    left: 10px !important;
-    width: auto !important; /* Override inline style */
-    max-width: calc(100% - 20px);
-  }
 }

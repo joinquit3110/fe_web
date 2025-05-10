@@ -488,12 +488,15 @@ export const AdminProvider = ({ children }) => {
                 console.log('Sending house_points_update via socket');
                 window.socket.emit('client_house_notification', {
                   house,
-                  points: pointsChange,
+                  points: pointsChange, // This is the delta (change) in points
                   reason,
                   criteria: null,
                   level: null,
                   newTotal: houseUsers.reduce((total, user) => 
-                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0)
+                    total + Math.max(0, (user.magicPoints || 0) + pointsChange), 0),
+                  // Add admin flag to make it clear this is an admin-initiated action
+                  adminAction: true,
+                  timestamp: new Date().toISOString()
                 });
               }
               

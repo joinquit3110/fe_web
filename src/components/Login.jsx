@@ -56,19 +56,21 @@ const Login = () => {
     }
   }, []);
 
-  
   // Add stars to the background
   useEffect(() => {
     const createStars = () => {
       const starsContainer = document.createElement('div');
       starsContainer.className = 'stars';
       
+      // Create small stars
       const smallStars = document.createElement('div');
       smallStars.className = 'small-stars';
       
+      // Create medium stars
       const mediumStars = document.createElement('div');
       mediumStars.className = 'medium-stars';
       
+      // Generate random positions for stars
       for (let i = 0; i < 100; i++) {
         const star = document.createElement('div');
         star.className = 'star';
@@ -86,6 +88,7 @@ const Login = () => {
       starsContainer.appendChild(smallStars);
       starsContainer.appendChild(mediumStars);
       
+      // Add moon
       const moonWrapper = document.createElement('div');
       moonWrapper.className = 'moon-wrapper';
       
@@ -110,27 +113,18 @@ const Login = () => {
       moonlight1.appendChild(moonlight2);
       moonWrapper.appendChild(moonlight1);
       
-      // Check if body exists before appending
-      if (document.body) {
-        document.body.appendChild(starsContainer);
-        document.body.appendChild(moonWrapper);
-      }
+      document.body.appendChild(starsContainer);
+      document.body.appendChild(moonWrapper);
       
       return () => {
-        // Check if elements are still in body before removing
-        if (document.body && document.body.contains(starsContainer)) {
-          document.body.removeChild(starsContainer);
-        }
-        if (document.body && document.body.contains(moonWrapper)) {
-          document.body.removeChild(moonWrapper);
-        }
+        document.body.removeChild(starsContainer);
+        document.body.removeChild(moonWrapper);
       };
     };
     
     const cleanup = createStars();
     return cleanup;
   }, []);
-  
 
   // Effect for house logo transition after login
   useEffect(() => {
