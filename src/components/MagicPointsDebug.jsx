@@ -39,7 +39,9 @@ const MagicPointsDebug = () => {
 
   // Run debug on initial load - only log once when component mounts
   useEffect(() => {
-    if (typeof debugPointsState === 'function') {
+    console.log("Developer mode is active");
+    // First check if debugPointsState exists and is a function
+    if (debugPointsState && typeof debugPointsState === 'function') {
       try {
         const data = debugPointsState(true); // Silent mode for initial load
         setDebugData(data);
@@ -56,8 +58,8 @@ const MagicPointsDebug = () => {
       console.warn('[MagicPointsDebug] debugPointsState function not available');
       setDebugData({
         magicPoints: magicPoints || 0,
-        isOnline: isOnline || navigator.onLine,
-        offlineMode: isOfflineMode || false,
+        isOnline: typeof isOnline === 'boolean' ? isOnline : navigator.onLine,
+        offlineMode: typeof isOfflineMode === 'boolean' ? isOfflineMode : false,
         error: 'debugPointsState function not available'
       });
     }

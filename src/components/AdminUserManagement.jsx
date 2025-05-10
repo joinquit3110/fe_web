@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext.jsx'; // Fixed import path to use correct AuthContext
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Table, Thead, Tbody, Tr, Th, Td, Checkbox, 

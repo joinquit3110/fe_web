@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.jsx'; // Corrected import to use the event-driven AuthContext and ensure .jsx extension
-import { useMagicPoints } from '../context/MagicPointsContext'; // Import without .jsx extension
+import { useMagicPoints } from '../context/MagicPointsContext.jsx'; // Added .jsx extension for consistency
 import axios from 'axios';
 import { useToast } from '@chakra-ui/react'; // Added useToast import
 
@@ -24,12 +24,15 @@ export const useAdmin = () => {
 export const AdminProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth(); // Now from ../context/AuthContext.jsx
   
-  // Safe access to magicPoints context with fallback in case of errors
+  // Always call useMagicPoints unconditionally to follow React Hook rules
+  const magicPointsContextValue = useMagicPoints();
+  
+  // Then handle any potential errors after the hook is called
   let magicPointsContext = {};
-  try {
-    magicPointsContext = useMagicPoints() || {};
-  } catch (error) {
-    console.warn('[AdminContext] Error accessing MagicPointsContext:', error.message);
+  if (magicPointsContextValue) {
+    magicPointsContext = magicPointsContextValue;
+  } else {
+    console.warn('[AdminContext] MagicPointsContext not available or returned null/undefined');
     // Provide default empty functions as fallback
     magicPointsContext = {
       magicPoints: 100,

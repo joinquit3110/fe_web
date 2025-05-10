@@ -9,11 +9,13 @@ const BACKEND_URL = 'https://be-web-6c4k.onrender.com';
 // Flag to enable offline mode for development
 const USE_OFFLINE_MODE = false;
 
-// Export USE_OFFLINE_MODE for use in other modules
+// Export constants and utility functions for use in other modules
 export { USE_OFFLINE_MODE };
 
-// Helper for getting authentication token
-// Export getAuthToken
+/**
+ * Helper for getting authentication token
+ * @returns {string} The authentication token from storage, or empty string if not found
+ */
 export const getAuthToken = () => {
   // Try multiple token storage locations
   const token = localStorage.getItem('token') || 
@@ -463,34 +465,90 @@ export const checkAuthStatus = async () => {
   }
 };
 
-// Placeholder function for clearNeedSync
+/**
+ * Function to clear the "needs sync" flag on the server
+ * @param {string} token - Authentication token
+ * @returns {Promise<Object>} - Result of the operation
+ */
 export const clearNeedSync = async (token) => {
-  console.log('[API] clearNeedSync called. Placeholder implementation.');
-  // TODO: Implement actual logic to clear sync flag on the server
-  // Example:
-  // const response = await fetch(`${BACKEND_URL}/api/user/magic-points/clear-sync-flag`, {
-  //   method: 'POST',
-  //   headers: {
-  //     'Authorization': `Bearer ${token}`
-  //   }
-  // });
-  // handleApiError(response, 'clear need sync');
-  // return response.json();
-  return Promise.resolve({ success: true, message: "Sync flag cleared (simulated)" });
+  console.log('[API] clearNeedSync called.');
+  
+  if (!token) {
+    console.warn('[API] No token provided to clearNeedSync');
+    return Promise.resolve({ success: false, message: "No authentication token" });
+  }
+  
+  try {
+    // Call the API endpoint to clear the sync flag
+    const response = await fetch(`${BACKEND_URL}/api/user/magic-points/clear-sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.warn(`[API] clearNeedSync failed with status ${response.status}`);
+      return { success: false, status: response.status };
+    }
+    
+    // Parse and return the response
+    const data = await response.json();
+    return { success: true, ...data };
+  } catch (error) {
+    console.error('[API] Error in clearNeedSync:', error);
+    return { success: false, error: error.message };
+  }
 };
 
-// Placeholder function for checkNeedSync
+/**
+ * Function to check if synchronization is needed based on server data
+ * @param {string} token - Authentication token
+ * @returns {Promise<boolean>} - Whether synchronization is needed
+ */
 export const checkNeedSync = async (token) => {
-  console.log('[API] checkNeedSync called. Placeholder implementation.');
-  // TODO: Implement actual logic to check if sync is needed from the server
-  // Example:
-  // const response = await fetch(`${BACKEND_URL}/api/user/magic-points/check-sync-flag`, {
-  //   headers: {
-  //     'Authorization': `Bearer ${token}`
-  //   }
-  // });
-  // handleApiError(response, 'check need sync');
-  // const data = await response.json();
-  // return data.needsSync; // Assuming API returns { needsSync: boolean }
-  return Promise.resolve(false); // Simulate no sync needed
+  console.log('[API] checkNeedSync called.');
+  
+  if (!token) {
+    console.warn('[API] No token provided to checkNeedSync');
+    return false;
+  }
+  
+  try {
+    // Call the API endpoint to check if sync is needed
+    const response = await fetch(`${BACKEND_URL}/api/user/magic-points/check-sync`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.warn(`[API] checkNeedSync failed with status ${response.status}`);
+      return false;
+    }
+    
+    // Parse and return the response
+    const data = await response.json();
+    return data.needsSync || false; // Return whether sync is needed
+  } catch (error) {
+    console.error('[API] Error in checkNeedSync:', error);
+    return false; // Default to no sync needed on error
+  }
 };
+
+// No need to re-export everything since we're using named exports throughout the file
+// The following functions are all already exported directly:
+// - getAuthToken
+// - checkAuthStatus
+// - clearNeedSync
+// - checkNeedSync
+// - fetchMagicPoints
+// - updateMagicPoints
+// - syncMagicPointsOperations
+// - isOnline
+// - storePointsLocally
+// - getLocalPoints

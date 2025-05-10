@@ -24,7 +24,12 @@ export const SocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  const { user, isAuthenticated, setUser } = useAuth();
+  
+  // Safely get auth context values with defaults
+  const authContext = useAuth();
+  const user = authContext?.user || null;
+  const isAuthenticated = authContext?.isAuthenticated || false;
+  const setUser = authContext?.setUser || (() => console.warn('[SocketContext] setUser called but not available'));
   
   // Add reference to track socket initialization state
   const socketInitializedRef = useRef(false);
@@ -113,14 +118,10 @@ export const SocketProvider = ({ children }) => {
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 500,         // Reduced from 1000ms
-      reconnectionDelayMax: 3000,     // Reduced from 5000ms
-      timeout: 5000,                  // Reduced from 10000ms
+      reconnectionAttempts: 10,       // Increased from 5 to 10 attempts
+      reconnectionDelay: 500,         // Reduced from 1000ms to 500ms
+      reconnectionDelayMax: 3000,     // Reduced from 5000ms to 3000ms
+      timeout: 5000,                  // Reduced from 20000ms to 5000ms
       // Remove multiplex: false to allow socket.io's built-in connection manager to work
     });
     

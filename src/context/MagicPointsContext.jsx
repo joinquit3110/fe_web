@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { getAuthToken, checkAuthStatus as apiCheckAuthStatus, updateMagicPoints as apiUpdateMagicPoints, clearNeedSync as apiClearNeedSync, checkNeedSync as apiCheckNeedSync } from '../api/magicPointsApi.js'; // Assuming API functions are here
+// Import API functions with explicit naming
+import { 
+  getAuthToken, 
+  checkAuthStatus as apiCheckAuthStatus, 
+  updateMagicPoints as apiUpdateMagicPoints, 
+  clearNeedSync as apiClearNeedSync, 
+  checkNeedSync as apiCheckNeedSync 
+} from '../api/magicPointsApi.js';
 
 // API URL for direct calls (if needed, though magicPointsApi.js should handle this)
 const API_URL = process.env.REACT_APP_API_URL || "/api";
@@ -80,7 +87,18 @@ export const MagicPointsProvider = ({ children }) => {
       setLastSynced(new Date().toISOString());
       setSyncRetries(0);
       console.log('[MagicPointsContext] Sync successful.');
-      await apiClearNeedSync(token);
+      
+      // Try to clear the sync flag but don't fail if it doesn't work
+      try {
+        if (apiClearNeedSync && typeof apiClearNeedSync === 'function') {
+          await apiClearNeedSync(token);
+        } else {
+          console.warn('[MagicPointsContext] apiClearNeedSync function not available');
+        }
+      } catch (clearError) {
+        console.warn('[MagicPointsContext] Failed to clear needSync flag:', clearError);
+        // Don't rethrow - we don't want to mark the sync as failed just because clearing the flag failed
+      }
     } catch (error) {
       console.error('[MagicPointsContext] Sync failed:', error);
       setSyncRetries(prev => prev + 1);

@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-// No need to alias BrowserRouter
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
@@ -608,18 +607,17 @@ const AppContent = () => {
 const App = () => {
   return (
     <ChakraProvider theme={theme}>
-      <AuthProvider> {/* AuthProvider should be at a higher level */}
-        <SocketProvider> {/* SocketProvider might depend on AuthContext */}
-          <MagicPointsProvider> {/* MagicPointsProvider now wraps AdminProvider */}
-            <AdminProvider> {/* AdminProvider might depend on AuthContext and MagicPointsContext */}
-              {/* Changed: Used BrowserRouter directly */}
-              <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
+          <SocketProvider>
+            <MagicPointsProvider>
+              <AdminProvider>
                 <AppContent />
-              </BrowserRouter>
-            </AdminProvider>
-          </MagicPointsProvider>
-        </SocketProvider>
-      </AuthProvider>
+              </AdminProvider>
+            </MagicPointsProvider>
+          </SocketProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </ChakraProvider>
   );
 };
