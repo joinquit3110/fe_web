@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../context/AuthContext.jsx'; // Corrected import
 import { useMagicPoints } from '../context/MagicPointsContext';
 import axios from 'axios';
 import { useToast } from '@chakra-ui/react'; // Added useToast import
@@ -16,7 +16,7 @@ const AdminContext = createContext();
 export const useAdmin = () => useContext(AdminContext);
 
 export const AdminProvider = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth(); // Now from ../context/AuthContext.jsx
   const { 
     magicPoints, 
     forceSync, 
@@ -84,44 +84,58 @@ export const AdminProvider = ({ children }) => {
 
   // Check if current user is an admin
   useEffect(() => {
-    // Try to get admin status from multiple sources
-    const adminFlagInSession = sessionStorage.getItem('adminLogin') === 'true';
-    
-    // If we have a user object from context, use that first
+    console.log('[AdminContext] useEffect for isAdmin check. AuthContext user:', user, 'isAuthenticated:', isAuthenticated);
+    let determinedAdmin = false;
     if (isAuthenticated && user) {
-      // Check multiple ways to determine if user is admin
-      const isAdminUser = 
-        // Check explicit session flag
-        adminFlagInSession ||
-        // Check username against hardcoded admin list
-        ADMIN_USERS.includes(user.username) ||
-        // Check isAdmin flag from token/user object
-        user.isAdmin === true ||
-        // Check role field
-        user.role === 'admin' ||
-        // Check house field
-        user.house === 'admin';
-      
-      console.log('[AdminContext] Admin check from context user:', { 
-        username: user.username, 
-        isInAdminList: ADMIN_USERS.includes(user.username),
-        isAdminFlag: user.isAdmin,
-        role: user.role,
-        house: user.house,
-        adminFlagInSession,
-        result: isAdminUser
-      });
-      
-      setIsAdmin(isAdminUser);
-      
-      // If admin, fetch users
-      if (isAdminUser) {
-        fetchUsers();
-      }
+        if (user.isAdmin) {
+            determinedAdmin = true;
+            console.log('[AdminContext] Admin status confirmed from AuthContext user object (user.isAdmin).');
+        } else if (ADMIN_USERS.includes(user.username)) {
+            console.warn('[AdminContext] User is in ADMIN_USERS list, but user.isAdmin is false in AuthContext. This might indicate an issue with how isAdmin is set during login or authStateChange. User:', user);
+            // Attempt to verify with localStorage as a fallback, but AuthContext should be the source of truth.
+            try {
+                const storedUserString = localStorage.getItem('user');
+                if (storedUserString) {
+                    const storedUser = JSON.parse(storedUserString);
+                    if (storedUser && storedUser.isAdmin && storedUser.username === user.username) {
+                        determinedAdmin = true;
+                        console.log('[AdminContext] Fallback: Confirmed admin via ADMIN_USERS list and matching localStorage admin user.');
+                    } else {
+                         console.log('[AdminContext] Fallback: User in ADMIN_USERS list, but localStorage does not confirm admin status for this specific user or username mismatch.');
+                    }
+                }
+            } catch (e) {
+                console.error('[AdminContext] Fallback: Error parsing localStorage user for admin check', e);
+            }
+        } else {
+            console.log('[AdminContext] User is not admin based on user.isAdmin and not in ADMIN_USERS list.');
+        }
+        
+        // Additional check for sessionStorage.adminLogin as a potential indicator if other checks fail
+        // This is more of a debugging/consistency check.
+        if (!determinedAdmin && sessionStorage.getItem('adminLogin') === 'true' && user && ADMIN_USERS.includes(user.username)) {
+            console.warn('[AdminContext] sessionStorage.adminLogin is true and username is admin, but user.isAdmin was false and not caught by primary checks. This is a significant state inconsistency.');
+            // Consider if determinedAdmin should be true here, but it implies AuthContext is out of sync.
+        }
+
     } else {
-      setIsAdmin(false);
+        console.log('[AdminContext] Not authenticated or no user object from AuthContext for isAdmin check.');
     }
-  }, [isAuthenticated, user, fetchUsers]);
+
+    if (isAdmin !== determinedAdmin) {
+        console.log(`[AdminContext] Setting isAdmin state from ${isAdmin} to: ${determinedAdmin}`);
+        setIsAdmin(determinedAdmin);
+    }
+
+  }, [isAuthenticated, user, isAdmin]);
+
+  // useEffect to fetch users when isAdmin becomes true and users are not yet loaded.
+  useEffect(() => {
+    if (isAdmin && users.length === 0) {
+      console.log('[AdminContext] isAdmin is true and users not loaded, fetching users.');
+      fetchUsers();
+    }
+  }, [isAdmin, users.length, fetchUsers]);
 
   // Assign house to user in MongoDB with improved handling
   const assignHouse = async (userId, house) => {
