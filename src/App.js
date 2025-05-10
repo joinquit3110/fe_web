@@ -10,7 +10,7 @@ import katex from 'katex';
 import './styles/App.css';
 import './styles/HarryPotter.css';
 // Fix AuthContext import
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext.jsx'; // Corrected import path
 import { AdminProvider } from './contexts/AdminContext';
 import Login from './components/Login';
 import Register from './components/Register';
