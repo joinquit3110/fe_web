@@ -13,7 +13,8 @@ const USE_OFFLINE_MODE = false;
 export { USE_OFFLINE_MODE };
 
 // Helper for getting authentication token
-const getAuthToken = () => {
+// Export getAuthToken
+export const getAuthToken = () => {
   // Try multiple token storage locations
   const token = localStorage.getItem('token') || 
                 localStorage.getItem('authToken') || 

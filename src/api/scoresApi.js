@@ -3,7 +3,7 @@
  * Handles server-side interactions for the scores system
  */
 
-import { getAuthToken } from './authApi';
+import { getAuthToken } from './magicPointsApi'; // Corrected import path
 
 // Backend base URL
 const BACKEND_URL = 'https://be-web-6c4k.onrender.com'; 
