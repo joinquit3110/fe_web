@@ -3,6 +3,7 @@
 /* Hogwarts background */
 .hogwarts-app {
   background-color: var(--hogwarts-dark);
+  background-image: linear-gradient(to bottom, rgba(14, 26, 64, 0.95), rgba(10, 14, 35, 0.98));
   /* background-image: linear-gradient(to bottom, rgba(14, 26, 64, 0.95), rgba(10, 14, 35, 0.98)); */
   animation: gentle-float 10s ease-in-out infinite;
 }
