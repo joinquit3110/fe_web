@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+// Changed: Removed alias for BrowserRouter, will use BrowserRouter directly
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import InequalityInput from "./components/InequalityInput";
 import CoordinatePlane from "./components/CoordinatePlane";
@@ -16,7 +17,8 @@ import Login from './components/Login';
 import Register from './components/Register';
 import UserProfile from './components/UserProfile';
 import MagicPointsDebug from './components/MagicPointsDebug';
-import { MagicPointsProvider } from './context/MagicPointsContext';
+// Changed: Added .jsx extension
+import { MagicPointsProvider } from './context/MagicPointsContext.jsx';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import AdminUserManagement from './components/AdminUserManagement'; // Added import for AdminUserManagement
@@ -57,14 +59,22 @@ const theme = extendTheme({
 
 // Private Route component for protected routes
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth(); // Added isLoading
+  const location = useLocation(); // For passing redirect state
   const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
-  // Allow bypassing auth in development mode
-  if (!isAuthenticated && !isDevelopment) {
-    return <Navigate to="/login" replace />;
+
+  // Wait for authentication to load, unless in development mode (where we might bypass auth)
+  if (isLoading && !isDevelopment) {
+    // You can replace this with a more sophisticated loading spinner
+    return <div>Loading authentication...</div>;
   }
-  
+
+  // If not authenticated (and not in development mode allowing bypass), redirect to login
+  if (!isAuthenticated && !isDevelopment) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If authenticated or in development bypass, render the children
   return children;
 };
 
@@ -600,13 +610,14 @@ const App = () => {
     <ChakraProvider theme={theme}>
       <AuthProvider> {/* AuthProvider should be at a higher level */}
         <SocketProvider> {/* SocketProvider might depend on AuthContext */}
-          <AdminProvider> {/* AdminProvider might depend on AuthContext */}
-            <MagicPointsProvider>
+          <MagicPointsProvider> {/* MagicPointsProvider now wraps AdminProvider */}
+            <AdminProvider> {/* AdminProvider might depend on AuthContext and MagicPointsContext */}
+              {/* Changed: Used BrowserRouter directly */}
               <BrowserRouter>
                 <AppContent />
               </BrowserRouter>
-            </MagicPointsProvider>
-          </AdminProvider>
+            </AdminProvider>
+          </MagicPointsProvider>
         </SocketProvider>
       </AuthProvider>
     </ChakraProvider>

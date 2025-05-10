@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.jsx'; // Corrected import to use the event-driven AuthContext and ensure .jsx extension
-import { useMagicPoints } from '../context/MagicPointsContext';
+import { useMagicPoints } from '../context/MagicPointsContext.jsx'; // Corrected import to ensure .jsx extension
 import axios from 'axios';
 import { useToast } from '@chakra-ui/react'; // Added useToast import
 
@@ -13,7 +13,13 @@ const API_URL = process.env.REACT_APP_API_URL || "https://be-web-6c4k.onrender.c
 const AdminContext = createContext();
 
 // Custom hook to use the admin context
-export const useAdmin = () => useContext(AdminContext);
+export const useAdmin = () => {
+  const context = useContext(AdminContext);
+  if (context === undefined) {
+    throw new Error('useAdmin must be used within an AdminProvider');
+  }
+  return context;
+};
 
 export const AdminProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth(); // Now from ../context/AuthContext.jsx
