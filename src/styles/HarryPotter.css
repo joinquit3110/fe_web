@@ -1553,10 +1553,6 @@ button, input, select, textarea {
 }
 
 .hogwarts-app {
-  background-image: url('https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?auto=format&fit=crop&q=80');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
   min-height: 100vh;
   box-sizing: border-box;
   position: relative;

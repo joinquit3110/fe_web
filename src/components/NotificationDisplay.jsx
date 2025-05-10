@@ -42,6 +42,45 @@ const NotificationDisplay = () => {
   const processingQueue = useRef(false);
   const timerRef = useRef(null);
 
+  const handleDismiss = useCallback(() => {
+    if (activeNotification) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      if (activeNotification.id) {
+         removeNotification(activeNotification.id);
+      }
+      
+      setActiveNotification(null);
+      processingQueue.current = false;
+      
+      if (notificationQueue.current.length > 0) {
+        setTimeout(() => processQueue(), 300); // Delay to allow fade-out or transition
+      }
+    }
+  }, [activeNotification, removeNotification, setActiveNotification, notificationQueue, timerRef]);
+
+  const processQueue = useCallback(() => {
+    if (processingQueue.current || notificationQueue.current.length === 0) {
+      return;
+    }
+    
+    processingQueue.current = true;
+    const next = notificationQueue.current.shift();
+    setActiveNotification(next);
+    
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    
+    const displayTime = next.duration || getDurationByType(next.type);
+    timerRef.current = setTimeout(() => {
+      handleDismiss();
+    }, displayTime);
+  }, [timerRef, processingQueue, setActiveNotification, notificationQueue, handleDismiss, getDurationByType]);
+
   const getNotificationTitle = (type) => {
     // Titles are now often set directly in SocketContext, but this can be a fallback
     switch (type) {
@@ -64,45 +103,6 @@ const NotificationDisplay = () => {
       default: return 7000;
     }
   };
-
-  const processQueue = useCallback(() => {
-    if (processingQueue.current || notificationQueue.current.length === 0) {
-      return;
-    }
-    
-    processingQueue.current = true;
-    const next = notificationQueue.current.shift();
-    setActiveNotification(next);
-    
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    
-    const displayTime = next.duration || getDurationByType(next.type);
-    timerRef.current = setTimeout(() => {
-      handleDismiss();
-    }, displayTime);
-  }, [timerRef, processingQueue, setActiveNotification, notificationQueue, handleDismiss]); // Added handleDismiss to deps
-
-  const handleDismiss = useCallback(() => {
-    if (activeNotification) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      
-      if (activeNotification.id) {
-         removeNotification(activeNotification.id);
-      }
-      
-      setActiveNotification(null);
-      processingQueue.current = false;
-      
-      if (notificationQueue.current.length > 0) {
-        setTimeout(processQueue, 300); // Delay to allow fade-out or transition
-      }
-    }
-  }, [activeNotification, removeNotification, processQueue, setActiveNotification, notificationQueue, timerRef]);
 
   useEffect(() => {
     if (notifications.length > 0) {
