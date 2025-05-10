@@ -154,6 +154,8 @@ const NotificationDisplay = () => {
     }
   };
 
+  // Removed the moved up processQueue function, as it's now defined below
+
   const handleDismiss = useCallback(() => {
     if (activeNotification) {
       if (timerRef.current) {
@@ -175,8 +177,15 @@ const NotificationDisplay = () => {
           setActiveNotification(null);
           processingQueue.current = false;
           
+          // Process the queue after a small delay
           if (notificationQueue.current.length > 0) {
-            setTimeout(() => processQueue(), 300);
+            // Note: We're not calling processQueue here to avoid circular dependency
+            // Instead, we'll trigger processing via a state change that useEffect will detect
+            setTimeout(() => {
+              // This state update will trigger the useEffect that processes the queue
+              processingQueue.current = false;
+              setActiveNotification(null);
+            }, 300);
           }
         }, 300); // Animation duration
       } else {
@@ -188,13 +197,19 @@ const NotificationDisplay = () => {
         setActiveNotification(null);
         processingQueue.current = false;
         
+        // Process the queue after a small delay
         if (notificationQueue.current.length > 0) {
-          setTimeout(() => processQueue(), 300);
+          setTimeout(() => {
+            // This state update will trigger the useEffect that processes the queue
+            processingQueue.current = false;
+            setActiveNotification(null);
+          }, 300);
         }
       }
     }
-  }, [activeNotification, removeNotification, setActiveNotification, notificationQueue, timerRef, processQueue]);
+  }, [activeNotification, removeNotification, setActiveNotification, notificationQueue, timerRef]);
 
+  // Removed handleDismiss dependency to break circular reference
   const processQueue = useCallback(() => {
     if (processingQueue.current || notificationQueue.current.length === 0) {
       return;
@@ -224,9 +239,31 @@ const NotificationDisplay = () => {
     console.log(`[NOTIFICATION] Will auto-dismiss in ${displayTime}ms:`, next.id);
     
     timerRef.current = setTimeout(() => {
-      handleDismiss();
+      // Directly calling functions that handleDismiss would call
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      if (next.id) {
+        removeNotification(next.id);
+      }
+      
+      setActiveNotification(null);
+      processingQueue.current = false;
+      
+      if (notificationQueue.current.length > 0) {
+        setTimeout(() => processQueue(), 300);
+      }
     }, displayTime);
-  }, [timerRef, processingQueue, setActiveNotification, notificationQueue, handleDismiss, getDurationByType]);
+  }, [timerRef, removeNotification, setActiveNotification, notificationQueue, getDurationByType]);
+
+  useEffect(() => {
+    // When activeNotification is null and queue has items, process the next notification
+    if (!activeNotification && notificationQueue.current.length > 0 && !processingQueue.current) {
+      processQueue();
+    }
+  }, [activeNotification, processQueue]);
 
   useEffect(() => {
     if (notifications.length > 0) {
