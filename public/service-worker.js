@@ -189,120 +189,6 @@ function openDatabase() {
   });
 }
 
-// Get auth token (try to access from IndexedDB or via client messaging)
-async function getAuthToken() {
-  try {
-    // Check first in IndexedDB
-    const db = await openDatabase();
-    const transaction = db.transaction(['userData'], 'readonly');
-    const store = transaction.objectStore('userData');
-    const request = store.get('authToken');
-    
-    return new Promise(async (resolve) => {
-      request.onsuccess = async function() {
-        if (request.result && request.result.token) {
-          // Verify token is not too old (30 min max)
-          const lastUpdated = new Date(request.result.lastUpdated || 0);
-          const now = new Date();
-          const tokenAge = now - lastUpdated; // milliseconds
-          
-          if (tokenAge < 30 * 60 * 1000) { // Less than 30 minutes old
-            console.log('[SW] Using auth token from IndexedDB');
-            resolve(request.result.token);
-            return;
-          } else {
-            console.log('[SW] Token too old, requesting fresh one');
-          }
-        }
-        
-        // If not in IndexedDB or token too old, check for message from client
-        console.log('[SW] No valid token in IndexedDB, querying clients');
-        const clients = await self.clients.matchAll();
-        
-        if (clients.length > 0) {
-          // Ask first client for token with timeout for response
-          let responseReceived = false;
-          
-          // Set up promise with timeout
-          const clientResponse = new Promise((clientResolve) => {
-            const messageChannel = new MessageChannel();
-            
-            // Set up listener for response
-            messageChannel.port1.onmessage = (event) => {
-              responseReceived = true;
-              if (event.data && event.data.token) {
-                // Store and use fresh token
-                storeAuthToken(event.data.token);
-                clientResolve(event.data.token);
-              } else {
-                clientResolve(null);
-              }
-            };
-            
-            // Send request to client (all clients to ensure one responds)
-            clients.forEach(client => {
-              try {
-                client.postMessage(
-                  { action: 'getAuthToken' },
-                  [messageChannel.port2]
-                );
-              } catch (e) {
-                console.error('[SW] Error sending token request to client:', e);
-              }
-            });
-          });
-          
-          // Add a timeout in case client doesn't respond
-          const timeoutPromise = new Promise(timeoutResolve => {
-            setTimeout(() => {
-              if (!responseReceived) {
-                console.log('[SW] Client token request timed out');
-                timeoutResolve(null);
-              }
-            }, 1000);
-          });
-          
-          // Wait for client response or timeout
-          const token = await Promise.race([clientResponse, timeoutPromise]);
-          resolve(token);
-        } else {
-          console.log('[SW] No clients available to get token');
-          resolve(null);
-        }
-      };
-      
-      request.onerror = function(event) {
-        console.error('[SW] Error getting auth token from IndexedDB:', event.target.error);
-        resolve(null);
-      };
-    });
-  } catch (error) {
-    console.error('[SW] Error in getAuthToken:', error);
-    return null;
-  }
-}
-
-// Helper function to store auth token in IndexedDB
-async function storeAuthToken(token) {
-  if (!token) return;
-  
-  try {
-    const db = await openDatabase();
-    const transaction = db.transaction(['userData'], 'readwrite');
-    const store = transaction.objectStore('userData');
-    
-    store.put({
-      id: 'authToken',
-      token: token,
-      lastUpdated: new Date().toISOString()
-    });
-    
-    console.log('[SW] Stored auth token in IndexedDB');
-  } catch (error) {
-    console.error('[SW] Error storing auth token:', error);
-  }
-}
-
 // Enhanced fetch event with more sophisticated caching and network strategies
 self.addEventListener('fetch', event => {
   // Skip cross-origin requests
@@ -864,6 +750,62 @@ async function syncPendingOperations() {
       timestamp: new Date().toISOString()
     });
   }
+}
+
+// Get auth token (try to access from IndexedDB or via client messaging)
+async function getAuthToken() {
+  try {
+    const db = await openDatabase();
+    const transaction = db.transaction(['userData'], 'readonly');
+    const store = transaction.objectStore('userData');
+    const authData = await new Promise((resolve, reject) => {
+      const request = store.get('authToken');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = (event) => reject(event.target.error);
+    });
+    
+    if (authData && authData.token) {
+      return authData.token;
+    }
+  } catch (error) {
+    console.error('[SW] Error getting auth token from IndexedDB:', error);
+  }
+  
+  // If we couldn't get from IndexedDB, try via client messaging
+  try {
+    const clients = await self.clients.matchAll();
+    if (clients.length > 0) {
+      // First client found
+      const client = clients[0];
+      
+      // Request token
+      client.postMessage({
+        action: 'get_auth_token'
+      });
+      
+      // Wait for response using a promise
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Token request timed out'));
+        }, 3000);
+        
+        const messageHandler = function(event) {
+          if (event.data && event.data.action === 'auth_token_response') {
+            clearTimeout(timeout);
+            self.removeEventListener('message', messageHandler);
+            resolve(event.data.token);
+          }
+        };
+        
+        self.addEventListener('message', messageHandler);
+      });
+    }
+  } catch (error) {
+    console.error('[SW] Error getting auth token via client messaging:', error);
+  }
+  
+  // Last resort - try localStorage via client
+  return localStorage.getItem('token') || localStorage.getItem('authToken');
 }
 
 // Clear successful operations from IndexedDB

@@ -40,45 +40,13 @@ const MagicPointsDebug = () => {
   // Check if we're in offline/dev mode
   const isDevMode = false; // Set to false since we're online now
   
-  // Safely get pending operations length with fallback
-  const getSafePendingOperationsLength = () => {
-    if (!debugData) return 0;
-    if (!debugData.pendingOperations) return 0;
-    return Array.isArray(debugData.pendingOperations) ? 
-      debugData.pendingOperations.length : 0;
-  };
-
-  // Run debug on initial load with online check and auth verification
+  // Run debug on initial load
   useEffect(() => {
-    // First get the current state immediately
     const data = debugPointsState(true); // Silent mode for initial load
     setDebugData(data);
-    
-    // Set a timer to refresh data again after a short delay
-    // This helps after initial page load to catch any asynchronous state updates
-    const refreshTimer = setTimeout(() => {
-      const updatedData = debugPointsState(true);
-      setDebugData(updatedData);
-    }, 1500);
-    
-    return () => clearTimeout(refreshTimer);
   }, [debugPointsState]);
   
-  // Separate effect for auth checking
-  useEffect(() => {
-    // Small delay to ensure other initialization is complete
-    const authCheckTimer = setTimeout(() => {
-      try {
-        checkServerAuth();
-      } catch (error) {
-        console.error('[DEBUG] Error running auth check:', error);
-      }
-    }, 500);
-    
-    return () => clearTimeout(authCheckTimer);
-  }, []);
-  
-  // Enhanced event listener for real-time updates
+  // Listen for magic points updates from socket events
   useEffect(() => {
     const handlePointsUpdate = (event) => {
       console.log('[DEBUG] Received magicPointsUpdated event:', event.detail);
@@ -96,57 +64,14 @@ const MagicPointsDebug = () => {
       }
     };
     
-    const handleSyncCompleted = () => {
-      console.log('[DEBUG] Received serverSyncCompleted event');
-      const data = debugPointsState(true); // Silent mode for automatic updates
-      setDebugData(data);
-    };
-    
-    const handleAuthUpdate = (event) => {
-      console.log('[DEBUG] Received auth update event:', event.detail);
-      setDebugData(prevData => ({
-        ...prevData,
-        isAuthenticated: event.detail.authenticated
-      }));
-      
-      // Update auth status
-      if (event.detail.authenticated) {
-        setAuthStatus({
-          authenticated: true,
-          userId: event.detail.userId,
-          wasRetry: event.detail.wasRetry
-        });
-        
-        // Show toast for retry success
-        if (event.detail.wasRetry) {
-          toast({
-            title: 'Authentication Verified',
-            description: 'Auth state verified after retry',
-            status: 'success',
-            duration: 3000,
-          });
-        }
-      }
-    };
-    
-    const handleSocketUpdate = (event) => {
-      console.log('[DEBUG] Received socket connection event:', event.detail);
-      setDebugData(prevData => ({
-        ...prevData,
-        isOnline: true
-      }));
-    };
-    
     window.addEventListener('magicPointsUpdated', handlePointsUpdate);
-    window.addEventListener('serverSyncCompleted', handleSyncCompleted);
-    window.addEventListener('authVerified', handleAuthUpdate);
-    window.addEventListener('socketConnected', handleSocketUpdate);
+    window.addEventListener('serverSyncCompleted', handlePointsUpdate);
+    window.addEventListener('magicPointsUIUpdate', handlePointsUpdate);
     
     return () => {
       window.removeEventListener('magicPointsUpdated', handlePointsUpdate);
-      window.removeEventListener('serverSyncCompleted', handleSyncCompleted);
-      window.removeEventListener('authVerified', handleAuthUpdate);
-      window.removeEventListener('socketConnected', handleSocketUpdate);
+      window.removeEventListener('serverSyncCompleted', handlePointsUpdate);
+      window.removeEventListener('magicPointsUIUpdate', handlePointsUpdate);
     };
   }, [debugPointsState]);
   
@@ -473,12 +398,12 @@ const MagicPointsDebug = () => {
         
         {debugData && (
           <>
-            <Text fontWeight="bold" color="white">Pending Operations: {getSafePendingOperationsLength()}</Text>
-            {getSafePendingOperationsLength() > 0 && (
+            <Text fontWeight="bold" color="white">Pending Operations: {debugData.pendingOperations.length}</Text>
+            {debugData.pendingOperations.length > 0 && (
               <Box bg="gray.700" p={2} borderRadius="md" fontSize="sm">
-                <Code bg="gray.700" color="green.300">{JSON.stringify((debugData.pendingOperations || []).slice(0, 5), null, 2)}</Code>
-                {getSafePendingOperationsLength() > 5 && (
-                  <Text color="gray.300">...and {getSafePendingOperationsLength() - 5} more</Text>
+                <Code bg="gray.700" color="green.300">{JSON.stringify(debugData.pendingOperations.slice(0, 5), null, 2)}</Code>
+                {debugData.pendingOperations.length > 5 && (
+                  <Text color="gray.300">...and {debugData.pendingOperations.length - 5} more</Text>
                 )}
               </Box>
             )}

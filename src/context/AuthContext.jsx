@@ -15,42 +15,16 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
 
   useEffect(() => {
-    // Check local storage for saved auth state with server verification
-    const checkAuth = async () => {
+    // Check local storage for saved auth state
+    const checkAuth = () => {
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
       
       if (token && savedUser) {
-        // Set initial state from localStorage
         setUser(JSON.parse(savedUser));
         setToken(token);
         setIsAuthenticated(true);
         localStorage.setItem('isAuthenticated', 'true');
-        
-        // Verify token with server in the background
-        try {
-          const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('[AUTH] Token verified with server:', data);
-            
-            // Dispatch an event to notify other components about verified auth
-            window.dispatchEvent(new CustomEvent('authVerified', { 
-              detail: { authenticated: true, userId: data.userId }
-            }));
-          } else {
-            console.warn('[AUTH] Token verification failed, status:', response.status);
-            // Don't log out immediately on first failure - we'll retry
-          }
-        } catch (error) {
-          console.error('[AUTH] Error verifying token with server:', error);
-        }
       } else {
         setUser(null);
         setToken(null);
@@ -61,47 +35,6 @@ export const AuthProvider = ({ children }) => {
     };
     
     checkAuth();
-    
-    // Set up a retry mechanism for token verification
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    const retryVerification = async () => {
-      const token = localStorage.getItem('token');
-      if (!token || retryCount >= maxRetries) return;
-      
-      try {
-        console.log(`[AUTH] Retry token verification attempt ${retryCount + 1}`);
-        const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[AUTH] Token verified on retry:', data);
-          window.dispatchEvent(new CustomEvent('authVerified', { 
-            detail: { authenticated: true, userId: data.userId, wasRetry: true }
-          }));
-        } else {
-          retryCount++;
-          if (retryCount < maxRetries) {
-            setTimeout(retryVerification, 1000 * retryCount); // Exponential backoff
-          }
-        }
-      } catch (error) {
-        console.error('[AUTH] Error during retry verification:', error);
-        retryCount++;
-        if (retryCount < maxRetries) {
-          setTimeout(retryVerification, 1000 * retryCount);
-        }
-      }
-    };
-    
-    // Start first retry after a small delay
-    setTimeout(retryVerification, 2000);
   }, []);
 
   // Listen for user house changes from sockets or other parts of the application

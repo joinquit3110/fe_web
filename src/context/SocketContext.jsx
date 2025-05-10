@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Backend URL for socket connection
 const SOCKET_URL = "https://be-web-6c4k.onrender.com";
@@ -17,7 +17,6 @@ export const SocketProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionQuality, setConnectionQuality] = useState('good'); // 'good', 'poor', 'disconnected'
   const [lastHeartbeat, setLastHeartbeat] = useState(null);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
   const { user, isAuthenticated, setUser } = useAuth();
   
   // Track recent notification keys to prevent duplicates
@@ -32,10 +31,6 @@ export const SocketProvider = ({ children }) => {
   const batchTimeoutRef = useRef(null);
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100; // ms
-  
-  // Track socket initialization status
-  const socketInitializing = useRef(false);
-  const socketInitialized = useRef(false);
 
   // Check if current user is admin when user changes
   useEffect(() => {
@@ -65,24 +60,17 @@ export const SocketProvider = ({ children }) => {
 
   // Initialize socket on authentication state change
   useEffect(() => {
-    // Only initialize socket if user is authenticated and we're not already initializing
+    // Only initialize socket if user is authenticated
     if (!isAuthenticated) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
         setIsConnected(false);
         setConnectionQuality('disconnected');
-        socketInitialized.current = false;
       }
       return;
     }
     
-    // Prevent multiple initialization attempts
-    if (socketInitializing.current || socketInitialized.current) {
-      return;
-    }
-    
-    socketInitializing.current = true;
     console.log('[SOCKET] Initializing socket connection');
     
     // Create new socket instance with optimized connection settings
@@ -101,9 +89,6 @@ export const SocketProvider = ({ children }) => {
       console.log('[SOCKET] Connected to server');
       setIsConnected(true);
       setConnectionQuality('good');
-      socketInitialized.current = true;
-      socketInitializing.current = false;
-      setConnectionAttempts(0);
       
       // Authenticate with user ID and house
       if (user) {
@@ -113,23 +98,6 @@ export const SocketProvider = ({ children }) => {
           house: user.house
         });
         console.log(`[SOCKET] Authenticated as ${user.username}, house: ${user.house || 'unassigned'}`);
-        
-        // Dispatch an event that other components can listen to
-        window.dispatchEvent(new CustomEvent('socketConnected', { 
-          detail: { 
-            authenticated: true,
-            userId: user.id || user._id,
-            username: user.username,
-            timestamp: new Date().toISOString() 
-          }
-        }));
-        
-        // Also verify authentication with the server
-        setTimeout(() => {
-          if (socketInstance.connected) {
-            socketInstance.emit('verify_auth', { userId: user.id || user._id });
-          }
-        }, 500);
       }
     });
     
@@ -137,7 +105,6 @@ export const SocketProvider = ({ children }) => {
       console.error('[SOCKET] Connection error:', error);
       setIsConnected(false);
       setConnectionQuality('disconnected');
-      setConnectionAttempts(prev => prev + 1);
     });
     
     socketInstance.on('disconnect', (reason) => {
@@ -150,9 +117,6 @@ export const SocketProvider = ({ children }) => {
       console.log(`[SOCKET] Reconnected after ${attempt} attempts`);
       setIsConnected(true);
       setConnectionQuality('good');
-      setConnectionAttempts(0);
-      socketInitialized.current = true;
-      socketInitializing.current = false;
       
       // Re-authenticate on reconnect
       if (user) {
@@ -161,11 +125,6 @@ export const SocketProvider = ({ children }) => {
           username: user.username,
           house: user.house
         });
-        
-        // Dispatch event for components to update
-        window.dispatchEvent(new CustomEvent('socketConnected', { 
-          detail: { authenticated: true, reconnected: true }
-        }));
       }
       
       // Request a sync after reconnection
@@ -180,7 +139,6 @@ export const SocketProvider = ({ children }) => {
     socketInstance.on('reconnect_error', (error) => {
       console.error('[SOCKET] Reconnection error:', error);
       setConnectionQuality('poor');
-      setConnectionAttempts(prev => prev + 1);
     });
 
     socketInstance.on('reconnect_failed', () => {
@@ -564,7 +522,6 @@ export const SocketProvider = ({ children }) => {
         lastMessage,
         notifications,
         lastHeartbeat,
-        connectionAttempts,
         sendMessage,
         requestSync,
         clearNotifications,
