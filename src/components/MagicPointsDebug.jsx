@@ -92,16 +92,10 @@ const MagicPointsDebug = () => {
     window.addEventListener('force_sync', handleContextUpdate);
     window.addEventListener('authStatusVerified', handleContextUpdate);
     
-    // Create a MutationObserver to track direct magicPoints updates in memory
+    // Create a custom event for tracking context updates
     const contextUpdateEvent = new CustomEvent('magicPointsContextUpdate');
-    const originalSetMagicPoints = setMagicPoints;
-    if (typeof setMagicPoints === 'function') {
-      window.setMagicPoints = (...args) => {
-        const result = originalSetMagicPoints(...args);
-        window.dispatchEvent(contextUpdateEvent);
-        return result;
-      };
-    }
+    
+    // Add listener for the event
     window.addEventListener('magicPointsContextUpdate', handleContextUpdate);
     
     return () => {
@@ -113,12 +107,9 @@ const MagicPointsDebug = () => {
       window.removeEventListener('authStatusVerified', handleContextUpdate);
       window.removeEventListener('magicPointsContextUpdate', handleContextUpdate);
       
-      // Restore original function if we monkey-patched it
-      if (window.setMagicPoints === setMagicPoints) {
-        window.setMagicPoints = originalSetMagicPoints;
-      }
+      // No need to restore function as we're not monkey-patching anymore
     };
-  }, [debugPointsState, setMagicPoints]);
+  }, [debugPointsState]);
   
   // Update immediately when any context values change
   useEffect(() => {
