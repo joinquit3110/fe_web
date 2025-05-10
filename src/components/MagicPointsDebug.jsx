@@ -46,7 +46,7 @@ const MagicPointsDebug = () => {
     setDebugData(data);
   }, [debugPointsState]);
   
-  // Listen for magic points updates from socket events - improved with direct state updates
+  // Listen for magic points updates from events - thoroughly improved with direct state updates
   useEffect(() => {
     const handlePointsUpdate = (event) => {
       console.log('[DEBUG] Received magicPointsUpdated event:', event.detail);
@@ -55,8 +55,21 @@ const MagicPointsDebug = () => {
       if (event.detail?.points !== undefined) {
         setDebugData(prevData => ({
           ...prevData,
-          magicPoints: event.detail.points
+          magicPoints: event.detail.points,
+          lastUpdate: new Date().toISOString(),
+          lastUpdateSource: event.detail.source || 'event',
+          lastUpdateOperation: event.detail.operation || 'unknown',
+          lastUpdateDelta: event.detail.delta || 0
         }));
+        
+        // Update localStorage to ensure consistency
+        localStorage.setItem('magicPoints', event.detail.points);
+        
+        // Force a full refresh of debug data after a brief timeout
+        setTimeout(() => {
+          const freshData = debugPointsState(true);
+          setDebugData(prev => ({...freshData, lastUpdate: prev.lastUpdate, lastUpdateSource: prev.lastUpdateSource}));
+        }, 100);
       } else {
         // Fallback to fetching the full state
         const data = debugPointsState(true); // Silent mode for automatic updates
@@ -64,19 +77,52 @@ const MagicPointsDebug = () => {
       }
     };
     
+    // Custom handler for context state changes
+    const handleContextUpdate = () => {
+      console.log('[DEBUG] Detected context state change, updating debug data');
+      const data = debugPointsState(true);
+      setDebugData(data);
+    };
+    
+    // Listen for all relevant events that could update points
     window.addEventListener('magicPointsUpdated', handlePointsUpdate);
     window.addEventListener('serverSyncCompleted', handlePointsUpdate);
     window.addEventListener('magicPointsUIUpdate', handlePointsUpdate);
+    window.addEventListener('sync_update', handleContextUpdate);
+    window.addEventListener('force_sync', handleContextUpdate);
+    window.addEventListener('authStatusVerified', handleContextUpdate);
+    
+    // Create a MutationObserver to track direct magicPoints updates in memory
+    const contextUpdateEvent = new CustomEvent('magicPointsContextUpdate');
+    const originalSetMagicPoints = setMagicPoints;
+    if (typeof setMagicPoints === 'function') {
+      window.setMagicPoints = (...args) => {
+        const result = originalSetMagicPoints(...args);
+        window.dispatchEvent(contextUpdateEvent);
+        return result;
+      };
+    }
+    window.addEventListener('magicPointsContextUpdate', handleContextUpdate);
     
     return () => {
       window.removeEventListener('magicPointsUpdated', handlePointsUpdate);
       window.removeEventListener('serverSyncCompleted', handlePointsUpdate);
       window.removeEventListener('magicPointsUIUpdate', handlePointsUpdate);
+      window.removeEventListener('sync_update', handleContextUpdate);
+      window.removeEventListener('force_sync', handleContextUpdate);
+      window.removeEventListener('authStatusVerified', handleContextUpdate);
+      window.removeEventListener('magicPointsContextUpdate', handleContextUpdate);
+      
+      // Restore original function if we monkey-patched it
+      if (window.setMagicPoints === setMagicPoints) {
+        window.setMagicPoints = originalSetMagicPoints;
+      }
     };
-  }, [debugPointsState]);
+  }, [debugPointsState, setMagicPoints]);
   
-  // Also update immediately when magicPoints changes in the context
+  // Update immediately when any context values change
   useEffect(() => {
+    console.log('[DEBUG] Context values changed, updating debug view');
     setDebugData(prevData => ({
       ...prevData,
       magicPoints,
@@ -86,15 +132,23 @@ const MagicPointsDebug = () => {
       lastSynced,
       pendingOperations: pendingOperations || []
     }));
-  }, [magicPoints, isOnline, isAuthenticated, isSyncing, lastSynced, pendingOperations]);
+    
+    // Dispatch an event to notify that magic points were updated in the UI
+    // This helps keep all debug displays in sync
+    if (showDebug) {
+      window.dispatchEvent(new CustomEvent('magicPointsUIUpdate', {
+        detail: { points: magicPoints }
+      }));
+    }
+  }, [magicPoints, isOnline, isAuthenticated, isSyncing, lastSynced, pendingOperations, showDebug]);
   
-  // Refresh debug data every 2 seconds (silently)
+  // Refresh debug data more frequently (every 500ms) for more responsive updates
   useEffect(() => {
     if (showDebug) {
       const interval = setInterval(() => {
         const data = debugPointsState(true); // Silent mode for automatic updates
         setDebugData(data);
-      }, 2000);
+      }, 500); // More frequent updates (from 2000ms to 500ms)
       
       return () => clearInterval(interval);
     }

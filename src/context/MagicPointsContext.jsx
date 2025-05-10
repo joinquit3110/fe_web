@@ -271,6 +271,26 @@ export const MagicPointsProvider = ({ children }) => {
             // Reset retry counter on success
             localStorage.setItem('syncRetryCount', '0');
             setSyncRetries(0);
+            
+            // Dispatch an event to notify UI components of successful sync
+            window.dispatchEvent(new CustomEvent('syncComplete', {
+              detail: {
+                points: serverPoints,
+                source: 'syncToServer',
+                operation: 'sync',
+                timestamp: new Date().toISOString()
+              }
+            }));
+            
+            // Also dispatch the magicPointsUpdated event for consistent behavior
+            window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
+              detail: {
+                points: serverPoints,
+                source: 'syncToServer',
+                operation: 'sync',
+                timestamp: new Date().toISOString()
+              }
+            }));
           } catch (syncError) {
             console.error(`[POINTS] Specific sync error: ${syncError.message}`);
             
@@ -522,8 +542,11 @@ export const MagicPointsProvider = ({ children }) => {
       console.log('[POINTS] Auth state change detected via event:', currentAuthState);
       setIsAuthenticated(currentAuthState === 'true');
       
-      // If now authenticated, check for sync needs
+      // If now authenticated, verify with server immediately and check for sync needs
       if (currentAuthState === 'true') {
+        // Immediate verification with server
+        verifyAuth();
+        
         // Check for pending operations to auto-sync
         const pendingOps = localStorage.getItem('pendingOperations');
         if (pendingOps && JSON.parse(pendingOps).length > 0) {
@@ -563,6 +586,12 @@ export const MagicPointsProvider = ({ children }) => {
           setIsAuthenticated(true);
           localStorage.setItem('isAuthenticated', 'true');
           
+          // Dispatch a custom event to synchronize other contexts
+          const syncEvent = new CustomEvent('authStatusVerified', {
+            detail: { authenticated: true, userId: authStatus.userId }
+          });
+          window.dispatchEvent(syncEvent);
+          
           // If authenticated, check for pending operations to auto-sync
           const pendingOps = localStorage.getItem('pendingOperations');
           if (pendingOps && JSON.parse(pendingOps).length > 0) {
@@ -572,13 +601,14 @@ export const MagicPointsProvider = ({ children }) => {
               if (syncToServerRef.current) {
                 syncToServerRef.current();
               }
-            }, 1500);
+            }, 1000); // Reduced from 1500ms to 1000ms
           } else {
             console.log('[POINTS] No pending operations found on load');
           }
         } else {
           console.warn(`[POINTS] Auth verification failed: ${authStatus.reason}`);
-          // Don't immediately set to false - we'll rely on API call failures for that
+          // Set local state to match server status to ensure we're in sync
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('[POINTS] Error verifying auth:', error);
@@ -1068,6 +1098,18 @@ export const MagicPointsProvider = ({ children }) => {
     localStorage.setItem('magicPoints', newPoints);
     setPendingChanges(true);
     
+    // Dispatch event for real-time updates in other components
+    window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
+      detail: {
+        points: newPoints,
+        source: 'addPoints',
+        delta: amount,
+        operation: 'add',
+        reason: source,
+        timestamp: new Date().toISOString()
+      }
+    }));
+    
     // Create operation record
     const operation = {
       type: 'add',
@@ -1108,6 +1150,18 @@ export const MagicPointsProvider = ({ children }) => {
     setMagicPoints(newPoints);
     localStorage.setItem('magicPoints', newPoints);
     setPendingChanges(true);
+    
+    // Dispatch event for real-time updates in other components
+    window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
+      detail: {
+        points: newPoints,
+        source: 'removePoints',
+        delta: -amount,
+        operation: 'remove',
+        reason: source,
+        timestamp: new Date().toISOString()
+      }
+    }));
     
     const operation = {
       type: 'remove',
