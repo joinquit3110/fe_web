@@ -598,12 +598,16 @@ const AppContent = () => {
 const App = () => {
   return (
     <ChakraProvider theme={theme}>
-      <AuthProvider>
-        <AdminProvider>
-          <SocketProvider>
-            <AppContent />
-          </SocketProvider>
-        </AdminProvider>
+      <AuthProvider> {/* AuthProvider should be at a higher level */}
+        <SocketProvider> {/* SocketProvider might depend on AuthContext */}
+          <AdminProvider> {/* AdminProvider might depend on AuthContext */}
+            <MagicPointsProvider>
+              <Router>
+                <AppContent />
+              </Router>
+            </MagicPointsProvider>
+          </AdminProvider>
+        </SocketProvider>
       </AuthProvider>
     </ChakraProvider>
   );
