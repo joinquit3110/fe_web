@@ -56,7 +56,7 @@ const Login = () => {
     }
   }, []);
 
-  /*
+  
   // Add stars to the background
   useEffect(() => {
     const createStars = () => {
@@ -130,7 +130,7 @@ const Login = () => {
     const cleanup = createStars();
     return cleanup;
   }, []);
-  */
+  
 
   // Effect for house logo transition after login
   useEffect(() => {
