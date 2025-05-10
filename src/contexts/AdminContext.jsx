@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext.jsx'; // Corrected import
+import { useAuth } from '../context/AuthContext.jsx'; // Corrected import to use the event-driven AuthContext and ensure .jsx extension
 import { useMagicPoints } from '../context/MagicPointsContext';
 import axios from 'axios';
 import { useToast } from '@chakra-ui/react'; // Added useToast import

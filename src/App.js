@@ -11,7 +11,7 @@ import './styles/App.css';
 import './styles/HarryPotter.css';
 // Fix AuthContext import
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'; // Corrected import path
-import { AdminProvider } from './contexts/AdminContext';
+import { AdminProvider } from './contexts/AdminContext.jsx'; // Added .jsx extension
 import Login from './components/Login';
 import Register from './components/Register';
 import UserProfile from './components/UserProfile';
@@ -21,7 +21,7 @@ import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import AdminUserManagement from './components/AdminUserManagement'; // Added import for AdminUserManagement
 import NotificationDisplay from './components/NotificationDisplay';
-import { SocketProvider } from './context/SocketContext';
+import { SocketProvider } from './context/SocketContext.jsx'; // Added .jsx extension
 // Import the Hogwarts logo image
 import hogwartsLogoImg from './asset/Hogwarts logo.png';
 
