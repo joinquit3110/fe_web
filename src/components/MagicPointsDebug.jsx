@@ -106,8 +106,6 @@ const MagicPointsDebug = () => {
       window.removeEventListener('force_sync', handleContextUpdate);
       window.removeEventListener('authStatusVerified', handleContextUpdate);
       window.removeEventListener('magicPointsContextUpdate', handleContextUpdate);
-      
-      // No need to restore function as we're not monkey-patching anymore
     };
   }, [debugPointsState]);
   
