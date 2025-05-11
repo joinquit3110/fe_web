@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { FaBolt, FaSkull } from 'react-icons/fa';
 import '../styles/notification.css';
 import '../styles/HarryPotter.css';
+import '../styles/notification_animations.css';
 
 // Import images for point change animations
 import increasePointImg from '../asset/IncreasePoint.png';
@@ -407,8 +408,8 @@ const NotificationDisplay = () => {
               
               // For personal points updates
               else if (notification.isPersonalPointsUpdate) {
-                fixedNotification.reason = 'Personal points update';
-                console.log('[NOTIFICATION_DEBUG] 3️⃣ Using personal default reason:', fixedNotification.reason);
+                fixedNotification.reason = 'Point change';
+                console.log('[NOTIFICATION_DEBUG] 3️⃣ Using point change reason:', fixedNotification.reason);
               }
               
               // Generic fallback for any remaining notification
@@ -478,27 +479,25 @@ const NotificationDisplay = () => {
       top="20px"
       right="20px"
       zIndex="toast"
-      width={{ base: "90vw", sm: "400px", md: "450px" }}  // increased size for better image visibility
+      width={{ base: "90vw", sm: "450px", md: "500px" }}  // further increased size for better image visibility
       maxWidth="95vw"
       className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
+    >    <Box
+      borderWidth="5px" /* Increased border width for better visibility */
+      borderRadius="lg" 
+      overflow="hidden"
+      borderColor={isPointChange ? 
+        `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
+        houseColors.borderColor}
+      p={isPointChange ? 5 : 4}
+      className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
+      style={{
+        background: isPointChange 
+          ? `url(${pointsImage}) no-repeat center center` 
+          : houseColors.bgColor,
+        position: 'relative',
+      }}
     >
-      <Box
-        borderWidth="3px"
-        borderRadius="lg"
-        overflow="hidden"
-        borderColor={isPointChange ? 
-          `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
-          houseColors.borderColor}
-        p={isPointChange ? 5 : 4}
-        className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
-        style={{
-          background: isPointChange 
-            ? `url(${pointsImage}) no-repeat center center` 
-            : houseColors.bgColor,
-          backgroundSize: isPointChange ? 'cover' : 'auto',
-          position: 'relative',
-        }}
-      >
         {/* Add magical glow bar */}
         <div className="notification-glow-bar" style={{
           position: 'absolute',
@@ -514,6 +513,22 @@ const NotificationDisplay = () => {
         <div className="magical-sparkle sparkle-1"></div>
         <div className="magical-sparkle sparkle-2"></div>
         <div className="magical-sparkle sparkle-3"></div>
+        
+        {/* Add magical floating particles for point notifications */}
+        {isPointChange && (
+          <>
+            <div className="magical-particle magical-particle-1" 
+                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
+            <div className="magical-particle magical-particle-2" 
+                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
+            <div className="magical-particle magical-particle-3" 
+                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
+            <div className="magical-particle magical-particle-4" 
+                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
+            <div className="magical-particle magical-particle-5" 
+                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
+          </>
+        )}
         
         <Flex justifyContent="space-between" alignItems="center" mb={2}>
           <Heading 
@@ -531,10 +546,12 @@ const NotificationDisplay = () => {
           <CloseButton size="sm" color={houseColors.textColor} onClick={handleDismiss} />
         </Flex>
         
-        <Text fontSize="sm" mb={2} color={houseColors.textColor}>{activeNotification.message}</Text>
+        {!isPointChange && (
+          <Text fontSize="sm" mb={2} color={houseColors.textColor}>{activeNotification.message}</Text>
+        )}
         
         {activeNotification.house && (
-          <Flex align="center" mb={2} className="notification-house-info">
+          <Flex align="center" mb={2} className="notification-house-info" zIndex="10">
             <Badge 
               bg={activeNotification.house === 'gryffindor' ? '#740001' : 
                 activeNotification.house === 'slytherin' ? '#1A472A' :
@@ -542,41 +559,25 @@ const NotificationDisplay = () => {
               color={activeNotification.house === 'hufflepuff' ? '#000000' : '#FFFFFF'}
               mr={2}
               p={1}
+              fontSize="0.9rem" /* Slightly larger badge text */
               borderRadius="md"
               className={`house-badge house-badge-${activeNotification.house.toLowerCase()}`}
               style={{
-                boxShadow: activeNotification.house === 'gryffindor' ? '0 0 8px rgba(218, 165, 32, 0.5)' : 
-                  activeNotification.house === 'slytherin' ? '0 0 8px rgba(192, 192, 192, 0.5)' :
-                  activeNotification.house === 'ravenclaw' ? '0 0 8px rgba(176, 196, 222, 0.5)' : 
-                  '0 0 8px rgba(0, 0, 0, 0.5)'
+                boxShadow: activeNotification.house === 'gryffindor' ? '0 0 15px rgba(218, 165, 32, 0.8)' : 
+                  activeNotification.house === 'slytherin' ? '0 0 15px rgba(192, 192, 192, 0.8)' :
+                  activeNotification.house === 'ravenclaw' ? '0 0 15px rgba(176, 196, 222, 0.8)' : 
+                  '0 0 15px rgba(255, 217, 102, 0.8)', /* Increased glow */
+                letterSpacing: "0.05em",
+                fontWeight: "bold",
+                border: activeNotification.house === 'gryffindor' ? '1px solid rgba(255, 215, 0, 0.6)' : 
+                  activeNotification.house === 'slytherin' ? '1px solid rgba(192, 192, 192, 0.6)' :
+                  activeNotification.house === 'ravenclaw' ? '1px solid rgba(176, 196, 222, 0.6)' : 
+                  '1px solid rgba(255, 217, 102, 0.6)', /* Add subtle matching border */
+                animation: `badge-pulse 1.5s infinite alternate` /* Add gentle pulsing animation */
               }}
             >
               {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
             </Badge>
-            {(isHousePoints || isHouseAssessment) && (
-              <Flex 
-                alignItems="center" 
-                className={isPointChange ? "points-value-display" : ""}
-              >
-                {isPointChange && (                <Icon 
-                  as={isPointIncrease ? FaBolt : FaSkull} 
-                  color={isPointIncrease ? "#4ADE80" : "#F56565"} 
-                  mr="1"
-                  boxSize="16px"
-                  className={isPointIncrease ? "increase-icon" : "decrease-icon"}
-                />
-                )}
-                <Text
-                  fontSize={isPointChange ? "md" : "sm"} 
-                  fontWeight="bold" 
-                  color={isPointChange ? (isPointIncrease ? "#4ADE80" : "#F56565") : houseColors.accentColor}
-                  textShadow={isPointChange ? "0 0 10px rgba(0, 0, 0, 0.9)" : "none"}
-                >
-                  {isPointChange ? (isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`) : ''} 
-                  {isPointChange ? 'points' : ''}
-                </Text>
-              </Flex>
-            )}
           </Flex>
         )}
         
@@ -610,92 +611,93 @@ const NotificationDisplay = () => {
           else if (isHousePoints && activeNotification.house) {
             displayReason = `${activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)} house points update`;
           }
-          // Fourth priority: For personal points updates
+          // Fourth priority: For personal points updates - changed to generic point messages
           else if (activeNotification.isPersonalPointsUpdate) {
-            displayReason = "Personal achievement";
+            displayReason = isPointIncrease ? "Points Achievement" : "Points Deduction";
           }
           // Last resort fallback
           else if (!displayReason) {
-            displayReason = isPointIncrease ? "Achievement reward" : "Point adjustment";
+            displayReason = isPointIncrease ? "Points awarded" : "Points deducted";
           }
 
           console.log('[NOTIFICATION_REASON_FINAL]', displayReason);
           
           return (
             <Text 
-              fontSize="sm" // Increased size for better visibility
+              fontSize="md" // Increased size for better visibility
               fontWeight="bold" 
               color={isPointChange ? "white" : houseColors.accentColor}
               mb={2} 
               className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
               style={{
-                textShadow: "0 2px 4px rgba(0, 0, 0, 0.9)",
-                letterSpacing: "0.02em",
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8)", /* Enhanced text shadow for better readability */
+                letterSpacing: "0.04em", /* Slightly increased letter spacing */
                 zIndex: 3,
-                position: "relative"
+                position: "relative",
+                padding: isPointChange ? "6px 12px" : "0", /* More padding */
+                background: isPointChange ? "rgba(0,0,0,0.2)" : "transparent", /* Reduced background opacity */
+                borderRadius: "10px", /* More rounded corners */
+                display: "inline-block",
+                border: isPointChange ? "1px solid rgba(255,255,255,0.15)" : "none", /* Subtle border */
+                fontSize: isPointChange ? "1.1em" : "inherit" /* Slightly larger text for point changes */
               }}
             >
-              Reason: {displayReason}
+              {isPointChange ? displayReason : `Reason: ${displayReason}`}
             </Text>
           );
         })()}
         
         {isPointChange && (
           <>
-            {/* Keep the original icon container for non-background version */}
-            <Box className="points-animation notification-icon-container" position="absolute" right="-20px" top="-30px">
-              <Image src={pointsImage} alt={isPointIncrease ? "Points increased" : "Points decreased"} width="80px" className="notification-icon" />
-              <Flex 
-                position="absolute" 
-                top="30px" 
-                right="25px" 
-                alignItems="center"
-              >
-                <Icon 
-                  as={isPointIncrease ? FaBolt : FaSkull} 
-                  color={isPointIncrease ? "#4ADE80" : "#F56565"} 
-                  mr="1"
-                  boxSize="14px"
-                  className={isPointIncrease ? "increase-icon" : "decrease-icon"}
-                />
-                <Text 
-                  fontWeight="bold" 
-                  color={isPointIncrease ? "#4ADE80" : "#F56565"}
-                  fontSize="20px"
-                  textShadow="0 0 5px rgba(0,0,0,0.5)"
-                >
-                  {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
-                </Text>
-              </Flex>
-            </Box>
+            {/* Remove the smaller icon container since we're using full background image */}
             
-            {/* Add a large points display for the background version */}
+            {/* Enhanced points display for the background version */}
             <Flex 
               className="points-value-display"
               fontWeight="bold" 
-              fontSize="48px"
+              fontSize="70px" /* Further increased font size for more emphasis */
               position="absolute"
               top="50%"
-              right="20px"
-              transform="translateY(-50%)"
+              left="50%" /* Centered horizontally */
+              transform="translate(-50%, -50%)" /* Center both horizontally and vertically */
               alignItems="center"
+              justifyContent="center"
+              width="100%"
               style={{
                 animation: activeNotification.house ? 
                   `${activeNotification.house.toLowerCase()}-points-pulse 2s infinite` : 
-                  'points-pulse 2s infinite',
-                zIndex: 5
+                  'points-value-glow 2s infinite', /* Use the new animation */
+                zIndex: 5,
+                padding: "15px", /* Increased padding */
+                background: "rgba(0,0,0,0.25)", /* Reduced opacity for better view of the background image */
+                borderRadius: "20px", /* More rounded corners */
+                backdropFilter: "blur(3px)", /* Reduced blur effect to show more of the background */
+                border: isPointIncrease ? 
+                  "3px solid rgba(74, 222, 128, 0.6)" : 
+                  "3px solid rgba(245, 101, 101, 0.6)", /* Thicker and more visible border */
+                boxShadow: isPointIncrease ?
+                  "0 0 20px rgba(74, 222, 128, 0.4)" :
+                  "0 0 20px rgba(245, 101, 101, 0.4)" /* Add glow around the points display */
               }}
             >
               <Icon 
                 as={isPointIncrease ? FaBolt : FaSkull} 
                 color={isPointIncrease ? "#4ADE80" : "#F56565"} 
-                mr="2"
-                boxSize="40px"
+                mr="5" /* Increased spacing */
+                boxSize="58px" /* Larger icon */
                 className={isPointIncrease ? "increase-icon" : "decrease-icon"}
+                style={{
+                  filter: isPointIncrease ? 
+                    "drop-shadow(0 0 8px rgba(74, 222, 128, 0.8))" : 
+                    "drop-shadow(0 0 8px rgba(245, 101, 101, 0.8))" /* Add glow to the icon */
+                }}
               />
               <Text
-                textShadow="0 0 12px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7)"
+                textShadow={isPointIncrease ? 
+                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(74, 222, 128, 0.6)" : 
+                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(245, 101, 101, 0.6)"} /* House-colored shadow */
                 color={isPointIncrease ? "#4ADE80" : "#F56565"}
+                letterSpacing="0.05em" /* Add some letter spacing */
               >
                 {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
               </Text>
