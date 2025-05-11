@@ -63,12 +63,6 @@ function extractCriteriaAndLevel(notification) {
     if (level === '') level = null; // Treat empty string as null
   }
 
-  // Fallback: Try to extract from message if not explicitly defined
-  // This fallback logic can be complex and error-prone; relying on direct fields is better.
-  // For now, we prioritize direct fields. If these are null, criteria/level will be null.
-  // if (!criteria && notification.message) { ... }
-  // if (!level && notification.reason) { ... }
-
   return { criteria, level };
 }
 
@@ -77,11 +71,7 @@ const NotificationDisplay = () => {
   const { notifications, removeNotification } = useSocket();
   const { user } = useAuth();
   const [activeNotification, setActiveNotification] = useState(null);
-  const notificationQueue = useRef([]);
-  const processingQueue = useRef(false);
   const timerRef = useRef(null);
-  // Track processed notification IDs to prevent duplicates
-  const processedIds = useRef(new Set());
 
   // Helper function to get house-specific colors
   const getHouseColors = (house) => {
@@ -145,15 +135,6 @@ const NotificationDisplay = () => {
     }
   };
 
-  // Define dismissHandler function reference first to avoid circular dependency
-  const dismissHandler = () => {
-    if (activeNotification?.id) {
-      removeNotification(activeNotification.id);
-    }
-    setActiveNotification(null);
-    processingQueue.current = false;
-  };
-
   const handleDismiss = useCallback(() => {
     if (activeNotification) {
       if (timerRef.current) {
@@ -161,229 +142,63 @@ const NotificationDisplay = () => {
         timerRef.current = null;
       }
       
-      // Add dismissing class for animation
       const notificationElement = document.querySelector('.notification-container');
       if (notificationElement) {
         notificationElement.classList.add('dismissing');
         
-        // Wait for animation to complete before removing
         setTimeout(() => {
-          if (activeNotification.id) {
-            removeNotification(activeNotification.id);
-          }
-          
-          setActiveNotification(null);
-          processingQueue.current = false;
-          
-          // We'll let the useEffect handle processing the next notification
-          // This avoids calling processQueue directly, breaking the circular dependency
-        }, 300); // Animation duration
-      } else {
-        // Fallback if element not found
-        if (activeNotification.id) {
           removeNotification(activeNotification.id);
-        }
-        
-        setActiveNotification(null);
-        processingQueue.current = false;
-      }
-    }
-  }, [activeNotification, removeNotification]);
-
-  // Separate function from handleDismiss to break circular reference
-  const processQueue = useCallback(() => {
-    if (processingQueue.current || notificationQueue.current.length === 0) {
-      return;
-    }
-    
-    processingQueue.current = true;
-    const next = notificationQueue.current.shift();
-    
-    // Enhanced safety checks for malformed notifications
-    if (!next || typeof next !== 'object') {
-      console.error('[NOTIFICATION] Encountered invalid notification in queue:', next);
-      processingQueue.current = false;
-      return;
-    };
-    
-    // Validate required fields
-    if (!next.id) {
-      console.error('[NOTIFICATION] Notification missing ID:', next);
-      processingQueue.current = false;
-      return;
-    }
-    
-    // Ensure we have a message
-    if (!next.message) {
-      next.message = next.title || 'Notification';
-    }
-    
-    setActiveNotification(next);
-    
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    
-    // Determine how long to display this notification
-    // First use the explicit duration if provided
-    // Otherwise, use the type-based duration
-    // For house-related notifications, give a bit more time
-    let displayTime = next.duration;
-    if (!displayTime) {
-      displayTime = getDurationByType(next.type || 'info');
-      // House notifications get a bit more time
-      if (next.isHousePointsUpdate || next.isHouseAssessmentUpdate) {
-        displayTime = Math.max(displayTime, 10000); // Minimum 10s for house notifications
-      }
-    };
-    
-    timerRef.current = setTimeout(() => {
-      // Add dismissing class for animation
-      const notificationElement = document.querySelector('.notification-container');
-      if (notificationElement) {
-        notificationElement.classList.add('dismissing');
-        
-        // Wait for animation to complete before removing
-        setTimeout(() => {
-          if (next.id) {
-            removeNotification(next.id);
-          }
-          
-          setActiveNotification(null);
-          processingQueue.current = false;
-          
-          // Process the next notification after a brief delay
-          if (notificationQueue.current.length > 0) {
-            setTimeout(() => {
-              processQueue();
-            }, 300);
-          }
         }, 300); // Animation duration
       } else {
-        // Direct removal if element not found
-        if (next.id) {
-          removeNotification(next.id);
-        }
-        
-        setActiveNotification(null);
-        processingQueue.current = false;
-        
-        if (notificationQueue.current.length > 0) {
-          setTimeout(() => processQueue(), 300);
-        }
+        removeNotification(activeNotification.id);
       }
-    }, displayTime);
-  }, [timerRef, removeNotification, setActiveNotification, notificationQueue, getDurationByType]);
-
-  useEffect(() => {
-    // When activeNotification is null and queue has items, process the next notification
-    if (!activeNotification && notificationQueue.current.length > 0 && !processingQueue.current) {
-      processQueue();
     }
-  }, [activeNotification, processQueue]);
+  }, [activeNotification, removeNotification, timerRef]);
 
   useEffect(() => {
-    if (notifications.length > 0) {
-      const newNotifications = notifications.filter(notification => {
-        // Safety check for malformed notifications
-        if (!notification || typeof notification !== 'object') {
-          console.error('[NOTIFICATION] Received invalid notification:', notification);
-          return false;
+    if (notifications && notifications.length > 0) {
+      const currentNotification = notifications[0];
+      if (!activeNotification || activeNotification.id !== currentNotification.id) {
+        setActiveNotification(currentNotification);
+
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
         }
-        
-        // Skip if notification has no ID
-        if (!notification.id) {
-          return false;
-        }
-        
-        // Skip if this notification ID has been processed before
-        if (processedIds.current.has(notification.id)) {
-          return false;
-        }
-        
-        // Skip if this is already in the queue
-        const inQueue = notificationQueue.current.some(n => n.id === notification.id);
-        if (inQueue) {
-          return false;
-        }
-        
-        // Skip if this is the active notification
-        if (activeNotification && activeNotification.id === notification.id) {
-          return false;
-        }
-        
-        // This is a new notification - track it
-        processedIds.current.add(notification.id);
-        return true;
-      });
-      
-      if (newNotifications.length > 0) {
-        // Limit how many notifications we process at once to prevent spamming
-        const toProcess = newNotifications.slice(0, 3);
-        
-        const validatedNotifications = toProcess.map(notification => {
-          const fixedNotification = {...notification};
-          
-          let notificationType = "standard";
-          if (notification.isHousePointsUpdate) notificationType = "house points";
-          if (notification.isPersonalPointsUpdate) notificationType = "personal points";
-          
-          if (notification.pointsChange !== undefined) {
-            
-            // Enhanced reason extraction for all notification types
-            if (fixedNotification.reason === 'System update' || !fixedNotification.reason) {
-              // First check if the message contains an explicit reason after a colon
-              if (notification.message && notification.message.includes(':')) {
-                const parts = notification.message.split(':');
-                if (parts.length > 1) {
-                  fixedNotification.reason = parts[1].trim();
-                }
-              }
-              
-              // Special handling for house points updates - ensure the reason is always included
-              if (notification.isHousePointsUpdate && notification.house) {
-                if (notification.message && notification.message.includes('points') && notification.message.includes(':')) {
-                  // Extract reason from message format "X points to House: Reason"
-                  const reasonPart = notification.message.split(':')[1];
-                  if (reasonPart && reasonPart.trim()) {
-                    fixedNotification.reason = reasonPart.trim();
-                  } 
-                  else if (notification.reason && notification.reason !== 'System update') {
-                    // Use the provided reason if available
-                    fixedNotification.reason = notification.reason;
-                  }
-                }
-                // If still no reason found, use default
-                if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
-                  const houseName = notification.house.charAt(0).toUpperCase() + notification.house.slice(1);
-                  fixedNotification.reason = `${houseName} house points update`;
-                }
-              } 
-              
-              // For personal points updates
-              else if (notification.isPersonalPointsUpdate) {
-                fixedNotification.reason = 'Point change';
-              }
-              
-              // Generic fallback for any remaining notification
-              else if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
-                fixedNotification.reason = notification.pointsChange > 0 ? 'Achievement reward' : 'Point adjustment';
-              }
-            }
+
+        let displayTime = currentNotification.duration;
+        if (!displayTime) {
+          displayTime = getDurationByType(currentNotification.type || 'info');
+          if (currentNotification.isHousePointsUpdate || currentNotification.isHouseAssessmentUpdate) {
+            displayTime = Math.max(displayTime, 10000);
           }
-              
-          return fixedNotification;
-        });
-        
-        notificationQueue.current = [...notificationQueue.current, ...validatedNotifications];
-        
-        if (!processingQueue.current && !activeNotification) {
-          processQueue();
         }
+        
+        console.log(`[NOTIFICATION] Displaying: ${currentNotification.id}, duration: ${displayTime}ms`, currentNotification);
+
+        timerRef.current = setTimeout(() => {
+          const notificationElement = document.querySelector('.notification-container');
+          if (notificationElement) {
+            notificationElement.classList.add('dismissing');
+            setTimeout(() => {
+              removeNotification(currentNotification.id);
+            }, 300); 
+          } else {
+            removeNotification(currentNotification.id);
+          }
+        }, displayTime);
       }
+    } else if (activeNotification) {
+      // If notifications array is empty but there's an active one, clear it
+      setActiveNotification(null);
     }
-  }, [notifications, activeNotification, removeNotification]);
+
+    // Cleanup timer on unmount or when activeNotification changes
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [notifications, activeNotification, removeNotification, getDurationByType]);
 
   if (!activeNotification) {
     return null;
@@ -395,7 +210,6 @@ const NotificationDisplay = () => {
   try {
     if (activeNotification) {
       const extracted = extractCriteriaAndLevel(activeNotification);
-      // Ensure that if standardizeCriteria returns '', it's treated as null for rendering logic
       criteria = extracted.criteria && extracted.criteria !== '' ? extracted.criteria : null;
       level = extracted.level && extracted.level !== '' ? extracted.level : null;
     }
@@ -404,28 +218,14 @@ const NotificationDisplay = () => {
   }
 
   const isPointChange = activeNotification.pointsChange !== undefined;
-  // Make sure we're using the points delta (change), not the total points
   const pointsValue = isPointChange ? Math.abs(activeNotification.pointsChange) : 0;
   const isPointIncrease = isPointChange && activeNotification.pointsChange > 0;
   const pointsImage = isPointIncrease ? increasePointImg : decreasePointImg;
-  
-  // Debug log to verify we're using the correct value
-  if (isPointChange) {
-    console.log('[NOTIFICATION] Displaying points change:', {
-      pointsChange: activeNotification.pointsChange,
-      displayValue: pointsValue,
-      isIncrease: isPointIncrease
-    });
-  }
-  
+
   const isHousePoints = Boolean(activeNotification.isHousePointsUpdate);
   const isHouseAssessment = Boolean(activeNotification.isHouseAssessmentUpdate);
-  
-  // Get theme colors based on notification house or type
-  // Using direct function call instead of useMemo to avoid "cannot access before initialization" errors
-  const houseColors = getHouseColors(activeNotification.house);
 
-  // Determine house class if present
+  const houseColors = getHouseColors(activeNotification.house);
   const houseClass = activeNotification.house ? `house-${activeNotification.house.toLowerCase()}` : '';
 
   return (
@@ -433,35 +233,35 @@ const NotificationDisplay = () => {
       position="fixed"
       top="20px"
       right="20px"
-      zIndex="toast" /* Using toast z-index to ensure visibility */
-      width={{ base: "94vw", sm: "500px", md: "550px" }}  /* Increased width for larger image */
+      zIndex="toast"
+      width={{ base: "94vw", sm: "500px", md: "550px" }}
       maxWidth="96vw"
       className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
-      style={{ pointerEvents: "all" }} /* Ensure clickable */
-    >    <Box
-      borderWidth="5px" /* Increased border width for better visibility */
-      borderRadius="lg" 
-      overflow="hidden"
-      borderColor={isPointChange ? 
-        `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
-        houseColors.borderColor}
-      p={isPointChange ? 0 : 4} /* Removed padding for point change to maximize image size */
-      className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
-      style={{
-        background: isPointChange 
-          ? `url(${pointsImage}) no-repeat center center` /* Changed to center center for balanced positioning */
-          : houseColors.bgColor,
-        backgroundSize: isPointChange ? 'cover' : 'cover', /* Use cover for full image */
-        backgroundPosition: isPointChange ? 'center center' : 'center center',
-        position: 'relative',
-        zIndex: 1,
-        imageRendering: 'high-quality', /* Best image quality */
-        backgroundOrigin: 'padding-box', /* Better for full coverage */
-        minHeight: isPointChange ? '500px' : 'auto', /* Increased height for better image display */
-        boxShadow: isPointChange ? '0 0 30px rgba(0,0,0,0.7)' : 'none' /* Add shadow for depth */
-      }}
+      style={{ pointerEvents: "all" }}
     >
-        {/* Add magical glow bar */}
+      <Box
+        borderWidth="5px"
+        borderRadius="lg" 
+        overflow="hidden"
+        borderColor={isPointChange ? 
+          `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
+          houseColors.borderColor}
+        p={isPointChange ? 0 : 4}
+        className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
+        style={{
+          background: isPointChange 
+            ? `url(${pointsImage}) no-repeat center center`
+            : houseColors.bgColor,
+          backgroundSize: isPointChange ? 'cover' : 'cover',
+          backgroundPosition: isPointChange ? 'center center' : 'center center',
+          position: 'relative',
+          zIndex: 1,
+          imageRendering: 'high-quality',
+          backgroundOrigin: 'padding-box',
+          minHeight: isPointChange ? '500px' : 'auto',
+          boxShadow: isPointChange ? '0 0 30px rgba(0,0,0,0.7)' : 'none'
+        }}
+      >
         <div className="notification-glow-bar" style={{
           position: 'absolute',
           left: 0,
@@ -472,12 +272,9 @@ const NotificationDisplay = () => {
           boxShadow: `0 0 10px ${houseColors.accentColor}`
         }}></div>
         
-        {/* Add magical sparkles */}
         <div className="magical-sparkle sparkle-1"></div>
         <div className="magical-sparkle sparkle-2"></div>
         <div className="magical-sparkle sparkle-3"></div>
-        
-        {/* Removing particles for simplicity and better performance */}
         
         <Flex justifyContent="space-between" alignItems="center" mb={2}>
           <Heading 
@@ -508,21 +305,21 @@ const NotificationDisplay = () => {
               color={activeNotification.house === 'hufflepuff' ? '#000000' : '#FFFFFF'}
               mr={2}
               p={1}
-              fontSize="0.9rem" /* Slightly larger badge text */
+              fontSize="0.9rem"
               borderRadius="md"
               className={`house-badge house-badge-${activeNotification.house.toLowerCase()}`}
               style={{
                 boxShadow: activeNotification.house === 'gryffindor' ? '0 0 15px rgba(218, 165, 32, 0.8)' : 
                   activeNotification.house === 'slytherin' ? '0 0 15px rgba(192, 192, 192, 0.8)' :
                   activeNotification.house === 'ravenclaw' ? '0 0 15px rgba(176, 196, 222, 0.8)' : 
-                  '0 0 15px rgba(255, 217, 102, 0.8)', /* Increased glow */
+                  '0 0 15px rgba(255, 217, 102, 0.8)',
                 letterSpacing: "0.05em",
                 fontWeight: "bold",
                 border: activeNotification.house === 'gryffindor' ? '1px solid rgba(255, 215, 0, 0.6)' : 
                   activeNotification.house === 'slytherin' ? '1px solid rgba(192, 192, 192, 0.6)' :
                   activeNotification.house === 'ravenclaw' ? '1px solid rgba(176, 196, 222, 0.6)' : 
-                  '1px solid rgba(255, 217, 102, 0.6)', /* Add subtle matching border */
-                animation: `badge-pulse 1.5s infinite alternate` /* Add gentle pulsing animation */
+                  '1px solid rgba(255, 217, 102, 0.6)',
+                animation: `badge-pulse 1.5s infinite alternate`
               }}
             >
               {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
@@ -530,59 +327,44 @@ const NotificationDisplay = () => {
           </Flex>
         )}
         
-        {/* Show reason with more robust handling */}
         {(() => {
-          // Extract reason using multiple approaches for reliability
           let displayReason = null;
           
-          // Extract reason from notification
-          
-          // First priority: Use valid reason from notification object
           if (activeNotification.reason && 
               activeNotification.reason !== 'System update' && 
               activeNotification.reason.trim() !== '') {
             displayReason = activeNotification.reason;
-          } 
-          // Second priority: Extract from message after colon for points notifications
-          else if (activeNotification.message && activeNotification.message.includes(':')) {
+          } else if (activeNotification.message && activeNotification.message.includes(':')) {
             const parts = activeNotification.message.split(':');
             if (parts.length > 1 && parts[1].trim() !== '') {
               displayReason = parts[1].trim();
             }
-          }
-          // Third priority: Generate house-specific fallback
-          else if (isHousePoints && activeNotification.house) {
+          } else if (isHousePoints && activeNotification.house) {
             displayReason = `${activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)} house points update`;
-          }
-          // Fourth priority: For personal points updates - changed to generic point messages
-          else if (activeNotification.isPersonalPointsUpdate) {
+          } else if (activeNotification.isPersonalPointsUpdate) {
             displayReason = isPointIncrease ? "Points Achievement" : "Points Deduction";
-          }
-          // Last resort fallback
-          else if (!displayReason) {
+          } else if (!displayReason) {
             displayReason = isPointIncrease ? "Points awarded" : "Points deducted";
           }
 
-          // Use the final display reason
-          
           return (
             <Text 
-              fontSize="md" // Increased size for better visibility
+              fontSize="md"
               fontWeight="bold" 
               color={isPointChange ? "white" : houseColors.accentColor}
               mb={2} 
               className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
               style={{
-                textShadow: "0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8)", /* Enhanced text shadow for better readability */
-                letterSpacing: "0.04em", /* Slightly increased letter spacing */
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8)",
+                letterSpacing: "0.04em",
                 zIndex: 3,
                 position: "relative",
-                padding: isPointChange ? "6px 12px" : "0", /* More padding */
-                background: isPointChange ? "rgba(0,0,0,0.2)" : "transparent", /* Reduced background opacity */
-                borderRadius: "10px", /* More rounded corners */
+                padding: isPointChange ? "6px 12px" : "0",
+                background: isPointChange ? "rgba(0,0,0,0.2)" : "transparent",
+                borderRadius: "10px",
                 display: "inline-block",
-                border: isPointChange ? "1px solid rgba(255,255,255,0.15)" : "none", /* Subtle border */
-                fontSize: isPointChange ? "1.1em" : "inherit" /* Slightly larger text for point changes */
+                border: isPointChange ? "1px solid rgba(255,255,255,0.15)" : "none",
+                fontSize: isPointChange ? "1.1em" : "inherit"
               }}
             >
               {isPointChange ? displayReason : `Reason: ${displayReason}`}
@@ -592,52 +374,46 @@ const NotificationDisplay = () => {
         
         {isPointChange && (
           <>
-            {/* Remove the smaller icon container since we're using full background image */}
-            
-            {/* Enhanced points display for the background version */}
-            {/* Points Display - Larger with icon positioned behind the text */}
             <Flex 
               className="points-value-display"
               fontWeight="bold" 
               position="absolute"
-              top="40%" /* Positioned in the middle upper area */
+              top="40%"
               left="50%"
               transform="translate(-50%, -50%)" 
               alignItems="center"
               justifyContent="center"
-              width="100%" /* Full width */
-              height="70%" /* Takes up most of the upper portion */
+              width="100%"
+              height="70%"
               style={{
                 zIndex: 10,
                 position: "relative",
                 textAlign: "center",
               }}
             >
-              {/* ICON BEHIND: Large icon positioned behind the text */}
               <Icon 
                 as={isPointIncrease ? FaBolt : FaSkull}
                 color={isPointIncrease ? "rgba(74, 222, 128, 0.4)" : "rgba(245, 101, 101, 0.4)"}
                 position="absolute" 
-                zIndex="1" /* Behind the text */
-                boxSize="220px" /* Much larger icon */
+                zIndex="1"
+                boxSize="220px"
                 opacity="0.8"
                 className={isPointIncrease ? "increase-icon-bg" : "decrease-icon-bg"}
               />
               
-              {/* Points text overlay that appears on top of the icon */}
               <Text
                 position="relative"
-                zIndex="2" /* In front of the icon */
+                zIndex="2"
                 textShadow={isPointIncrease ? 
                   "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(74, 222, 128, 0.7), 0 0 40px rgba(0,0,0,0.8)" : 
                   "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(245, 101, 101, 0.7), 0 0 40px rgba(0,0,0,0.8)"}
                 color={isPointIncrease ? "#4ADE80" : "#F56565"}
                 letterSpacing="0.05em"
-                fontWeight="900" /* Extra bold */
+                fontWeight="900"
                 data-testid="points-change-display" 
                 title={`Points ${isPointIncrease ? 'awarded' : 'deducted'}`}
                 textAlign="center"
-                fontSize="140px" /* Extra large text */
+                fontSize="140px"
                 style={{
                   filter: "drop-shadow(0 0 8px rgba(0,0,0,0.9))",
                 }}
@@ -646,45 +422,42 @@ const NotificationDisplay = () => {
               </Text>
             </Flex>
             
-            {/* Content area at the bottom of the notification */}
             <Box
               position="absolute"
               bottom="0"
               left="0"
               right="0"
-              background="rgba(0,0,0,0.75)" /* Darker background for better text visibility */
+              background="rgba(0,0,0,0.75)"
               padding="16px"
               borderTop={isPointIncrease ? 
                 "4px solid rgba(74, 222, 128, 0.9)" : 
                 "4px solid rgba(245, 101, 101, 0.9)"}
               textAlign="center"
-              className="points-content-area" /* Added class for specific styling */
+              className="points-content-area"
             >
               <Text 
-                fontSize="22px" /* Larger text */
+                fontSize="22px"
                 fontWeight="bold"
                 color="#FFFFFF" 
                 textShadow="0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)"
-                mb="1" /* Add margin below */
+                mb="1"
               >
                 Points {isPointIncrease ? 'Awarded' : 'Deducted'}
               </Text>
               <Text 
-                fontSize="16px" /* Larger reason text */
+                fontSize="16px"
                 color="#FFFFFF" 
                 fontWeight="medium"
                 opacity="0.9"
                 mt="1"
                 className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
               >
-                {/* Ensure reason is displayed if present, otherwise a sensible fallback */}
                 {(activeNotification.reason && String(activeNotification.reason).trim() !== '') ? String(activeNotification.reason).trim() : `For ${activeNotification.house || 'your house'}`}
               </Text>
             </Box>
           </>
         )}
         
-        {/* Render criteria and level badges if criteria is present */}
         {criteria && (
           <Flex mt={2} className="criteria-level-badges-container">
             <Badge 
@@ -705,7 +478,6 @@ const NotificationDisplay = () => {
             >
               {criteria}
             </Badge>
-            {/* Render level badge only if level is also present */}
             {level && (
               <Badge 
                 bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
