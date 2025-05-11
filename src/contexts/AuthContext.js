@@ -232,7 +232,6 @@ export const AuthProvider = ({ children }) => {
   
   const value = {
     user,
-    setUser, // Add setUser to the context value
     loading,
     isAuthenticated,
     error,

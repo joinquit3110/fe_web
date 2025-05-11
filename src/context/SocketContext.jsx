@@ -10,16 +10,6 @@ const SocketContext = createContext();
 
 export const useSocket = () => useContext(SocketContext);
 
-// Helper to determine notification priority (moved outside component for stability)
-const getNotificationPriority = (notification) => {
-  if (!notification || !notification.type) return 0; // Basic safety
-  if (notification.type === 'error') return 4;
-  if (notification.type === 'warning') return 3;
-  if (notification.type === 'success') return 2;
-  if (notification.type === 'announcement') return 1;
-  return 0;
-};
-
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -207,131 +197,100 @@ export const SocketProvider = ({ children }) => {
   }, [socket, isConnected, user?.house]);
 
   // Optimize notification processing
+  // Add notification queue state
   const [notificationQueue, setNotificationQueue] = useState([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
-  const batchTimeoutRef = useRef(null); // For batching incoming notifications
-  const processingTimeoutRef = useRef(null); // For draining the queue
+  const batchTimeoutRef = useRef(null);
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100; // ms
   
   const processNotificationQueue = useCallback(() => {
-    if (notificationQueue.length === 0 && !isProcessingQueue) { // Added !isProcessingQueue to log even if called when empty by mistake
-      return;
-    }
-    if (isProcessingQueue) {
-      console.log('[SOCKET] processNotificationQueue: CALLED but already processing. Bailing.');
-      return;
-    }
-
+    if (isProcessingQueue || notificationQueue.length === 0) return;
+    
     setIsProcessingQueue(true);
-    console.log('[SOCKET] processNotificationQueue: START. Queue length:', notificationQueue.length);
-
-    if (processingTimeoutRef.current) {
-      clearTimeout(processingTimeoutRef.current);
-      processingTimeoutRef.current = null;
-    }
-
-    let remainingInQueue = [];
-
+    
     try {
-      const currentQueueSnapshot = [...notificationQueue]; // Work on a snapshot
-      const sortedQueue = currentQueueSnapshot.sort((a, b) => {
+      // Sort by priority and timestamp
+      const sortedQueue = [...notificationQueue].sort((a, b) => {
         const priorityA = getNotificationPriority(a);
         const priorityB = getNotificationPriority(b);
         if (priorityA !== priorityB) return priorityB - priorityA;
         return new Date(b.timestamp) - new Date(a.timestamp);
       });
-      console.log('[SOCKET] processNotificationQueue: Sorted queue IDs:', JSON.stringify(sortedQueue.map(n => n.id)));
       
+      // Process batch
       const batch = sortedQueue.slice(0, MAX_BATCH_SIZE);
-      remainingInQueue = sortedQueue.slice(MAX_BATCH_SIZE);
-      console.log('[SOCKET] processNotificationQueue: Batch IDs to process:', JSON.stringify(batch.map(n => n.id)), 'Remaining in queue IDs:', JSON.stringify(remainingInQueue.map(n => n.id)));
+      const remaining = sortedQueue.slice(MAX_BATCH_SIZE);
       
-      if (batch.length > 0) {
-        setNotifications(prevDisplayedNotifications => {
-          console.log('[SOCKET] processNotificationQueue: setNotifications callback. Prev displayed IDs:', JSON.stringify(prevDisplayedNotifications.map(n => n.id)));
-          const displayedIds = new Set(prevDisplayedNotifications.map(n => n.id));
-          
-          const newBatchItemsToShow = batch.filter(item => {
-            const alreadyDisplayed = displayedIds.has(item.id);
-            return !alreadyDisplayed;
-          });
-          console.log('[SOCKET] processNotificationQueue: New items to show IDs:', JSON.stringify(newBatchItemsToShow.map(n => n.id)));
-          
-          // Combine new items with existing, ensuring new ones are at the beginning for LIFO-like display stack
-          const combined = [...newBatchItemsToShow, ...prevDisplayedNotifications];
-          
-          const finalNotifications = [];
-          const seenIds = new Set();
-          for (const n of combined) {
-              if (!seenIds.has(n.id)) {
-                  finalNotifications.push(n);
-                  seenIds.add(n.id);
-              }
-          }
-          console.log('[SOCKET] processNotificationQueue: Combined and deduplicated IDs for display:', JSON.stringify(finalNotifications.map(n => n.id)));
-          const result = finalNotifications.slice(0, 10); // Keep max 10 notifications
-          console.log('[SOCKET] processNotificationQueue: Resulting notifications for context (sliced) IDs:', JSON.stringify(result.map(n => n.id)));
-          return result;
-        });
-      } else {
-        console.log('[SOCKET] processNotificationQueue: Batch is empty, no call to setNotifications.');
-      }
+      // Update notifications with batch
+      setNotifications(prev => {
+        const newNotifications = [...batch, ...prev];
+        return newNotifications.slice(0, 10); // Keep max 10 notifications
+      });
       
-      // Update the queue state with what remains
-      setNotificationQueue(remainingInQueue); 
+      // Update queue with remaining items
+      setNotificationQueue(remaining);
       
     } catch (error) {
       console.error('[SOCKET] Error processing notification queue:', error);
     } finally {
       setIsProcessingQueue(false);
-      console.log('[SOCKET] processNotificationQueue: FINISHED current run. Remaining in queue:', remainingInQueue.length);
-      if (remainingInQueue.length > 0) {
-        processingTimeoutRef.current = setTimeout(processNotificationQueue, BATCH_TIMEOUT);
-        console.log('[SOCKET] processNotificationQueue: END. Queue has items, rescheduling.');
-      } else {
-        console.log('[SOCKET] processNotificationQueue: END. Queue empty.');
-      }
     }
-  }, [isProcessingQueue, notificationQueue, MAX_BATCH_SIZE, BATCH_TIMEOUT]); // getNotificationPriority is stable
+  }, [isProcessingQueue, notificationQueue]);
+
+  // Helper to determine notification priority
+  const getNotificationPriority = (notification) => {
+    if (notification.type === 'error') return 4;
+    if (notification.type === 'warning') return 3;
+    if (notification.type === 'success') return 2;
+    if (notification.type === 'announcement') return 1;
+    return 0;
+  };
 
   // Optimize notification adding with batching and deduplication
   const addNotification = useCallback((notification) => {
+    // Validate notification first
     if (!notification || !notification.id) {
       console.error('[SOCKET] Attempted to add invalid notification:', notification);
       return;
     }
     
+    // Generate a unique key to prevent duplicates
     const notificationKey = `${notification.id}_${notification.type}_${notification.house || ''}_${notification.pointsChange || ''}`;
+    
+    // Skip if we recently processed a very similar notification
     if (recentNotifications.current.has(notificationKey)) {
-      console.log('[SOCKET] Skipping duplicate notification (recent history):', notificationKey);
+      console.log('[SOCKET] Skipping duplicate notification:', notificationKey);
       return;
     }
-    recentNotifications.current.add(notificationKey);
-    console.log('[SOCKET] addNotification: Adding new notification with key:', notificationKey, 'ID:', notification.id);
     
-    setNotificationQueue(prevQueue => {
-      const isDuplicateInCurrentQueue = prevQueue.some(n => n.id === notification.id);
-      if (isDuplicateInCurrentQueue) {
-        console.log('[SOCKET] addNotification: Skipping duplicate already in queue. ID:', notification.id);
-        return prevQueue;
+    // Track this notification
+    recentNotifications.current.add(notificationKey);
+    console.log('[SOCKET] Adding new notification:', notificationKey);
+    
+    setNotificationQueue(prev => {
+      // Check for duplicates in the current queue
+      const isDuplicate = prev.some(n => n.id === notification.id);
+      if (isDuplicate) {
+        console.log('[SOCKET] Skipping duplicate in queue:', notification.id);
+        return prev;
       }
       
-      const newQueue = [...prevQueue, notification];
-      console.log('[SOCKET] addNotification: setNotificationQueue callback. New queue length:', newQueue.length, 'IDs:', JSON.stringify(newQueue.map(n => n.id)));
+      const newQueue = [...prev, notification];
       
+      // Clear existing timeout
       if (batchTimeoutRef.current) {
         clearTimeout(batchTimeoutRef.current);
       }
       
+      // Set new timeout for batch processing
       batchTimeoutRef.current = setTimeout(() => {
-        console.log('[SOCKET] addNotification: Batch timeout fired. Calling processNotificationQueue.');
         processNotificationQueue();
       }, BATCH_TIMEOUT);
       
       return newQueue;
     });
-  }, [processNotificationQueue, BATCH_TIMEOUT]); // processNotificationQueue is a dependency
+  }, [processNotificationQueue]);
 
   // Enhanced socket event handlers
   useEffect(() => {
@@ -342,11 +301,11 @@ export const SocketProvider = ({ children }) => {
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
 
       if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
-        console.log('[SOCKET] Processing user_update for magic points sync:', data);
+        console.log('[SOCKET] Converting point update to notification:', data);
 
-        // Skip this logic if it's an admin-initiated action already handled elsewhere
+        // Skip this notification if it's an admin-initiated action reflected in user_update
         if (data.data?.forceSyncOrigin === 'admin') {
-          console.log('[SOCKET] Skipping sync processing for admin-initiated user_update');
+          console.log('[SOCKET] Skipping sync notification for admin-initiated user_update');
           return;
         }
 
@@ -354,30 +313,72 @@ export const SocketProvider = ({ children }) => {
         const pointsMatch = data.message.match(/updated to (\d+)/);
         if (pointsMatch && pointsMatch[1] && user) {
           const newPoints = parseInt(pointsMatch[1], 10);
+          const oldPoints = user.magicPoints || 0; // Get old points BEFORE updating user state
 
-          // Primary responsibility: Update AuthContext with the new points total.
+          // Update AuthContext with the new points total from the sync message.
+          // This ensures the client's master state of points is correct for the current session.
           if (user.magicPoints !== newPoints) {
-            console.log(`[SOCKET] Sync update: User points changing from ${user.magicPoints} to ${newPoints}. Updating AuthContext.`);
             if (typeof setUser === 'function') {
               setUser(prevUser => ({ ...prevUser, magicPoints: newPoints }));
+              // For full persistence, AuthContext's setUser or a dedicated function
+              // should also handle updating localStorage.
             } else {
-              console.error('[SOCKET] setUser is not a function. Cannot update user points in AuthContext from sync_update.');
+              console.error('[SOCKET] setUser is not a function. Cannot update user points in AuthContext.');
             }
-          } else {
-            console.log(`[SOCKET] Sync update: User points already ${newPoints}. No AuthContext update needed.`);
+          }
+
+          const pointsDiff = newPoints - oldPoints;
+
+          // Skip if we've recently processed a house points update (within last 5 seconds)
+          const lastHouseUpdateTime = localStorage.getItem('lastHousePointsUpdate');
+          if (lastHouseUpdateTime && (Date.now() - parseInt(lastHouseUpdateTime)) < 5000) {
+            console.log('[SOCKET] Skipping personal notification from sync as it follows closely after house update (5s window).');
+            return;
+          }
+
+          if (pointsDiff !== 0) {
+            // Extract potential reason from data
+            let reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || 'System update';
+
+            // Extract criteria/level if available
+            const criteria = data.criteria || data.data?.criteria || null;
+            const level = data.level || data.data?.level || null;
+
+            console.log('[SOCKET] Extracted point update reason:', reason);
+
+            // Generate unique ID that includes user ID to prevent duplicates
+            const notificationId = `points_update_${Date.now()}_${user.id}`;
+
+            // Create notification for points change
+            const notification = {
+              id: notificationId,
+              type: pointsDiff > 0 ? 'success' : 'warning',
+              title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}${reason ? ': ' + reason : ''}`,
+              timestamp: new Date(),
+              pointsChange: pointsDiff,
+              reason: reason,
+              criteria: criteria,
+              level: level,
+              house: user.house,
+              isPersonalPointsUpdate: true,
+              isHousePointsUpdate: false
+            };
+
+            addNotification(notification);
           }
         }
-      } else if (data.type === 'force_sync') {
-        console.log('[SOCKET] Received force_sync. Client should re-fetch or await specific updates.');
       }
     };
 
     const handleHousePointsUpdate = (data) => {
       console.log('[SOCKET] Received house_points_update:', data);
       
+      // Add explicit debug log to check points vs newTotal
       if (data.newTotal !== undefined) {
         console.log('[SOCKET] Points delta:', data.points, 'New total:', data.newTotal);
         
+        // Sanity check - if points is larger than newTotal or equal to newTotal, it's likely incorrect
         if (Math.abs(data.points) >= Math.abs(data.newTotal)) {
           console.warn('[SOCKET] Warning: points delta is >= newTotal, this might be incorrect', {
             points: data.points, 
@@ -386,29 +387,37 @@ export const SocketProvider = ({ children }) => {
         }
       }
       
+      // Ensure we have all the data we need
       if (!data.house || data.points === undefined) {
         console.error('[SOCKET] Invalid house points data:', data);
         return;
       }
       
+      // Check if this is an admin-initiated action (will help prevent duplicate notifications)
       const isAdminAction = data.adminAction === true;
       if (isAdminAction) {
         console.log('[SOCKET] This is an admin-initiated house points update');
       }
       
+      // Special handling for admin users
       if (isAdminUser.current) {
         console.log('[SOCKET] Admin received house points update, displaying notification');
+        // Admin sees all house point changes
       } else if (!user || user.house === 'muggle' || !user.house || data.house !== user.house) {
+        // Skip notification if user doesn't belong to the house that got points
         return;
       }
       
+      // Save timestamp of house points update to prevent duplicate sync notifications
       localStorage.setItem('lastHousePointsUpdate', Date.now().toString());
       
+      // If this is an admin action, also record this specific type
       if (isAdminAction) {
         localStorage.setItem('lastAdminHousePointsUpdate', Date.now().toString());
         localStorage.setItem('lastAdminHousePointsValue', data.points.toString());
       }
       
+      // Log detailed data for debugging
       console.log('[SOCKET] Creating house points notification with data:', {
         house: data.house,
         points: data.points,
@@ -418,6 +427,7 @@ export const SocketProvider = ({ children }) => {
         timestamp: data.timestamp
       });
       
+      // Dispatch an event to notify components of house points change
       if (typeof window !== 'undefined') {
         const housePointsEvent = new CustomEvent('house-points-update', {
           detail: {
@@ -431,59 +441,81 @@ export const SocketProvider = ({ children }) => {
         });
         window.dispatchEvent(housePointsEvent);
         
-        const reasonForCustomEvent = (data.reason && String(data.reason).trim().toLowerCase() !== 'system update' && String(data.reason).trim() !== '') 
-                                     ? String(data.reason).trim() 
-                                     : null;
+        // Also dispatch a debug event to ensure debug panel is updated
+        // Make sure we're passing accurate house points data to update the debug menu
+        const extractedReason = data.reason && data.reason !== 'System update' ? data.reason : null;
         
-        console.log('[SOCKET] Dispatching debug event for house points with reason:', reasonForCustomEvent);
+        // Log detailed debug info about the event being dispatched
+        console.log('[SOCKET] Dispatching debug event for house points with reason:', extractedReason);
         
         const debugEvent = new CustomEvent('magicPointsUIUpdate', {
           detail: { 
             source: 'housePointsUpdate',
             timestamp: new Date().toISOString(),
-            points: data.points,
-            reason: reasonForCustomEvent,
-            delta: data.points,
-            house: data.house,
+            points: data.points, // This represents the change, not the total
+            reason: extractedReason, // Use the extracted reason
+            delta: data.points, // Include delta for better debug display
+            house: data.house,  // Include house info
             criteria: data.criteria || null,
             level: data.level || null,
-            isHousePointsUpdate: true
+            isHousePointsUpdate: true // Mark as house points update for filtering
           }
         });
         window.dispatchEvent(debugEvent);
         
+        // Also dispatch a regular magicPointsUpdated event to ensure all handlers receive the update
+        // Fix: Include the reason, criteria, level, and delta in the regular update for consistency
+        // Note: extractedReason is already defined above
         const regularUpdate = new CustomEvent('magicPointsUpdated', {
           detail: { 
             points: data.points,
             source: 'housePointsUpdate',
             timestamp: new Date().toISOString(),
             house: data.house,
-            reason: reasonForCustomEvent,
-            delta: data.points,
+            reason: extractedReason, // Include the reason
+            delta: data.points, // Include the delta
             criteria: data.criteria || null,
             level: data.level || null,
-            isHousePointsUpdate: true
+            isHousePointsUpdate: true // Mark as house points notification
           }
         });
         window.dispatchEvent(regularUpdate);
       }
       
-      let cleanReason = '';
-      if (data.reason && String(data.reason).trim() !== '' && String(data.reason).trim().toLowerCase() !== 'system update') {
-        cleanReason = String(data.reason).trim();
+      // Create custom notification with exact house points data
+      // Make sure we extract a clean reason for the notification - this is critical
+      
+      // Enhanced reason extraction - ensure the reason is never lost
+      let cleanReason = null;
+      if (data.reason) {
+        cleanReason = data.reason !== 'System update' ? data.reason : null;
       }
-
-      if (cleanReason === '') {
+      
+      // If no reason provided, create a default reason based on the house
+      if (!cleanReason) {
         const houseName = data.house.charAt(0).toUpperCase() + data.house.slice(1);
-        cleanReason = `${houseName} points ${data.points > 0 ? 'awarded' : 'deducted'}`;
+        cleanReason = `${houseName} ${data.points > 0 ? 'achievement' : 'penalty'}`;
       }
-
-      console.log('[SOCKET] House points notification - final reason:', cleanReason, 'from original:', data.reason);
-
+      
+      // Log all the details for debugging
+      console.log('[SOCKET] House points notification - extracted reason:', cleanReason, 'from original:', data.reason);
+      console.log('[SOCKET] House points full data:', {
+        house: data.house,
+        points: data.points,
+        originalReason: data.reason,
+        cleanReason: cleanReason,
+        criteria: data.criteria,
+        level: data.level
+      });
+      
+      // Always include the reason in the message after a colon - critical for UI reason extraction
+      // Formatting with colon allows the notification component to reliably extract the reason
       const message = cleanReason ? 
         `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${cleanReason}` :
         `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${data.house.charAt(0).toUpperCase() + data.house.slice(1)} update`;
         
+      // Create a unique ID that includes house, points, and timestamp to prevent duplicates
+      // This ID format will help ensure we don't create duplicate notifications
       const uniqueId = `house_points_${data.house}_${data.points}_${Date.now()}`;
       console.log('[SOCKET] Creating house points notification with unique ID:', uniqueId);
       
@@ -493,16 +525,19 @@ export const SocketProvider = ({ children }) => {
         title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
         message: message,
         timestamp: new Date(),
-        pointsChange: data.points,
+        // Make sure we're using the points delta, not newTotal
+        pointsChange: data.points, // This is the change in points, not the total
+        // Store newTotal separately if needed, but don't use it for the pointsChange display
         totalPoints: data.newTotal,
-        reason: cleanReason,
+        reason: cleanReason, // Always set reason, never null or 'System update'
         criteria: data.criteria || null,
         level: data.level || null,
         house: data.house,
-        isHousePointsUpdate: true,
+        isHousePointsUpdate: true, // Mark as house points notification
+        // Add more explicit flags to help the notification system
         isPersonalPointsUpdate: false
       };
-
+        
       addNotification(notification);
     };
 
@@ -521,22 +556,29 @@ export const SocketProvider = ({ children }) => {
       addNotification(notification);
     };
 
+    // Handle house assessment updates
     const handleHouseAssessmentUpdate = (data) => {
       console.log('[SOCKET] Received house_assessment_update:', data);
       
+      // Ensure we have all the data we need
       if (!data.house || !data.assessment) {
         console.error('[SOCKET] Invalid house assessment data:', data);
         return;
       }
       
+      // Special handling for admin users
       if (isAdminUser.current) {
         console.log('[SOCKET] Admin received house assessment update, displaying notification');
+        // Admin sees all house assessment updates
       } else if (!user || user.house === 'muggle' || !user.house || data.house !== user.house) {
+        // Skip notification if user doesn't belong to the house that got assessment
         return;
       }
       
+      // Save timestamp of house assessment update
       localStorage.setItem('lastHouseAssessmentUpdate', Date.now().toString());
       
+      // Log detailed data for debugging
       console.log('[SOCKET] Creating house assessment notification with data:', {
         house: data.house,
         assessment: data.assessment,
@@ -546,6 +588,7 @@ export const SocketProvider = ({ children }) => {
         timestamp: data.timestamp
       });
       
+      // Dispatch an event for house assessment update
       if (typeof window !== 'undefined') {
         const houseAssessmentEvent = new CustomEvent('house-assessment-update', {
           detail: {
@@ -560,6 +603,7 @@ export const SocketProvider = ({ children }) => {
         window.dispatchEvent(houseAssessmentEvent);
       }
       
+      // Create notification for the assessment
       const notification = {
         id: `house_assessment_${Date.now()}`,
         type: 'announcement',
@@ -589,6 +633,7 @@ export const SocketProvider = ({ children }) => {
       addNotification(notification);
     };
 
+    // Register event handlers
     socket.on('sync_update', handleSyncUpdate);
     socket.on('house_points_update', handleHousePointsUpdate);
     socket.on('admin_notification', handleAdminNotification);
@@ -604,13 +649,167 @@ export const SocketProvider = ({ children }) => {
     };
   }, [socket, user, addNotification]);
 
+  // Helper to create house points notification
+  const createHousePointsNotification = (data) => {
+    const pointsChange = data.points;
+    const isPositive = pointsChange > 0;
+    const uniqueId = `house_points_${data.house}_${pointsChange}_${data.timestamp || Date.now()}`;
+    
+    return {
+      id: uniqueId,
+      type: isPositive ? 'success' : 'warning',
+      title: isPositive ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
+      message: formatHousePointsMessage(data),
+      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+      pointsChange,
+      reason: data.reason,
+      criteria: data.criteria,
+      level: data.level,
+      source: 'house_points_update',
+      house: data.house
+    };
+  };
+
+  // Helper to format house points message
+  const formatHousePointsMessage = (data) => {
+    // Start with base message - only show the points change, not the total
+    let message = `House ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points!`;
+    
+    // We're not showing newTotal in the notification message anymore to avoid confusion
+    // Let's just keep the points change value to be consistent
+    
+    // Add reason, criteria, level in a consistent format
+    const details = [];
+    
+    if (data.reason && data.reason !== 'Admin action' && data.reason.trim() !== '') {
+      details.push(`Reason: ${data.reason}`);
+    }
+    
+    if (data.criteria && data.criteria !== null) {
+      details.push(`Criteria: ${data.criteria}`);
+    }
+    
+    if (data.level && data.level !== null) {
+      details.push(`Level: ${data.level}`);
+    }
+    
+    // Join all details with periods
+    if (details.length > 0) {
+      message += `. ${details.join('. ')}`;
+    }
+    
+    return message;
+  };
+
+  // Helper to handle user updates
+  const handleUserUpdate = (updatedFields) => {
+    if (updatedFields.house && user && setUser) {
+      handleHouseUpdate(updatedFields.house);
+    }
+    
+    if (updatedFields.magicPoints !== undefined) {
+      handleMagicPointsUpdate(updatedFields);
+    }
+  };
+
+  // Helper to handle house updates
+  const handleHouseUpdate = (newHouse) => {
+    if (user && setUser) {
+      setUser(prev => ({
+        ...prev,
+        house: newHouse,
+        previousHouse: prev.house
+      }));
+    }
+  };
+
+  // Helper to handle magic points updates
+  const handleMagicPointsUpdate = (updatedFields) => {
+    if (user && setUser) {
+      const oldPoints = user.magicPoints || 0;
+      const newPoints = updatedFields.magicPoints;
+      
+      console.log(`[SOCKET] Updating user magic points: ${oldPoints} → ${newPoints}`);
+      
+      // Check if this update comes after a house points update
+      const lastHouseUpdateTime = localStorage.getItem('lastHousePointsUpdate');
+      const isCloseToHouseUpdate = lastHouseUpdateTime && 
+        (Date.now() - parseInt(lastHouseUpdateTime)) < 2000;
+      
+      // Update the user object
+      setUser(prev => ({
+        ...prev,
+        magicPoints: newPoints
+      }));
+      
+      // Also notify the MagicPointsContext via a custom event
+      if (typeof window !== 'undefined') {
+        // Only dispatch events if this doesn't closely follow a house points update
+        // This prevents duplicate notifications
+        if (!isCloseToHouseUpdate) {
+          console.log('[SOCKET] Normal magic points update flow');
+          
+          // Event for general points updates
+          const pointsEvent = new CustomEvent('magicPointsUpdated', {
+            detail: {
+              points: newPoints,
+              source: 'serverSync',
+              immediate: true,
+              oldPoints: oldPoints,
+              timestamp: new Date().toISOString(),
+              delta: newPoints - oldPoints
+            }
+          });
+          console.log('[SOCKET] Dispatching magicPointsUpdated event with new value:', newPoints);
+          window.dispatchEvent(pointsEvent);
+        } else {
+          console.log('[SOCKET] Skipping magic points events due to recent house points update');
+        }
+        
+        // Always dispatch debug UI update event (for debug panel only)
+        const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+          detail: {
+            points: newPoints,
+            source: 'socketUpdate',
+            delta: newPoints - oldPoints,
+            timestamp: new Date().toISOString()
+          }
+        });
+        console.log('[SOCKET] Dispatching magicPointsUIUpdate event for debug menu:', newPoints);
+        window.dispatchEvent(uiUpdateEvent);
+      }
+    }
+  };
+
+  // Method to send a message to the server
+  const sendMessage = useCallback((eventName, data) => {
+    if (socket && isConnected) {
+      socket.emit(eventName, data);
+      return true;
+    }
+    return false;
+  }, [socket, isConnected]);
+
+  // Method to request an immediate sync from server
+  const requestSync = useCallback(() => {
+    if (socket && isConnected) {
+      console.log('[SOCKET] Manually requesting data sync');
+      socket.emit('request_sync');
+      return true;
+    }
+    
+    console.log('[SOCKET] Cannot request sync - not connected');
+    return false;
+  }, [socket, isConnected]);
+
+  // Method to clear notifications
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  // Method to remove a specific notification
   const removeNotification = useCallback((notificationId) => {
-    console.log('[SOCKET] removeNotification called for ID:', notificationId);
-    setNotifications(prevDisplayedNotifications => {
-      const newDisplayed = prevDisplayedNotifications.filter(notif => notif.id !== notificationId);
-      console.log('[SOCKET] removeNotification: setNotifications callback. Prev displayed IDs:', JSON.stringify(prevDisplayedNotifications.map(n => n.id)), 'New displayed IDs:', JSON.stringify(newDisplayed.map(n => n.id)));
-      return newDisplayed;
-    });
+    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
   }, []);
 
   return (
@@ -622,28 +821,9 @@ export const SocketProvider = ({ children }) => {
         lastMessage,
         notifications,
         lastHeartbeat,
-        sendMessage: useCallback((eventName, data) => {
-          if (socket && isConnected) {
-            socket.emit(eventName, data);
-            return true;
-          }
-          return false;
-        }, [socket, isConnected]),
-        requestSync: useCallback(() => {
-          if (socket && isConnected) {
-            console.log('[SOCKET] Manually requesting data sync');
-            socket.emit('request_sync');
-            return true;
-          }
-          
-          console.log('[SOCKET] Cannot request sync - not connected');
-          return false;
-        }, [socket, isConnected]),
-        clearNotifications: useCallback(() => {
-          console.log('[SOCKET] clearNotifications called');
-          setNotifications([]);
-          setNotificationQueue([]);
-        }, []),
+        sendMessage,
+        requestSync,
+        clearNotifications,
         removeNotification
       }}
     >
