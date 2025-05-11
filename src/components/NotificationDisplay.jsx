@@ -19,6 +19,9 @@ import { FaBolt, FaSkull } from 'react-icons/fa';
 import '../styles/notification.css';
 import '../styles/HarryPotter.css';
 import '../styles/notification_animations.css';
+import '../styles/notification_override.css'; // Import the override styles
+import '../styles/icon_animations.css'; // Import icon animations
+import '../styles/notification_animations_enhanced.css'; // Import enhanced animations
 
 // Import images for point change animations
 import increasePointImg from '../asset/IncreasePoint.png';
@@ -422,9 +425,19 @@ const NotificationDisplay = () => {
   }
 
   const isPointChange = activeNotification.pointsChange !== undefined;
+  // Make sure we're using the points delta (change), not the total points
   const pointsValue = isPointChange ? Math.abs(activeNotification.pointsChange) : 0;
   const isPointIncrease = isPointChange && activeNotification.pointsChange > 0;
   const pointsImage = isPointIncrease ? increasePointImg : decreasePointImg;
+  
+  // Debug log to verify we're using the correct value
+  if (isPointChange) {
+    console.log('[NOTIFICATION] Displaying points change:', {
+      pointsChange: activeNotification.pointsChange,
+      displayValue: pointsValue,
+      isIncrease: isPointIncrease
+    });
+  }
   
   const isHousePoints = Boolean(activeNotification.isHousePointsUpdate);
   const isHouseAssessment = Boolean(activeNotification.isHouseAssessmentUpdate);
@@ -442,8 +455,8 @@ const NotificationDisplay = () => {
       top="20px"
       right="20px"
       zIndex="toast" /* Using toast z-index to ensure visibility */
-      width={{ base: "90vw", sm: "450px", md: "500px" }}  
-      maxWidth="95vw"
+      width={{ base: "94vw", sm: "500px", md: "550px" }}  /* Increased width for larger image */
+      maxWidth="96vw"
       className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
       style={{ pointerEvents: "all" }} /* Ensure clickable */
     >    <Box
@@ -453,18 +466,20 @@ const NotificationDisplay = () => {
       borderColor={isPointChange ? 
         `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
         houseColors.borderColor}
-      p={isPointChange ? 5 : 4}
+      p={isPointChange ? 0 : 4} /* Removed padding for point change to maximize image size */
       className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
       style={{
         background: isPointChange 
-          ? `url(${pointsImage}) no-repeat center center` 
+          ? `url(${pointsImage}) no-repeat center center` /* Changed to center center for balanced positioning */
           : houseColors.bgColor,
-        backgroundSize: isPointChange ? 'contain' : 'cover',
-        backgroundPosition: 'center center',
+        backgroundSize: isPointChange ? 'cover' : 'cover', /* Use cover for full image */
+        backgroundPosition: isPointChange ? 'center center' : 'center center',
         position: 'relative',
         zIndex: 1,
-        imageRendering: 'crisp-edges', /* Improve image quality */
-        backgroundOrigin: 'content-box', /* Ensure proper padding */
+        imageRendering: 'high-quality', /* Best image quality */
+        backgroundOrigin: 'padding-box', /* Better for full coverage */
+        minHeight: isPointChange ? '500px' : 'auto', /* Increased height for better image display */
+        boxShadow: isPointChange ? '0 0 30px rgba(0,0,0,0.7)' : 'none' /* Add shadow for depth */
       }}
     >
         {/* Add magical glow bar */}
@@ -601,47 +616,91 @@ const NotificationDisplay = () => {
             {/* Remove the smaller icon container since we're using full background image */}
             
             {/* Enhanced points display for the background version */}
+            {/* Points Display - Larger with icon positioned behind the text */}
             <Flex 
               className="points-value-display"
               fontWeight="bold" 
-              fontSize="70px" /* Large font size for emphasis */
               position="absolute"
-              top="50%"
+              top="40%" /* Positioned in the middle upper area */
               left="50%"
               transform="translate(-50%, -50%)" 
               alignItems="center"
               justifyContent="center"
-              width="70%" /* Further reduced to avoid covering too much of background */
+              width="100%" /* Full width */
+              height="70%" /* Takes up most of the upper portion */
               style={{
                 zIndex: 10,
-                padding: "15px",
-                background: "rgba(0,0,0,0.4)", /* Reduced opacity for better background visibility */
-                borderRadius: "20px",
-                border: isPointIncrease ? 
-                  "3px solid rgba(74, 222, 128, 0.8)" : 
-                  "3px solid rgba(245, 101, 101, 0.8)",
-                boxShadow: isPointIncrease ?
-                  "0 0 20px rgba(74, 222, 128, 0.5)" :
-                  "0 0 20px rgba(245, 101, 101, 0.5)"
+                position: "relative",
+                textAlign: "center",
               }}
             >
+              {/* ICON BEHIND: Large icon positioned behind the text */}
               <Icon 
-                as={isPointIncrease ? FaBolt : FaSkull} 
-                color={isPointIncrease ? "#4ADE80" : "#F56565"} 
-                mr="5" /* Spacing */
-                boxSize="58px" /* Icon size */
-                className={isPointIncrease ? "increase-icon" : "decrease-icon"}
+                as={isPointIncrease ? FaBolt : FaSkull}
+                color={isPointIncrease ? "rgba(74, 222, 128, 0.4)" : "rgba(245, 101, 101, 0.4)"}
+                position="absolute" 
+                zIndex="1" /* Behind the text */
+                boxSize="220px" /* Much larger icon */
+                opacity="0.8"
+                className={isPointIncrease ? "increase-icon-bg" : "decrease-icon-bg"}
               />
+              
+              {/* Points text overlay that appears on top of the icon */}
               <Text
+                position="relative"
+                zIndex="2" /* In front of the icon */
                 textShadow={isPointIncrease ? 
-                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(74, 222, 128, 0.6)" : 
-                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(245, 101, 101, 0.6)"} /* House-colored shadow */
+                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(74, 222, 128, 0.7), 0 0 40px rgba(0,0,0,0.8)" : 
+                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(245, 101, 101, 0.7), 0 0 40px rgba(0,0,0,0.8)"}
                 color={isPointIncrease ? "#4ADE80" : "#F56565"}
-                letterSpacing="0.05em" /* Add some letter spacing */
+                letterSpacing="0.05em"
+                fontWeight="900" /* Extra bold */
+                data-testid="points-change-display" 
+                title={`Points ${isPointIncrease ? 'awarded' : 'deducted'}`}
+                textAlign="center"
+                fontSize="140px" /* Extra large text */
+                style={{
+                  filter: "drop-shadow(0 0 8px rgba(0,0,0,0.9))",
+                }}
               >
                 {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
               </Text>
             </Flex>
+            
+            {/* Content area at the bottom of the notification */}
+            <Box
+              position="absolute"
+              bottom="0"
+              left="0"
+              right="0"
+              background="rgba(0,0,0,0.75)" /* Darker background for better text visibility */
+              padding="16px"
+              borderTop={isPointIncrease ? 
+                "4px solid rgba(74, 222, 128, 0.9)" : 
+                "4px solid rgba(245, 101, 101, 0.9)"}
+              textAlign="center"
+              className="points-content-area" /* Added class for specific styling */
+            >
+              <Text 
+                fontSize="22px" /* Larger text */
+                fontWeight="bold"
+                color="#FFFFFF" 
+                textShadow="0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)"
+                mb="1" /* Add margin below */
+              >
+                Points {isPointIncrease ? 'Awarded' : 'Deducted'}
+              </Text>
+              <Text 
+                fontSize="16px" /* Larger reason text */
+                color="#FFFFFF" 
+                fontWeight="medium"
+                opacity="0.9"
+                mt="1"
+                className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
+              >
+                {activeNotification.reason || `For ${activeNotification.house} house`}
+              </Text>
+            </Box>
           </>
         )}
         

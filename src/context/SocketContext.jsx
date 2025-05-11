@@ -423,6 +423,19 @@ export const SocketProvider = ({ children }) => {
     const handleHousePointsUpdate = (data) => {
       console.log('[SOCKET] Received house_points_update:', data);
       
+      // Add explicit debug log to check points vs newTotal
+      if (data.newTotal !== undefined) {
+        console.log('[SOCKET] Points delta:', data.points, 'New total:', data.newTotal);
+        
+        // Sanity check - if points is larger than newTotal or equal to newTotal, it's likely incorrect
+        if (Math.abs(data.points) >= Math.abs(data.newTotal)) {
+          console.warn('[SOCKET] Warning: points delta is >= newTotal, this might be incorrect', {
+            points: data.points, 
+            newTotal: data.newTotal
+          });
+        }
+      }
+      
       // Ensure we have all the data we need
       if (!data.house || data.points === undefined) {
         console.error('[SOCKET] Invalid house points data:', data);
@@ -561,7 +574,10 @@ export const SocketProvider = ({ children }) => {
         title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
         message: message,
         timestamp: new Date(),
-        pointsChange: data.points,
+        // Make sure we're using the points delta, not newTotal
+        pointsChange: data.points, // This is the change in points, not the total
+        // Store newTotal separately if needed, but don't use it for the pointsChange display
+        totalPoints: data.newTotal,
         reason: cleanReason, // Always set reason, never null or 'System update'
         criteria: data.criteria || null,
         level: data.level || null,
@@ -705,13 +721,11 @@ export const SocketProvider = ({ children }) => {
 
   // Helper to format house points message
   const formatHousePointsMessage = (data) => {
-    // Start with base message
+    // Start with base message - only show the points change, not the total
     let message = `House ${data.house} has ${data.points > 0 ? 'gained' : 'lost'} ${Math.abs(data.points)} points!`;
     
-    // Add total if available
-    if (data.newTotal !== undefined) {
-      message += ` New total: ${data.newTotal}`;
-    }
+    // We're not showing newTotal in the notification message anymore to avoid confusion
+    // Let's just keep the points change value to be consistent
     
     // Add reason, criteria, level in a consistent format
     const details = [];

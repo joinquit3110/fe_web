@@ -1,0 +1,103 @@
+/* Override styles for the point notifications to make the image larger and icons behind text */
+
+/* Make the points background image larger and fit the container */
+.points-background {
+  background-position: center center !important;
+  background-size: 140% auto !important; /* Make the background image larger than container */
+  background-repeat: no-repeat !important;
+  min-height: 500px !important; /* Increased height for better image visibility */
+  padding: 0 !important; /* Remove padding to allow image to reach edges */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 0.8 / 1.6; /* Portrait aspect ratio for taller notification */
+  z-index: 2; /* Ensure proper stacking */
+  image-rendering: high-quality;
+  position: relative;
+  overflow: hidden; /* Prevent image overflow */
+  animation: bg-zoom 0.5s ease-out forwards;
+}
+
+@keyframes bg-zoom {
+  from { background-size: 120% auto; }
+  to { background-size: 140% auto; }
+}
+
+/* Style for icons behind points text */
+.increase-icon-bg, .decrease-icon-bg {
+  opacity: 0.7;
+  position: absolute;
+  z-index: 1;
+  transform: scale(2.2);
+  filter: blur(1px); /* Slight blur for better effect */
+}
+
+/* Make the points display text much larger and center it */
+.points-value-display {
+  width: 100% !important;
+  height: 70% !important;
+  top: 40% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Style for the points text overlay */
+.points-value-display .chakra-text {
+  font-size: 150px !important;
+  font-weight: 900 !important;
+  z-index: 10;
+  filter: drop-shadow(0 0 15px rgba(0,0,0,0.9));
+}
+
+/* Style for the content area at the bottom */
+.points-content-area {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.85); /* Darker background for better text visibility */
+  padding: 16px;
+  z-index: 5;
+  backdrop-filter: blur(3px); /* Blur effect for the footer */
+  box-shadow: 0 -10px 15px rgba(0,0,0,0.3); /* Shadow above the footer */
+}
+
+/* Magical sparkle effect for points notifications */
+.points-background::before, .points-background::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  animation: sparkle-float 4s infinite ease-in-out;
+  z-index: 3;
+}
+
+.points-background::before {
+  top: 20%;
+  left: 15%;
+}
+
+.points-background::after {
+  bottom: 30%;
+  right: 20%;
+  animation-delay: 0.8s;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+  .points-background {
+    min-height: 400px !important;
+    background-size: 150% auto !important;
+  }
+  
+  .points-value-display .chakra-text {
+    font-size: 120px !important;
+  }
+  
+  .increase-icon-bg, .decrease-icon-bg {
+    transform: scale(1.8);
+  }
+}

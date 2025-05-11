@@ -1,0 +1,48 @@
+/* Enhanced notification entrance animations for points notifications */
+
+/* Specific entrance animation for points notifications */
+.notification-container .points-background {
+  animation: points-notification-entrance 0.7s ease-out forwards;
+}
+
+@keyframes points-notification-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-30px);
+    filter: brightness(0.8) blur(5px);
+  }
+  70% {
+    transform: scale(1.05) translateY(5px);
+    filter: brightness(1.1) blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: brightness(1) blur(0);
+  }
+}
+
+/* Add a slight zoom effect to the background image */
+.points-background {
+  animation: bg-image-zoom 5s infinite alternate ease-in-out;
+  animation-delay: 0.7s; /* Start after entrance animation completes */
+}
+
+@keyframes bg-image-zoom {
+  from { background-size: 140% auto; }
+  to { background-size: 150% auto; }
+}
+
+/* Enhanced text glow for points value text */
+.points-value-display .chakra-text {
+  animation: text-pulse 2s infinite alternate;
+}
+
+@keyframes text-pulse {
+  from {
+    text-shadow: 0 0 20px rgba(0,0,0,0.9), 0 0 30px rgba(0,0,0,0.7);
+  }
+  to {
+    text-shadow: 0 0 25px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.3), 0 0 50px rgba(255,255,255,0.2);
+  }
+}

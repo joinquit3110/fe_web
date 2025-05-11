@@ -1,0 +1,82 @@
+@keyframes lightning-animate {
+  0% {
+    opacity: 0.4;
+    transform: scale(2.0) rotate(-5deg);
+    filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.3));
+  }
+  25% {
+    opacity: 0.7;
+    transform: scale(2.3) rotate(0deg);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(2.5) rotate(5deg);
+    filter: drop-shadow(0 0 25px rgba(74, 222, 128, 0.7));
+  }
+  75% {
+    opacity: 0.7;
+    transform: scale(2.3) rotate(0deg);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(2.0) rotate(-5deg);
+    filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.3));
+  }
+}
+
+@keyframes skull-animate {
+  0% {
+    opacity: 0.4;
+    transform: scale(2.0) rotate(5deg);
+    filter: drop-shadow(0 0 5px rgba(245, 101, 101, 0.3));
+  }
+  25% {
+    opacity: 0.7;
+    transform: scale(2.3) rotate(0deg);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(2.5) rotate(-5deg);
+    filter: drop-shadow(0 0 25px rgba(245, 101, 101, 0.7));
+  }
+  75% {
+    opacity: 0.7;
+    transform: scale(2.3) rotate(0deg);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(2.0) rotate(5deg);
+    filter: drop-shadow(0 0 5px rgba(245, 101, 101, 0.3));
+  }
+}
+
+.increase-icon-bg {
+  animation: lightning-animate 4s infinite ease-in-out !important;
+  transform-origin: center center;
+  color: rgba(74, 222, 128, 0.5) !important; /* Ensures consistent color */
+}
+
+.decrease-icon-bg {
+  animation: skull-animate 4s infinite ease-in-out !important;
+  transform-origin: center center;
+  color: rgba(245, 101, 101, 0.5) !important; /* Ensures consistent color */
+}
+
+/* Additional sparkle animations for the points display */
+@keyframes sparkle-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.3);
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 215, 0, 0.6);
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.3);
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
