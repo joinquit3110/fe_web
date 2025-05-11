@@ -299,93 +299,43 @@ export const SocketProvider = ({ children }) => {
     const handleSyncUpdate = (data) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
-      
-      if (data.type === 'user_update' && data.data?.updatedFields) {
-        handleUserUpdate(data.data.updatedFields);
-        
-        // Check if magic points were updated directly in the updatedFields
-        if (data.data.updatedFields.magicPoints !== undefined) {
-          const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
-          if (!isNaN(newPoints)) {
-            // Dispatch an event to update the debug menu directly
-            const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
-              detail: { 
-                points: newPoints,
-                source: 'socketFieldsUpdate',
-                timestamp: new Date().toISOString()
-              }
-            });
-            window.dispatchEvent(uiUpdateEvent);
-          }
-        }
-      }
-      
-      // Convert sync_update with points change messages to notifications
+
       if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
         console.log('[SOCKET] Converting point update to notification:', data);
-           // IMPORTANT: Skip this notification if there's a 'force_sync' field in the data
-      // This prevents duplicate notifications when point changes come from admin actions
-      if (data.type === 'force_sync' || data.data?.forceSyncOrigin === 'admin') {
-        console.log('[SOCKET] Skipping sync notification for admin-initiated update');
-        return;
-      }
-      
-      // Parse points value from message
-      const pointsMatch = data.message.match(/updated to (\d+)/);
-      if (pointsMatch && pointsMatch[1] && user) {
-        const newPoints = parseInt(pointsMatch[1], 10);
-        const oldPoints = user.magicPoints || 0;
-        const pointsDiff = newPoints - oldPoints;
-        
-        // Check if this sync update is likely related to an admin house points action
-        const lastAdminUpdateTime = localStorage.getItem('lastAdminHousePointsUpdate');
-        const lastAdminPointsValue = localStorage.getItem('lastAdminHousePointsValue');
-        
-        if (lastAdminUpdateTime && 
-            (Date.now() - parseInt(lastAdminUpdateTime)) < 3000 &&
-            lastAdminPointsValue) {
-          // Compare the points diff with what the admin did
-          const adminPointsDiff = parseInt(lastAdminPointsValue);
-          // If the points differ by less than 20% or 5 points, it's likely the same action
-          if (Math.abs(adminPointsDiff - pointsDiff) < Math.max(5, Math.abs(adminPointsDiff) * 0.2)) {
-            console.log('[SOCKET] Skipping sync notification that appears to duplicate admin house points action');
-            return;
-          }
-        }
-        
-        // Skip if we've recently processed a house points update (within last 2 seconds)
-        const lastHouseUpdateTime = localStorage.getItem('lastHousePointsUpdate');
-        if (lastHouseUpdateTime && (Date.now() - parseInt(lastHouseUpdateTime)) < 2000) {
-          console.log('[SOCKET] Skipping personal notification as it follows closely after house update');
+
+        // Skip this notification if it's an admin-initiated action reflected in user_update
+        if (data.data?.forceSyncOrigin === 'admin') {
+          console.log('[SOCKET] Skipping sync notification for admin-initiated user_update');
           return;
         }
-          
+
+        // Parse points value from message
+        const pointsMatch = data.message.match(/updated to (\d+)/);
+        if (pointsMatch && pointsMatch[1] && user) {
+          const newPoints = parseInt(pointsMatch[1], 10);
+          const oldPoints = user.magicPoints || 0;
+          const pointsDiff = newPoints - oldPoints;
+
+          // Skip if we've recently processed a house points update (within last 5 seconds)
+          const lastHouseUpdateTime = localStorage.getItem('lastHousePointsUpdate');
+          if (lastHouseUpdateTime && (Date.now() - parseInt(lastHouseUpdateTime)) < 5000) {
+            console.log('[SOCKET] Skipping personal notification from sync as it follows closely after house update (5s window).');
+            return;
+          }
+
           if (pointsDiff !== 0) {
-            // Extract potential reason from data - look more carefully for a reason
-            let reason = null;
-            
-            // Try to extract reason from the message if present
-            if (data.message && data.message.includes(':')) {
-              const parts = data.message.split(':');
-              if (parts.length >= 2) {
-                reason = parts[1].trim();
-              }
-            }
-            
-            // If no reason found in message, try standard fields
-            if (!reason) {
-              reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || null;
-            }
-            
+            // Extract potential reason from data
+            let reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || 'System update';
+
             // Extract criteria/level if available
             const criteria = data.criteria || data.data?.criteria || null;
             const level = data.level || data.data?.level || null;
-            
+
             console.log('[SOCKET] Extracted point update reason:', reason);
-            
+
             // Generate unique ID that includes user ID to prevent duplicates
             const notificationId = `points_update_${Date.now()}_${user.id}`;
-            
+
             // Create notification for points change
             const notification = {
               id: notificationId,
@@ -394,26 +344,14 @@ export const SocketProvider = ({ children }) => {
               message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}${reason ? ': ' + reason : ''}`,
               timestamp: new Date(),
               pointsChange: pointsDiff,
-              reason: reason, // Don't use 'System update' as default
+              reason: reason,
               criteria: criteria,
               level: level,
               house: user.house,
-              isPersonalPointsUpdate: true, // Mark as personal points notification to distinguish from house points
-              isHousePointsUpdate: false // Explicitly mark as not house points
+              isPersonalPointsUpdate: true,
+              isHousePointsUpdate: false
             };
-            
-            // Dispatch an event to update the debug menu
-            const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
-              detail: { 
-                points: newPoints,
-                source: 'socketUpdate',
-                timestamp: new Date().toISOString(),
-                delta: pointsDiff,
-                reason: reason || 'System update'
-              }
-            });
-            window.dispatchEvent(uiUpdateEvent);
-            
+
             addNotification(notification);
           }
         }
