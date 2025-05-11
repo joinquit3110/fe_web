@@ -50,6 +50,8 @@
   position: relative;
   background-position: center center !important;
   background-size: cover !important;
+  min-height: 220px !important; /* Increased height for better image visibility */
+  padding: 20px !important; /* More padding for better content placement */
 }
 
 .points-background::before {
@@ -59,7 +61,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6); /* Dark overlay for text readability */
+  background: rgba(0, 0, 0, 0.65); /* Darker overlay for better text readability */
   z-index: 0;
 }
 
@@ -343,14 +345,19 @@
 /* Points value display for background image notifications */
 .points-value-display {
   position: relative;
-  z-index: 2;
+  z-index: 10 !important; /* Ensure it's above all other elements */
   animation: points-pulse 2s infinite;
+  font-size: 48px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
 }
 
 @keyframes points-pulse {
-  0% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
-  50% { transform: scale(1.15); text-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 215, 0, 0.5); }
-  100% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+  0% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  50% { transform: translateY(-50%) scale(1.25); text-shadow: 0 0 20px rgba(0, 0, 0, 1), 0 0 40px rgba(255, 215, 0, 0.6); }
+  100% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
 }
 
 /* House-specific points value display */
@@ -359,9 +366,9 @@
 }
 
 @keyframes gryffindor-points-pulse {
-  0% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
-  50% { transform: scale(1.15); text-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 20px rgba(218, 165, 32, 0.7); }
-  100% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+  0% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  50% { transform: translateY(-50%) scale(1.25); text-shadow: 0 0 20px rgba(0, 0, 0, 1), 0 0 40px rgba(218, 165, 32, 0.8); }
+  100% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
 }
 
 .house-slytherin .points-value-display {
@@ -369,9 +376,9 @@
 }
 
 @keyframes slytherin-points-pulse {
-  0% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
-  50% { transform: scale(1.15); text-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 20px rgba(192, 192, 192, 0.7); }
-  100% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+  0% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  50% { transform: translateY(-50%) scale(1.25); text-shadow: 0 0 20px rgba(0, 0, 0, 1), 0 0 40px rgba(192, 192, 192, 0.8); }
+  100% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
 }
 
 .house-ravenclaw .points-value-display {
@@ -379,9 +386,9 @@
 }
 
 @keyframes ravenclaw-points-pulse {
-  0% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
-  50% { transform: scale(1.15); text-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 20px rgba(176, 196, 222, 0.7); }
-  100% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+  0% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  50% { transform: translateY(-50%) scale(1.25); text-shadow: 0 0 20px rgba(0, 0, 0, 1), 0 0 40px rgba(176, 196, 222, 0.8); }
+  100% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
 }
 
 .house-hufflepuff .points-value-display {
@@ -389,9 +396,9 @@
 }
 
 @keyframes hufflepuff-points-pulse {
-  0% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
-  50% { transform: scale(1.15); text-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 217, 102, 0.7); }
-  100% { transform: scale(1); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+  0% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  50% { transform: translateY(-50%) scale(1.25); text-shadow: 0 0 20px rgba(0, 0, 0, 1), 0 0 40px rgba(255, 217, 102, 0.8); }
+  100% { transform: translateY(-50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
 }
 
 /* Enhanced styling for points background image */
@@ -399,6 +406,29 @@
   background-position: center center !important;
   background-size: cover !important;
   position: relative;
+}
+
+/* Point change icon styling */
+.points-value-display svg.increase-icon {
+  filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.6));
+  animation: increase-icon-glow 2s infinite;
+}
+
+.points-value-display svg.decrease-icon {
+  filter: drop-shadow(0 0 5px rgba(245, 101, 101, 0.6));
+  animation: decrease-icon-glow 2s infinite;
+}
+
+@keyframes increase-icon-glow {
+  0% { filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.5)); }
+  50% { filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.8)); }
+  100% { filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.5)); }
+}
+
+@keyframes decrease-icon-glow {
+  0% { filter: drop-shadow(0 0 3px rgba(245, 101, 101, 0.5)); }
+  50% { filter: drop-shadow(0 0 8px rgba(245, 101, 101, 0.8)); }
+  100% { filter: drop-shadow(0 0 3px rgba(245, 101, 101, 0.5)); }
 }
 
 /* Responsive adjustments */

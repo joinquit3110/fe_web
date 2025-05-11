@@ -10,10 +10,12 @@ import {
   Badge,
   Heading,
   Flex,
-  Stack
+  Stack,
+  Icon
 } from '@chakra-ui/react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import { FaBolt, FaSkull } from 'react-icons/fa';
 import '../styles/notification.css';
 import '../styles/HarryPotter.css';
 
@@ -476,16 +478,18 @@ const NotificationDisplay = () => {
       top="20px"
       right="20px"
       zIndex="toast"
-      width={{ base: "85vw", sm: "330px", md: "360px" }}  // responsive width
+      width={{ base: "90vw", sm: "400px", md: "450px" }}  // increased size for better image visibility
       maxWidth="95vw"
       className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
     >
       <Box
-        borderWidth="2px"
+        borderWidth="3px"
         borderRadius="lg"
         overflow="hidden"
-        borderColor={houseColors.borderColor}
-        p={4}
+        borderColor={isPointChange ? 
+          `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
+          houseColors.borderColor}
+        p={isPointChange ? 5 : 4}
         className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
         style={{
           background: isPointChange 
@@ -550,16 +554,28 @@ const NotificationDisplay = () => {
               {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
             </Badge>
             {(isHousePoints || isHouseAssessment) && (
-              <Text 
-                fontSize={isPointChange ? "md" : "sm"} 
-                fontWeight="bold" 
-                color={isPointChange ? "white" : houseColors.accentColor}
+              <Flex 
+                alignItems="center" 
                 className={isPointChange ? "points-value-display" : ""}
-                textShadow={isPointChange ? "0 0 10px rgba(255, 255, 255, 0.7)" : "none"}
               >
-                {isPointChange ? (isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`) : ''} 
-                {isPointChange ? 'points' : ''}
-              </Text>
+                {isPointChange && (                <Icon 
+                  as={isPointIncrease ? FaBolt : FaSkull} 
+                  color={isPointIncrease ? "#4ADE80" : "#F56565"} 
+                  mr="1"
+                  boxSize="16px"
+                  className={isPointIncrease ? "increase-icon" : "decrease-icon"}
+                />
+                )}
+                <Text
+                  fontSize={isPointChange ? "md" : "sm"} 
+                  fontWeight="bold" 
+                  color={isPointChange ? (isPointIncrease ? "#4ADE80" : "#F56565") : houseColors.accentColor}
+                  textShadow={isPointChange ? "0 0 10px rgba(0, 0, 0, 0.9)" : "none"}
+                >
+                  {isPointChange ? (isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`) : ''} 
+                  {isPointChange ? 'points' : ''}
+                </Text>
+              </Flex>
             )}
           </Flex>
         )}
@@ -569,14 +585,22 @@ const NotificationDisplay = () => {
           // Extract reason using multiple approaches for reliability
           let displayReason = null;
           
+          // Debug the reason that is coming in
+          console.log('[NOTIFICATION_REASON_DEBUG]', {
+            fromNotif: activeNotification.reason,
+            message: activeNotification.message,
+            isHousePoints: isHousePoints,
+            isPersonalPoints: Boolean(activeNotification.isPersonalPointsUpdate)
+          });
+          
           // First priority: Use valid reason from notification object
           if (activeNotification.reason && 
               activeNotification.reason !== 'System update' && 
               activeNotification.reason.trim() !== '') {
             displayReason = activeNotification.reason;
           } 
-          // Second priority: Extract from message after colon for house points
-          else if (isHousePoints && activeNotification.message && activeNotification.message.includes(':')) {
+          // Second priority: Extract from message after colon for points notifications
+          else if (activeNotification.message && activeNotification.message.includes(':')) {
             const parts = activeNotification.message.split(':');
             if (parts.length > 1 && parts[1].trim() !== '') {
               displayReason = parts[1].trim();
@@ -586,20 +610,29 @@ const NotificationDisplay = () => {
           else if (isHousePoints && activeNotification.house) {
             displayReason = `${activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)} house points update`;
           }
+          // Fourth priority: For personal points updates
+          else if (activeNotification.isPersonalPointsUpdate) {
+            displayReason = "Personal achievement";
+          }
           // Last resort fallback
           else if (!displayReason) {
-            displayReason = "Point adjustment";
+            displayReason = isPointIncrease ? "Achievement reward" : "Point adjustment";
           }
+
+          console.log('[NOTIFICATION_REASON_FINAL]', displayReason);
           
           return (
             <Text 
-              fontSize="xs" 
-              fontWeight="medium" 
-              color={houseColors.accentColor} 
+              fontSize="sm" // Increased size for better visibility
+              fontWeight="bold" 
+              color={isPointChange ? "white" : houseColors.accentColor}
               mb={2} 
               className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
               style={{
-                textShadow: activeNotification.house ? `0 0 4px rgba(0, 0, 0, 0.5)` : 'none'
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.9)",
+                letterSpacing: "0.02em",
+                zIndex: 3,
+                position: "relative"
               }}
             >
               Reason: {displayReason}
@@ -612,41 +645,61 @@ const NotificationDisplay = () => {
             {/* Keep the original icon container for non-background version */}
             <Box className="points-animation notification-icon-container" position="absolute" right="-20px" top="-30px">
               <Image src={pointsImage} alt={isPointIncrease ? "Points increased" : "Points decreased"} width="80px" className="notification-icon" />
-              <Text 
+              <Flex 
                 position="absolute" 
                 top="30px" 
                 right="25px" 
-                fontWeight="bold" 
-                color={isPointIncrease ? "#FFDF00" : "#FF6B6B"}
-                fontSize="20px"
-                textShadow="0 0 5px rgba(0,0,0,0.5)"
+                alignItems="center"
               >
-                {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
-              </Text>
+                <Icon 
+                  as={isPointIncrease ? FaBolt : FaSkull} 
+                  color={isPointIncrease ? "#4ADE80" : "#F56565"} 
+                  mr="1"
+                  boxSize="14px"
+                  className={isPointIncrease ? "increase-icon" : "decrease-icon"}
+                />
+                <Text 
+                  fontWeight="bold" 
+                  color={isPointIncrease ? "#4ADE80" : "#F56565"}
+                  fontSize="20px"
+                  textShadow="0 0 5px rgba(0,0,0,0.5)"
+                >
+                  {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
+                </Text>
+              </Flex>
             </Box>
             
             {/* Add a large points display for the background version */}
-            <Text 
+            <Flex 
               className="points-value-display"
               fontWeight="bold" 
-              color={activeNotification.house === 'gryffindor' ? "#FFDF00" :
-                     activeNotification.house === 'slytherin' ? "#E5E5E5" :
-                     activeNotification.house === 'ravenclaw' ? "#B0C4DE" :
-                     activeNotification.house === 'hufflepuff' ? "#FFD966" :
-                     isPointIncrease ? "#FFDF00" : "#FF6B6B"}
-              fontSize="32px"
+              fontSize="48px"
               position="absolute"
-              top="15px"
+              top="50%"
               right="20px"
-              textShadow="0 0 10px rgba(0,0,0,0.7)"
+              transform="translateY(-50%)"
+              alignItems="center"
               style={{
                 animation: activeNotification.house ? 
                   `${activeNotification.house.toLowerCase()}-points-pulse 2s infinite` : 
-                  'points-pulse 2s infinite'
+                  'points-pulse 2s infinite',
+                zIndex: 5
               }}
             >
-              {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
-            </Text>
+              <Icon 
+                as={isPointIncrease ? FaBolt : FaSkull} 
+                color={isPointIncrease ? "#4ADE80" : "#F56565"} 
+                mr="2"
+                boxSize="40px"
+                className={isPointIncrease ? "increase-icon" : "decrease-icon"}
+              />
+              <Text
+                textShadow="0 0 12px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7)"
+                color={isPointIncrease ? "#4ADE80" : "#F56565"}
+              >
+                {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
+              </Text>
+            </Flex>
           </>
         )}
         
