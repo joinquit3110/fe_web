@@ -301,11 +301,11 @@ export const SocketProvider = ({ children }) => {
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
 
       if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
-        console.log('[SOCKET] Converting point update to notification:', data);
+        console.log('[SOCKET] Processing user_update for magic points sync:', data);
 
-        // Skip this notification if it's an admin-initiated action reflected in user_update
+        // Skip this logic if it's an admin-initiated action already handled elsewhere
         if (data.data?.forceSyncOrigin === 'admin') {
-          console.log('[SOCKET] Skipping sync notification for admin-initiated user_update');
+          console.log('[SOCKET] Skipping sync processing for admin-initiated user_update');
           return;
         }
 
@@ -313,61 +313,29 @@ export const SocketProvider = ({ children }) => {
         const pointsMatch = data.message.match(/updated to (\d+)/);
         if (pointsMatch && pointsMatch[1] && user) {
           const newPoints = parseInt(pointsMatch[1], 10);
-          const oldPoints = user.magicPoints || 0; // Get old points BEFORE updating user state
 
-          // Update AuthContext with the new points total from the sync message.
-          // This ensures the client's master state of points is correct for the current session.
+          // Primary responsibility: Update AuthContext with the new points total.
           if (user.magicPoints !== newPoints) {
+            console.log(`[SOCKET] Sync update: User points changing from ${user.magicPoints} to ${newPoints}. Updating AuthContext.`);
             if (typeof setUser === 'function') {
               setUser(prevUser => ({ ...prevUser, magicPoints: newPoints }));
-              // For full persistence, AuthContext's setUser or a dedicated function
-              // should also handle updating localStorage.
+              // Consider if localStorage for user object also needs update here via AuthContext's responsibility
             } else {
-              console.error('[SOCKET] setUser is not a function. Cannot update user points in AuthContext.');
+              console.error('[SOCKET] setUser is not a function. Cannot update user points in AuthContext from sync_update.');
             }
+          } else {
+            console.log(`[SOCKET] Sync update: User points already ${newPoints}. No AuthContext update needed.`);
           }
 
-          const pointsDiff = newPoints - oldPoints;
+          // DO NOT create a points change notification from this sync update.
+          // Notifications for deltas should come from specific events like 'house_points_update'.
+          // The debouncing logic for lastHouseUpdateTime is therefore no longer needed here for notification purposes.
+          console.log('[SOCKET] Sync update for magic points processed. No delta notification will be generated from here.');
 
-          // Skip if we've recently processed a house points update (within last 5 seconds)
-          const lastHouseUpdateTime = localStorage.getItem('lastHousePointsUpdate');
-          if (lastHouseUpdateTime && (Date.now() - parseInt(lastHouseUpdateTime)) < 5000) {
-            console.log('[SOCKET] Skipping personal notification from sync as it follows closely after house update (5s window).');
-            return;
-          }
-
-          if (pointsDiff !== 0) {
-            // Extract potential reason from data
-            let reason = data.reason || data.data?.reason || data.data?.lastUpdateReason || 'System update';
-
-            // Extract criteria/level if available
-            const criteria = data.criteria || data.data?.criteria || null;
-            const level = data.level || data.data?.level || null;
-
-            console.log('[SOCKET] Extracted point update reason:', reason);
-
-            // Generate unique ID that includes user ID to prevent duplicates
-            const notificationId = `points_update_${Date.now()}_${user.id}`;
-
-            // Create notification for points change
-            const notification = {
-              id: notificationId,
-              type: pointsDiff > 0 ? 'success' : 'warning',
-              title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
-              message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}${reason ? ': ' + reason : ''}`,
-              timestamp: new Date(),
-              pointsChange: pointsDiff,
-              reason: reason,
-              criteria: criteria,
-              level: level,
-              house: user.house,
-              isPersonalPointsUpdate: true,
-              isHousePointsUpdate: false
-            };
-
-            addNotification(notification);
-          }
         }
+      } else if (data.type === 'force_sync') {
+        console.log('[SOCKET] Received force_sync. Client should re-fetch or await specific updates.');
+        // Handle other force_sync subtypes if necessary, but generally no direct notification from here.
       }
     };
 
@@ -484,38 +452,27 @@ export const SocketProvider = ({ children }) => {
       
       // Create custom notification with exact house points data
       // Make sure we extract a clean reason for the notification - this is critical
-      
+
       // Enhanced reason extraction - ensure the reason is never lost
-      let cleanReason = null;
-      if (data.reason) {
-        cleanReason = data.reason !== 'System update' ? data.reason : null;
+      let cleanReason = ''; // Default to empty string
+      if (data.reason && String(data.reason).trim() !== '' && String(data.reason).trim().toLowerCase() !== 'system update') {
+        cleanReason = String(data.reason).trim();
       }
-      
-      // If no reason provided, create a default reason based on the house
-      if (!cleanReason) {
+
+      // If no specific reason was provided or it was "System update" or empty, generate a default.
+      if (cleanReason === '') {
         const houseName = data.house.charAt(0).toUpperCase() + data.house.slice(1);
-        cleanReason = `${houseName} ${data.points > 0 ? 'achievement' : 'penalty'}`;
+        // Provide a more generic default if no specific reason is available
+        cleanReason = `${houseName} points ${data.points > 0 ? 'awarded' : 'deducted'}`;
       }
-      
+
       // Log all the details for debugging
-      console.log('[SOCKET] House points notification - extracted reason:', cleanReason, 'from original:', data.reason);
-      console.log('[SOCKET] House points full data:', {
-        house: data.house,
-        points: data.points,
-        originalReason: data.reason,
-        cleanReason: cleanReason,
-        criteria: data.criteria,
-        level: data.level
-      });
-      
-      // Always include the reason in the message after a colon - critical for UI reason extraction
-      // Formatting with colon allows the notification component to reliably extract the reason
+      console.log('[SOCKET] House points notification - final reason:', cleanReason, 'from original:', data.reason);
+
       const message = cleanReason ? 
         `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${cleanReason}` :
         `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${data.house.charAt(0).toUpperCase() + data.house.slice(1)} update`;
         
-      // Create a unique ID that includes house, points, and timestamp to prevent duplicates
-      // This ID format will help ensure we don't create duplicate notifications
       const uniqueId = `house_points_${data.house}_${data.points}_${Date.now()}`;
       console.log('[SOCKET] Creating house points notification with unique ID:', uniqueId);
       
@@ -523,21 +480,18 @@ export const SocketProvider = ({ children }) => {
         id: uniqueId,
         type: data.points > 0 ? 'success' : 'warning',
         title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
-        message: message,
+        message: message, // Message already incorporates cleanReason
         timestamp: new Date(),
-        // Make sure we're using the points delta, not newTotal
-        pointsChange: data.points, // This is the change in points, not the total
-        // Store newTotal separately if needed, but don't use it for the pointsChange display
+        pointsChange: data.points,
         totalPoints: data.newTotal,
-        reason: cleanReason, // Always set reason, never null or 'System update'
-        criteria: data.criteria || null,
-        level: data.level || null,
+        reason: cleanReason, // Ensure this is the consistently determined cleanReason
+        criteria: data.criteria || null, // Pass directly if present, else null
+        level: data.level || null,     // Pass directly if present, else null
         house: data.house,
-        isHousePointsUpdate: true, // Mark as house points notification
-        // Add more explicit flags to help the notification system
+        isHousePointsUpdate: true,
         isPersonalPointsUpdate: false
       };
-        
+
       addNotification(notification);
     };
 
@@ -556,7 +510,6 @@ export const SocketProvider = ({ children }) => {
       addNotification(notification);
     };
 
-    // Handle house assessment updates
     const handleHouseAssessmentUpdate = (data) => {
       console.log('[SOCKET] Received house_assessment_update:', data);
       
@@ -610,9 +563,9 @@ export const SocketProvider = ({ children }) => {
         title: 'HOUSE ASSESSMENT!',
         message: `${data.house} house has been assessed: ${data.assessment}`,
         timestamp: new Date(),
-        reason: data.criteria || 'House Assessment',
-        criteria: data.criteria || null,
-        level: data.level || null,
+        reason: data.criteria || 'House Assessment', // Uses criteria as reason, or a default
+        criteria: data.criteria || null, // Pass directly if present, else null
+        level: data.level || null,     // Pass directly if present, else null
         house: data.house,
         isHouseAssessmentUpdate: true,
         isHousePointsUpdate: false,
