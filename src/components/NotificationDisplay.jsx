@@ -24,11 +24,8 @@ import '../styles/notification_animations.css';
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
 
-// Preload images for better performance
-const increasePointImage = new Image();
-increasePointImage.src = increasePointImg;
-const decreasePointImage = new Image();
-decreasePointImage.src = decreasePointImg;
+// Don't preload images here - this causes issues with SSR or bundling
+// We'll let React handle the image loading when it's actually used in the component
 
 // Helper function to standardize criteria text
 const standardizeCriteria = (criteria) => {
@@ -468,7 +465,6 @@ const NotificationDisplay = () => {
         zIndex: 1,
         imageRendering: 'crisp-edges', /* Improve image quality */
         backgroundOrigin: 'content-box', /* Ensure proper padding */
-        backgroundRepeat: 'no-repeat',
       }}
     >
         {/* Add magical glow bar */}
