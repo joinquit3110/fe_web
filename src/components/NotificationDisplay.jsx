@@ -24,6 +24,12 @@ import '../styles/notification_animations.css';
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
 
+// Preload images for better performance
+const increasePointImage = new Image();
+increasePointImage.src = increasePointImg;
+const decreasePointImage = new Image();
+decreasePointImage.src = decreasePointImg;
+
 // Helper function to standardize criteria text
 const standardizeCriteria = (criteria) => {
   if (!criteria) return '';
@@ -216,7 +222,7 @@ const NotificationDisplay = () => {
       console.error('[NOTIFICATION] Encountered invalid notification in queue:', next);
       processingQueue.current = false;
       return;
-    }
+    };
     
     // Validate required fields
     if (!next.id) {
@@ -227,7 +233,6 @@ const NotificationDisplay = () => {
     
     // Ensure we have a message
     if (!next.message) {
-      console.log('[NOTIFICATION] Adding default message for notification:', next.id);
       next.message = next.title || 'Notification';
     }
     
@@ -249,9 +254,7 @@ const NotificationDisplay = () => {
       if (next.isHousePointsUpdate || next.isHouseAssessmentUpdate) {
         displayTime = Math.max(displayTime, 10000); // Minimum 10s for house notifications
       }
-    }
-    
-    console.log(`[NOTIFICATION] Will auto-dismiss in ${displayTime}ms:`, next.id);
+    };
     
     timerRef.current = setTimeout(() => {
       // Add dismissing class for animation
@@ -309,32 +312,27 @@ const NotificationDisplay = () => {
         
         // Skip if notification has no ID
         if (!notification.id) {
-          console.log('[NOTIFICATION] Skipping notification without ID');
           return false;
         }
         
         // Skip if this notification ID has been processed before
         if (processedIds.current.has(notification.id)) {
-          console.log('[NOTIFICATION] Skipping already processed notification:', notification.id);
           return false;
         }
         
         // Skip if this is already in the queue
         const inQueue = notificationQueue.current.some(n => n.id === notification.id);
         if (inQueue) {
-          console.log('[NOTIFICATION] Skipping notification already in queue:', notification.id);
           return false;
         }
         
         // Skip if this is the active notification
         if (activeNotification && activeNotification.id === notification.id) {
-          console.log('[NOTIFICATION] Skipping active notification:', notification.id);
           return false;
         }
         
         // This is a new notification - track it
         processedIds.current.add(notification.id);
-        console.log('[NOTIFICATION] Adding new notification to queue:', notification.id);
         return true;
       });
       
@@ -345,32 +343,11 @@ const NotificationDisplay = () => {
         const validatedNotifications = toProcess.map(notification => {
           const fixedNotification = {...notification};
           
-          console.log('[NOTIFICATION_DEBUG] Processing notification:', {
-            id: notification.id,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            reason: notification.reason,
-            pointsChange: notification.pointsChange,
-            house: notification.house,
-            isHousePointsUpdate: notification.isHousePointsUpdate
-          });
-          
           let notificationType = "standard";
           if (notification.isHousePointsUpdate) notificationType = "house points";
           if (notification.isPersonalPointsUpdate) notificationType = "personal points";
-          console.log(`[NOTIFICATION_DEBUG] Processing ${notificationType} notification:`, fixedNotification);
           
           if (notification.pointsChange !== undefined) {
-            console.log('[NOTIFICATION_DEBUG] Full notification details:', {
-              id: notification.id,
-              type: notification.type,
-              message: notification.message, 
-              reason: notification.reason,
-              house: notification.house,
-              isHousePoints: notification.isHousePointsUpdate,
-              isPersonal: notification.isPersonalPointsUpdate
-            });
             
             // Enhanced reason extraction for all notification types
             if (fixedNotification.reason === 'System update' || !fixedNotification.reason) {
@@ -379,7 +356,6 @@ const NotificationDisplay = () => {
                 const parts = notification.message.split(':');
                 if (parts.length > 1) {
                   fixedNotification.reason = parts[1].trim();
-                  console.log('[NOTIFICATION_DEBUG] 1️⃣ Extracted reason from message:', fixedNotification.reason);
                 }
               }
               
@@ -390,36 +366,29 @@ const NotificationDisplay = () => {
                   const reasonPart = notification.message.split(':')[1];
                   if (reasonPart && reasonPart.trim()) {
                     fixedNotification.reason = reasonPart.trim();
-                    console.log('[NOTIFICATION_DEBUG] 2️⃣ Extracted house reason:', fixedNotification.reason);
                   } 
                   else if (notification.reason && notification.reason !== 'System update') {
                     // Use the provided reason if available
                     fixedNotification.reason = notification.reason;
-                    console.log('[NOTIFICATION_DEBUG] 2️⃣ Using provided house reason:', fixedNotification.reason);
                   }
                 }
                 // If still no reason found, use default
                 if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
                   const houseName = notification.house.charAt(0).toUpperCase() + notification.house.slice(1);
                   fixedNotification.reason = `${houseName} house points update`;
-                  console.log('[NOTIFICATION_DEBUG] 2️⃣ Using house default reason:', fixedNotification.reason);
                 }
               } 
               
               // For personal points updates
               else if (notification.isPersonalPointsUpdate) {
                 fixedNotification.reason = 'Point change';
-                console.log('[NOTIFICATION_DEBUG] 3️⃣ Using point change reason:', fixedNotification.reason);
               }
               
               // Generic fallback for any remaining notification
               else if (!fixedNotification.reason || fixedNotification.reason === 'System update') {
                 fixedNotification.reason = notification.pointsChange > 0 ? 'Achievement reward' : 'Point adjustment';
-                console.log('[NOTIFICATION_DEBUG] 4️⃣ Using generic fallback reason');
               }
             }
-            
-            console.log('[NOTIFICATION_DEBUG] Final notification reason:', fixedNotification.reason);
           }
               
           return fixedNotification;
@@ -448,13 +417,10 @@ const NotificationDisplay = () => {
       const extracted = extractCriteriaAndLevel(activeNotification);
       criteria = extracted?.criteria || null;
       level = extracted?.level || null;
-      
-      console.log('[NOTIFICATION] Extracted criteria/level:', { criteria, level });
     } else {
-      console.warn('[NOTIFICATION] Cannot extract criteria/level from invalid notification');
+      // Continue with null values for criteria and level
     }
   } catch (error) {
-    console.error('[NOTIFICATION] Error extracting criteria/level:', error);
     // Continue with null values for criteria and level
   }
 
@@ -478,10 +444,11 @@ const NotificationDisplay = () => {
       position="fixed"
       top="20px"
       right="20px"
-      zIndex="toast"
-      width={{ base: "90vw", sm: "450px", md: "500px" }}  // further increased size for better image visibility
+      zIndex="toast" /* Using toast z-index to ensure visibility */
+      width={{ base: "90vw", sm: "450px", md: "500px" }}  
       maxWidth="95vw"
       className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
+      style={{ pointerEvents: "all" }} /* Ensure clickable */
     >    <Box
       borderWidth="5px" /* Increased border width for better visibility */
       borderRadius="lg" 
@@ -495,7 +462,13 @@ const NotificationDisplay = () => {
         background: isPointChange 
           ? `url(${pointsImage}) no-repeat center center` 
           : houseColors.bgColor,
+        backgroundSize: isPointChange ? 'contain' : 'cover',
+        backgroundPosition: 'center center',
         position: 'relative',
+        zIndex: 1,
+        imageRendering: 'crisp-edges', /* Improve image quality */
+        backgroundOrigin: 'content-box', /* Ensure proper padding */
+        backgroundRepeat: 'no-repeat',
       }}
     >
         {/* Add magical glow bar */}
@@ -514,21 +487,7 @@ const NotificationDisplay = () => {
         <div className="magical-sparkle sparkle-2"></div>
         <div className="magical-sparkle sparkle-3"></div>
         
-        {/* Add magical floating particles for point notifications */}
-        {isPointChange && (
-          <>
-            <div className="magical-particle magical-particle-1" 
-                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
-            <div className="magical-particle magical-particle-2" 
-                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
-            <div className="magical-particle magical-particle-3" 
-                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
-            <div className="magical-particle magical-particle-4" 
-                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
-            <div className="magical-particle magical-particle-5" 
-                 style={{background: isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'}}></div>
-          </>
-        )}
+        {/* Removing particles for simplicity and better performance */}
         
         <Flex justifyContent="space-between" alignItems="center" mb={2}>
           <Heading 
@@ -586,13 +545,7 @@ const NotificationDisplay = () => {
           // Extract reason using multiple approaches for reliability
           let displayReason = null;
           
-          // Debug the reason that is coming in
-          console.log('[NOTIFICATION_REASON_DEBUG]', {
-            fromNotif: activeNotification.reason,
-            message: activeNotification.message,
-            isHousePoints: isHousePoints,
-            isPersonalPoints: Boolean(activeNotification.isPersonalPointsUpdate)
-          });
+          // Extract reason from notification
           
           // First priority: Use valid reason from notification object
           if (activeNotification.reason && 
@@ -620,7 +573,7 @@ const NotificationDisplay = () => {
             displayReason = isPointIncrease ? "Points awarded" : "Points deducted";
           }
 
-          console.log('[NOTIFICATION_REASON_FINAL]', displayReason);
+          // Use the final display reason
           
           return (
             <Text 
@@ -655,42 +608,33 @@ const NotificationDisplay = () => {
             <Flex 
               className="points-value-display"
               fontWeight="bold" 
-              fontSize="70px" /* Further increased font size for more emphasis */
+              fontSize="70px" /* Large font size for emphasis */
               position="absolute"
               top="50%"
-              left="50%" /* Centered horizontally */
-              transform="translate(-50%, -50%)" /* Center both horizontally and vertically */
+              left="50%"
+              transform="translate(-50%, -50%)" 
               alignItems="center"
               justifyContent="center"
-              width="100%"
+              width="70%" /* Further reduced to avoid covering too much of background */
               style={{
-                animation: activeNotification.house ? 
-                  `${activeNotification.house.toLowerCase()}-points-pulse 2s infinite` : 
-                  'points-value-glow 2s infinite', /* Use the new animation */
-                zIndex: 5,
-                padding: "15px", /* Increased padding */
-                background: "rgba(0,0,0,0.25)", /* Reduced opacity for better view of the background image */
-                borderRadius: "20px", /* More rounded corners */
-                backdropFilter: "blur(3px)", /* Reduced blur effect to show more of the background */
+                zIndex: 10,
+                padding: "15px",
+                background: "rgba(0,0,0,0.4)", /* Reduced opacity for better background visibility */
+                borderRadius: "20px",
                 border: isPointIncrease ? 
-                  "3px solid rgba(74, 222, 128, 0.6)" : 
-                  "3px solid rgba(245, 101, 101, 0.6)", /* Thicker and more visible border */
+                  "3px solid rgba(74, 222, 128, 0.8)" : 
+                  "3px solid rgba(245, 101, 101, 0.8)",
                 boxShadow: isPointIncrease ?
-                  "0 0 20px rgba(74, 222, 128, 0.4)" :
-                  "0 0 20px rgba(245, 101, 101, 0.4)" /* Add glow around the points display */
+                  "0 0 20px rgba(74, 222, 128, 0.5)" :
+                  "0 0 20px rgba(245, 101, 101, 0.5)"
               }}
             >
               <Icon 
                 as={isPointIncrease ? FaBolt : FaSkull} 
                 color={isPointIncrease ? "#4ADE80" : "#F56565"} 
-                mr="5" /* Increased spacing */
-                boxSize="58px" /* Larger icon */
+                mr="5" /* Spacing */
+                boxSize="58px" /* Icon size */
                 className={isPointIncrease ? "increase-icon" : "decrease-icon"}
-                style={{
-                  filter: isPointIncrease ? 
-                    "drop-shadow(0 0 8px rgba(74, 222, 128, 0.8))" : 
-                    "drop-shadow(0 0 8px rgba(245, 101, 101, 0.8))" /* Add glow to the icon */
-                }}
               />
               <Text
                 textShadow={isPointIncrease ? 

@@ -21,6 +21,8 @@
 .points-value-display {
   animation: points-value-glow 2s infinite !important;
   transition: all 0.3s ease;
+  opacity: 0.9; /* Add slight transparency */
+  backdrop-filter: blur(2px); /* Add subtle blur effect to make text stand out */
 }
 
 /* Icon animations for points */
@@ -111,7 +113,7 @@
     text-shadow: 0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(0,0,0,0.8);
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(1.05); /* Reduced scale for better visibility */
     text-shadow: 0 0 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8), 0 0 60px rgba(255,255,255,0.4);
   }
   100% {

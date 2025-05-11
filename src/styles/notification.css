@@ -11,11 +11,11 @@
 @keyframes notification-entrance {
   0% {
     opacity: 0;
-    transform: translateY(-20px) scale(0.95);
+    transform: translateY(-20px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -57,17 +57,7 @@
   flex-direction: column;
   justify-content: space-between;
   aspect-ratio: 1.5 / 1; /* Maintain aspect ratio to fit the image */
-  animation: background-pulse 5s infinite alternate ease-in-out; /* Subtle animation for the background image */
-}
-
-/* Subtle background animation */
-@keyframes background-pulse {
-  0% {
-    background-size: 100% auto !important;
-  }
-  100% {
-    background-size: 105% auto !important;
-  }
+  z-index: 2; /* Ensure proper stacking */
 }
 
 .points-background::before {
@@ -77,25 +67,25 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3); /* Reduced opacity for better background image visibility */
+  background: rgba(0, 0, 0, 0.2); /* Further reduced opacity for better background visibility */
   z-index: 0;
 }
 
 /* House-specific overlays for better theme integration with reduced opacity */
 .house-gryffindor .points-background::before {
-  background: radial-gradient(circle, rgba(122, 10, 10, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%);
+  background: radial-gradient(circle, rgba(122, 10, 10, 0.15) 0%, rgba(0, 0, 0, 0.25) 100%);
 }
 
 .house-slytherin .points-background::before {
-  background: radial-gradient(circle, rgba(5, 77, 35, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%);
+  background: radial-gradient(circle, rgba(5, 77, 35, 0.15) 0%, rgba(0, 0, 0, 0.25) 100%);
 }
 
 .house-ravenclaw .points-background::before {
-  background: radial-gradient(circle, rgba(10, 30, 90, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%);
+  background: radial-gradient(circle, rgba(10, 30, 90, 0.15) 0%, rgba(0, 0, 0, 0.25) 100%);
 }
 
 .house-hufflepuff .points-background::before {
-  background: radial-gradient(circle, rgba(128, 109, 16, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%);
+  background: radial-gradient(circle, rgba(128, 109, 16, 0.15) 0%, rgba(0, 0, 0, 0.25) 100%);
 }
 
 /* Ensure all content is above the overlay */
@@ -114,36 +104,36 @@
   pointer-events: none;
   z-index: 2;
   opacity: 0;
+  animation: magical-float 3s infinite ease-in-out;
 }
 
 .points-background .magical-particle-1 {
   top: 20%;
   left: 15%;
-  animation: magical-float 3s infinite ease-in-out 0.2s;
+  animation-delay: 0.2s;
 }
 
 .points-background .magical-particle-2 {
   top: 70%;
   left: 10%;
-  animation: magical-float 2.5s infinite ease-in-out;
 }
 
 .points-background .magical-particle-3 {
   top: 30%;
   right: 10%;
-  animation: magical-float 3.5s infinite ease-in-out 0.7s;
+  animation-delay: 0.7s;
 }
 
 .points-background .magical-particle-4 {
   top: 60%;
   right: 15%;
-  animation: magical-float 3s infinite ease-in-out 0.5s;
+  animation-delay: 0.5s;
 }
 
 .points-background .magical-particle-5 {
   top: 40%;
   left: 50%;
-  animation: magical-float 4s infinite ease-in-out 1s;
+  animation-delay: 1s;
 }
 
 @keyframes magical-float {
@@ -333,47 +323,6 @@
   100% { text-shadow: 0 0 5px rgba(128, 109, 16, 0.6); }
 }
 
-/* House-specific title glows */
-.house-gryffindor .notification-title {
-  animation: gryffindor-title-glow 1.5s infinite;
-}
-
-@keyframes gryffindor-title-glow {
-  0% { text-shadow: 0 0 5px rgba(218, 165, 32, 0.6); }
-  50% { text-shadow: 0 0 10px rgba(218, 165, 32, 0.9), 0 0 15px rgba(218, 165, 32, 0.4); }
-  100% { text-shadow: 0 0 5px rgba(218, 165, 32, 0.6); }
-}
-
-.house-slytherin .notification-title {
-  animation: slytherin-title-glow 1.5s infinite;
-}
-
-@keyframes slytherin-title-glow {
-  0% { text-shadow: 0 0 5px rgba(192, 192, 192, 0.6); }
-  50% { text-shadow: 0 0 10px rgba(192, 192, 192, 0.9), 0 0 15px rgba(192, 192, 192, 0.4); }
-  100% { text-shadow: 0 0 5px rgba(192, 192, 192, 0.6); }
-}
-
-.house-ravenclaw .notification-title {
-  animation: ravenclaw-title-glow 1.5s infinite;
-}
-
-@keyframes ravenclaw-title-glow {
-  0% { text-shadow: 0 0 5px rgba(176, 196, 222, 0.6); }
-  50% { text-shadow: 0 0 10px rgba(176, 196, 222, 0.9), 0 0 15px rgba(176, 196, 222, 0.4); }
-  100% { text-shadow: 0 0 5px rgba(176, 196, 222, 0.6); }
-}
-
-.house-hufflepuff .notification-title {
-  animation: hufflepuff-title-glow 1.5s infinite;
-}
-
-@keyframes hufflepuff-title-glow {
-  0% { text-shadow: 0 0 5px rgba(255, 217, 102, 0.6); }
-  50% { text-shadow: 0 0 10px rgba(255, 217, 102, 0.9), 0 0 15px rgba(255, 217, 102, 0.4); }
-  100% { text-shadow: 0 0 5px rgba(255, 217, 102, 0.6); }
-}
-
 /* Enhanced Background Image for Points Notifications */
 .points-background {
   position: relative;
@@ -382,24 +331,6 @@
 /* Hide the icon container when using full background */
 .points-background .notification-icon-container {
   display: none;
-}
-
-/* Add overlay to improve text readability on background images */
-.points-background::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 1;
-}
-
-/* Ensure all content stays above the overlay */
-.points-background > * {
-  position: relative;
-  z-index: 2;
 }
 
 /* Non-points notifications still show the icon */
@@ -439,11 +370,12 @@
 /* Enhanced Magical Sparkles */
 .magical-sparkle {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.4);
+  background-color: rgba(255, 255, 255, 0.7); /* Reduced opacity */
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6), 0 0 15px rgba(255, 215, 0, 0.3); /* Softer glow */
+  z-index: 5; /* Ensure sparkles appear above background but below text */
 }
 
 /* House-specific sparkles */
@@ -568,7 +500,10 @@
 
 /* Points value display for background image notifications */
 .points-value-display {
-  position: relative;
+  position: absolute; /* Changed to absolute for proper positioning */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center in parent */
   z-index: 10 !important; /* Ensure it's above all other elements */
   animation: points-pulse 2s infinite;
   font-size: 64px !important; /* Larger font size for better visibility */
@@ -579,12 +514,15 @@
   justify-content: center; /* Center the points display */
   border: 2px solid rgba(255, 255, 255, 0.2); /* Subtle border */
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* Enhanced shadow for depth */
+  padding: 10px 20px; /* Add padding for better spacing */
+  background: rgba(0, 0, 0, 0.3); /* Semi-transparent background */
+  border-radius: 10px; /* Rounded corners */
 }
 
 @keyframes points-pulse {
-  0% { transform: translate(-50%, -50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  0% { transform: translate(-50%, -50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9); }
   50% { transform: translate(-50%, -50%) scale(1.25); text-shadow: 0 0 20px rgba(0, 0, 0, 1), 0 0 40px rgba(255, 215, 0, 0.6); }
-  100% { transform: translate(-50%, -50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7); }
+  100% { transform: translate(-50%, -50%) scale(1); text-shadow: 0 0 15px rgba(0, 0, 0, 0.9); }
 }
 
 /* House-specific points value display */
@@ -631,7 +569,6 @@
 /* Enhanced styling for points background image */
 .magical-notification.points-background {
   background-position: center center !important;
-  background-size: cover !important;
   position: relative;
 }
 
