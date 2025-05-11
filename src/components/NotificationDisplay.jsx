@@ -154,7 +154,14 @@ const NotificationDisplay = () => {
     }
   };
 
-  // Removed the moved up processQueue function, as it's now defined below
+  // Define dismissHandler function reference first to avoid circular dependency
+  const dismissHandler = () => {
+    if (activeNotification?.id) {
+      removeNotification(activeNotification.id);
+    }
+    setActiveNotification(null);
+    processingQueue.current = false;
+  };
 
   const handleDismiss = useCallback(() => {
     if (activeNotification) {
@@ -178,7 +185,7 @@ const NotificationDisplay = () => {
           processingQueue.current = false;
           
           // We'll let the useEffect handle processing the next notification
-          // This breaks the circular dependency between handleDismiss and processQueue
+          // This avoids calling processQueue directly, breaking the circular dependency
         }, 300); // Animation duration
       } else {
         // Fallback if element not found
@@ -192,7 +199,7 @@ const NotificationDisplay = () => {
     }
   }, [activeNotification, removeNotification]);
 
-  // Removed handleDismiss dependency to break circular reference
+  // Separate function from handleDismiss to break circular reference
   const processQueue = useCallback(() => {
     if (processingQueue.current || notificationQueue.current.length === 0) {
       return;
@@ -201,11 +208,24 @@ const NotificationDisplay = () => {
     processingQueue.current = true;
     const next = notificationQueue.current.shift();
     
-    // Safety check for malformed notifications
+    // Enhanced safety checks for malformed notifications
     if (!next || typeof next !== 'object') {
       console.error('[NOTIFICATION] Encountered invalid notification in queue:', next);
       processingQueue.current = false;
       return;
+    }
+    
+    // Validate required fields
+    if (!next.id) {
+      console.error('[NOTIFICATION] Notification missing ID:', next);
+      processingQueue.current = false;
+      return;
+    }
+    
+    // Ensure we have a message
+    if (!next.message) {
+      console.log('[NOTIFICATION] Adding default message for notification:', next.id);
+      next.message = next.title || 'Notification';
     }
     
     setActiveNotification(next);
@@ -278,21 +298,40 @@ const NotificationDisplay = () => {
   useEffect(() => {
     if (notifications.length > 0) {
       const newNotifications = notifications.filter(notification => {
+        // Safety check for malformed notifications
+        if (!notification || typeof notification !== 'object') {
+          console.error('[NOTIFICATION] Received invalid notification:', notification);
+          return false;
+        }
+        
         // Skip if notification has no ID
-        if (!notification.id) return false;
+        if (!notification.id) {
+          console.log('[NOTIFICATION] Skipping notification without ID');
+          return false;
+        }
         
         // Skip if this notification ID has been processed before
-        if (processedIds.current.has(notification.id)) return false;
+        if (processedIds.current.has(notification.id)) {
+          console.log('[NOTIFICATION] Skipping already processed notification:', notification.id);
+          return false;
+        }
         
         // Skip if this is already in the queue
         const inQueue = notificationQueue.current.some(n => n.id === notification.id);
-        if (inQueue) return false;
+        if (inQueue) {
+          console.log('[NOTIFICATION] Skipping notification already in queue:', notification.id);
+          return false;
+        }
         
         // Skip if this is the active notification
-        if (activeNotification && activeNotification.id === notification.id) return false;
+        if (activeNotification && activeNotification.id === notification.id) {
+          console.log('[NOTIFICATION] Skipping active notification:', notification.id);
+          return false;
+        }
         
         // This is a new notification - track it
         processedIds.current.add(notification.id);
+        console.log('[NOTIFICATION] Adding new notification to queue:', notification.id);
         return true;
       });
       
@@ -396,16 +435,24 @@ const NotificationDisplay = () => {
     return null;
   }
 
-  // Extract criteria and level with error handling
+  // Extract criteria and level with more comprehensive error handling
   let criteria = null;
   let level = null;
   
   try {
-    const extracted = extractCriteriaAndLevel(activeNotification);
-    criteria = extracted.criteria;
-    level = extracted.level;
+    // Safety check the notification object before extraction
+    if (activeNotification && typeof activeNotification === 'object') {
+      const extracted = extractCriteriaAndLevel(activeNotification);
+      criteria = extracted?.criteria || null;
+      level = extracted?.level || null;
+      
+      console.log('[NOTIFICATION] Extracted criteria/level:', { criteria, level });
+    } else {
+      console.warn('[NOTIFICATION] Cannot extract criteria/level from invalid notification');
+    }
   } catch (error) {
     console.error('[NOTIFICATION] Error extracting criteria/level:', error);
+    // Continue with null values for criteria and level
   }
 
   const isPointChange = activeNotification.pointsChange !== undefined;
@@ -416,8 +463,12 @@ const NotificationDisplay = () => {
   const isHousePoints = Boolean(activeNotification.isHousePointsUpdate);
   const isHouseAssessment = Boolean(activeNotification.isHouseAssessmentUpdate);
   
-  // Get theme colors based on notification house or type - don't use useMemo with function dependency
+  // Get theme colors based on notification house or type
+  // Using direct function call instead of useMemo to avoid "cannot access before initialization" errors
   const houseColors = getHouseColors(activeNotification.house);
+
+  // Determine house class if present
+  const houseClass = activeNotification.house ? `house-${activeNotification.house.toLowerCase()}` : '';
 
   return (
     <Box
@@ -427,16 +478,22 @@ const NotificationDisplay = () => {
       zIndex="toast"
       width={{ base: "85vw", sm: "330px", md: "360px" }}  // responsive width
       maxWidth="95vw"
-      className={`notification-container ${activeNotification.type || 'default'}`}
+      className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
     >
       <Box
-        bg={houseColors.bgColor}
         borderWidth="2px"
         borderRadius="lg"
         overflow="hidden"
         borderColor={houseColors.borderColor}
         p={4}
-        className="magical-notification"
+        className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
+        style={{
+          background: isPointChange 
+            ? `url(${pointsImage}) no-repeat center center` 
+            : houseColors.bgColor,
+          backgroundSize: isPointChange ? 'cover' : 'auto',
+          position: 'relative',
+        }}
       >
         {/* Add magical glow bar */}
         <div className="notification-glow-bar" style={{
@@ -455,7 +512,16 @@ const NotificationDisplay = () => {
         <div className="magical-sparkle sparkle-3"></div>
         
         <Flex justifyContent="space-between" alignItems="center" mb={2}>
-          <Heading size="sm" color={houseColors.textColor} className="notification-title">
+          <Heading 
+            size="sm" 
+            color={houseColors.textColor} 
+            className="notification-title"
+            letterSpacing={activeNotification.house ? "0.04em" : "normal"}
+            fontFamily="'Cinzel', serif"
+            style={{
+              textTransform: activeNotification.house ? "capitalize" : "normal"
+            }}
+          >
             {activeNotification.title || getNotificationTitle(activeNotification.type)}
           </Heading>
           <CloseButton size="sm" color={houseColors.textColor} onClick={handleDismiss} />
@@ -473,12 +539,24 @@ const NotificationDisplay = () => {
               mr={2}
               p={1}
               borderRadius="md"
-              className="house-badge"
+              className={`house-badge house-badge-${activeNotification.house.toLowerCase()}`}
+              style={{
+                boxShadow: activeNotification.house === 'gryffindor' ? '0 0 8px rgba(218, 165, 32, 0.5)' : 
+                  activeNotification.house === 'slytherin' ? '0 0 8px rgba(192, 192, 192, 0.5)' :
+                  activeNotification.house === 'ravenclaw' ? '0 0 8px rgba(176, 196, 222, 0.5)' : 
+                  '0 0 8px rgba(0, 0, 0, 0.5)'
+              }}
             >
               {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
             </Badge>
             {(isHousePoints || isHouseAssessment) && (
-              <Text fontSize="sm" fontWeight="bold" color={houseColors.accentColor}>
+              <Text 
+                fontSize={isPointChange ? "md" : "sm"} 
+                fontWeight="bold" 
+                color={isPointChange ? "white" : houseColors.accentColor}
+                className={isPointChange ? "points-value-display" : ""}
+                textShadow={isPointChange ? "0 0 10px rgba(255, 255, 255, 0.7)" : "none"}
+              >
                 {isPointChange ? (isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`) : ''} 
                 {isPointChange ? 'points' : ''}
               </Text>
@@ -486,56 +564,127 @@ const NotificationDisplay = () => {
           </Flex>
         )}
         
-        {/* Show reason with better fallback handling */}
-        {(activeNotification.reason && 
-          activeNotification.reason !== 'System update' && 
-          activeNotification.reason.trim() !== '') ? (
-          <Text fontSize="xs" fontWeight="medium" color={houseColors.accentColor} mb={2} className="notification-reason">
-            Reason: {activeNotification.reason}
-          </Text>
-        ) : isHousePoints && (
-          <Text fontSize="xs" fontWeight="medium" color={houseColors.accentColor} mb={2} className="notification-reason">
-            Reason: {(activeNotification.message?.split(':')?.[1]?.trim()) || 
-                    (activeNotification.reason && activeNotification.reason !== 'System update' ? 
-                     activeNotification.reason : 
-                     `${activeNotification.house?.charAt(0).toUpperCase() + activeNotification.house?.slice(1) || ''} house points update`)}
-          </Text>
-        )}
+        {/* Show reason with more robust handling */}
+        {(() => {
+          // Extract reason using multiple approaches for reliability
+          let displayReason = null;
+          
+          // First priority: Use valid reason from notification object
+          if (activeNotification.reason && 
+              activeNotification.reason !== 'System update' && 
+              activeNotification.reason.trim() !== '') {
+            displayReason = activeNotification.reason;
+          } 
+          // Second priority: Extract from message after colon for house points
+          else if (isHousePoints && activeNotification.message && activeNotification.message.includes(':')) {
+            const parts = activeNotification.message.split(':');
+            if (parts.length > 1 && parts[1].trim() !== '') {
+              displayReason = parts[1].trim();
+            }
+          }
+          // Third priority: Generate house-specific fallback
+          else if (isHousePoints && activeNotification.house) {
+            displayReason = `${activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)} house points update`;
+          }
+          // Last resort fallback
+          else if (!displayReason) {
+            displayReason = "Point adjustment";
+          }
+          
+          return (
+            <Text 
+              fontSize="xs" 
+              fontWeight="medium" 
+              color={houseColors.accentColor} 
+              mb={2} 
+              className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
+              style={{
+                textShadow: activeNotification.house ? `0 0 4px rgba(0, 0, 0, 0.5)` : 'none'
+              }}
+            >
+              Reason: {displayReason}
+            </Text>
+          );
+        })()}
         
         {isPointChange && (
-          <Box className="points-animation notification-icon-container" position="absolute" right="-20px" top="-30px">
-            <Image src={pointsImage} alt={isPointIncrease ? "Points increased" : "Points decreased"} width="80px" className="notification-icon" />
+          <>
+            {/* Keep the original icon container for non-background version */}
+            <Box className="points-animation notification-icon-container" position="absolute" right="-20px" top="-30px">
+              <Image src={pointsImage} alt={isPointIncrease ? "Points increased" : "Points decreased"} width="80px" className="notification-icon" />
+              <Text 
+                position="absolute" 
+                top="30px" 
+                right="25px" 
+                fontWeight="bold" 
+                color={isPointIncrease ? "#FFDF00" : "#FF6B6B"}
+                fontSize="20px"
+                textShadow="0 0 5px rgba(0,0,0,0.5)"
+              >
+                {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
+              </Text>
+            </Box>
+            
+            {/* Add a large points display for the background version */}
             <Text 
-              position="absolute" 
-              top="30px" 
-              right="25px" 
+              className="points-value-display"
               fontWeight="bold" 
-              color={isPointIncrease ? "#FFDF00" : "#FF6B6B"}
-              fontSize="20px"
-              textShadow="0 0 5px rgba(0,0,0,0.5)"
+              color={activeNotification.house === 'gryffindor' ? "#FFDF00" :
+                     activeNotification.house === 'slytherin' ? "#E5E5E5" :
+                     activeNotification.house === 'ravenclaw' ? "#B0C4DE" :
+                     activeNotification.house === 'hufflepuff' ? "#FFD966" :
+                     isPointIncrease ? "#FFDF00" : "#FF6B6B"}
+              fontSize="32px"
+              position="absolute"
+              top="15px"
+              right="20px"
+              textShadow="0 0 10px rgba(0,0,0,0.7)"
+              style={{
+                animation: activeNotification.house ? 
+                  `${activeNotification.house.toLowerCase()}-points-pulse 2s infinite` : 
+                  'points-pulse 2s infinite'
+              }}
             >
               {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
             </Text>
-          </Box>
+          </>
         )}
         
         {criteria && (
           <Flex mt={2}>
             <Badge 
-              bg="rgba(128, 90, 213, 0.8)" 
+              bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.85)' :
+                 activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.85)' :
+                 activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.85)' :
+                 activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.85)' :
+                 'rgba(128, 90, 213, 0.8)'} 
               color="white" 
               mr={2}
               p={1}
-              boxShadow="0 0 5px rgba(128, 90, 213, 0.5)"
+              boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.5)' :
+                 activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.5)' :
+                 activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.5)' :
+                 activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.5)' :
+                 '0 0 5px rgba(128, 90, 213, 0.5)'}
+              className={`criteria-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
             >
               {criteria}
             </Badge>
             {level && (
               <Badge 
-                bg="rgba(49, 151, 149, 0.8)" 
+                bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
+                   activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.7)' :
+                   activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.7)' :
+                   activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.7)' :
+                   'rgba(49, 151, 149, 0.8)'}
                 color="white"
                 p={1}
-                boxShadow="0 0 5px rgba(49, 151, 149, 0.5)"
+                boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.4)' :
+                   activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.4)' :
+                   activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.4)' :
+                   activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.4)' :
+                   '0 0 5px rgba(49, 151, 149, 0.5)'}
+                className={`level-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
               >
                 {level}
               </Badge>

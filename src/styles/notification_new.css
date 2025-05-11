@@ -450,112 +450,11 @@
   transform: translateY(5px);
 }
 
-/* House-specific reason styling */
-.house-reason-gryffindor {
-  color: #DAA520 !important;
-  letter-spacing: 0.02em;
-}
-
-.house-reason-slytherin {
-  color: #C0C0C0 !important;
-  letter-spacing: 0.02em;
-}
-
-.house-reason-ravenclaw {
-  color: #B0C4DE !important;
-  letter-spacing: 0.02em;
-}
-
-.house-reason-hufflepuff {
-  color: #FFD966 !important;
-  letter-spacing: 0.02em;
-}
-
-/* Badge shimmer effects for houses */
-.criteria-badge.house-badge-gryffindor,
-.level-badge.house-badge-gryffindor {
-  position: relative;
-  overflow: hidden;
-}
-
-.criteria-badge.house-badge-gryffindor::after,
-.level-badge.house-badge-gryffindor::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 20%;
-  height: 200%;
-  background: rgba(255, 215, 0, 0.3);
-  transform: rotate(30deg);
-  animation: badge-shine 3s infinite;
-}
-
-.criteria-badge.house-badge-slytherin::after,
-.level-badge.house-badge-slytherin::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 20%;
-  height: 200%;
-  background: rgba(192, 192, 192, 0.3);
-  transform: rotate(30deg);
-  animation: badge-shine 3s infinite;
-}
-
-.criteria-badge.house-badge-ravenclaw::after,
-.level-badge.house-badge-ravenclaw::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 20%;
-  height: 200%;
-  background: rgba(176, 196, 222, 0.3);
-  transform: rotate(30deg);
-  animation: badge-shine 3s infinite;
-}
-
-.criteria-badge.house-badge-hufflepuff::after,
-.level-badge.house-badge-hufflepuff::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 20%;
-  height: 200%;
-  background: rgba(255, 217, 102, 0.3);
-  transform: rotate(30deg);
-  animation: badge-shine 3s infinite;
-}
-
 @keyframes reason-appear {
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Focus states for house-specific notifications */
-.house-gryffindor .magical-notification:focus {
-  outline: 2px solid #DAA520;
-  outline-offset: 2px;
-}
-
-.house-slytherin .magical-notification:focus {
-  outline: 2px solid #C0C0C0;
-  outline-offset: 2px;
-}
-
-.house-ravenclaw .magical-notification:focus {
-  outline: 2px solid #B0C4DE;
-  outline-offset: 2px;
-}
-
-.house-hufflepuff .magical-notification:focus {
-  outline: 2px solid #FFD966;
-  outline-offset: 2px;
 }
 
 /* Dismiss Animation */

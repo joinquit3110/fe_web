@@ -247,9 +247,35 @@ export const SocketProvider = ({ children }) => {
     return 0;
   };
 
-  // Optimize notification adding with batching
+  // Optimize notification adding with batching and deduplication
   const addNotification = useCallback((notification) => {
+    // Validate notification first
+    if (!notification || !notification.id) {
+      console.error('[SOCKET] Attempted to add invalid notification:', notification);
+      return;
+    }
+    
+    // Generate a unique key to prevent duplicates
+    const notificationKey = `${notification.id}_${notification.type}_${notification.house || ''}_${notification.pointsChange || ''}`;
+    
+    // Skip if we recently processed a very similar notification
+    if (recentNotifications.current.has(notificationKey)) {
+      console.log('[SOCKET] Skipping duplicate notification:', notificationKey);
+      return;
+    }
+    
+    // Track this notification
+    recentNotifications.current.add(notificationKey);
+    console.log('[SOCKET] Adding new notification:', notificationKey);
+    
     setNotificationQueue(prev => {
+      // Check for duplicates in the current queue
+      const isDuplicate = prev.some(n => n.id === notification.id);
+      if (isDuplicate) {
+        console.log('[SOCKET] Skipping duplicate in queue:', notification.id);
+        return prev;
+      }
+      
       const newQueue = [...prev, notification];
       
       // Clear existing timeout
@@ -518,14 +544,19 @@ export const SocketProvider = ({ children }) => {
         level: data.level
       });
       
-      // Always include the reason in the message - important for UI display
-      // We format the message with the reason after a colon which helps with extraction
+      // Always include the reason in the message after a colon - critical for UI reason extraction
+      // Formatting with colon allows the notification component to reliably extract the reason
       const message = cleanReason ? 
         `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${cleanReason}` :
-        `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}`;
+        `${Math.abs(data.points)} points ${data.points > 0 ? 'awarded to' : 'deducted from'} ${data.house}: ${data.house.charAt(0).toUpperCase() + data.house.slice(1)} update`;
         
+      // Create a unique ID that includes house, points, and timestamp to prevent duplicates
+      // This ID format will help ensure we don't create duplicate notifications
+      const uniqueId = `house_points_${data.house}_${data.points}_${Date.now()}`;
+      console.log('[SOCKET] Creating house points notification with unique ID:', uniqueId);
+      
       const notification = {
-        id: `house_points_${Date.now()}`,
+        id: uniqueId,
         type: data.points > 0 ? 'success' : 'warning',
         title: data.points > 0 ? 'HOUSE POINTS AWARDED!' : 'HOUSE POINTS DEDUCTED!',
         message: message,
