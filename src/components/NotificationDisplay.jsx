@@ -32,28 +32,19 @@ import decreasePointImg from '../asset/DecreasePoint.png';
 
 // Helper function to standardize criteria text
 const standardizeCriteria = (criteria) => {
-  if (!criteria) return '';
-  
-  // Trim and standardize common criteria formats
-  let normalized = criteria.trim();
-  
-  // Handle known criteria types
+  if (!criteria) return ''; // Return empty string if input is falsy
+
+  const normalized = String(criteria).trim(); // Ensure it's a string and trim
+
   if (normalized.toLowerCase().includes('participation')) {
     return 'Participation';
   } else if (normalized.toLowerCase().includes('english')) {
-    return 'English Usage';
-  } else if (normalized.toLowerCase().includes('homework')) {
-    return 'Homework';
-  } else if (normalized.toLowerCase().includes('assignment')) {
-    return 'Assignment';
-  } else if (normalized.toLowerCase().includes('quiz')) {
-    return 'Quiz';
-  } else if (normalized.toLowerCase().includes('test')) {
-    return 'Test';
+    return 'English Usage'; // Or a more specific standardized term
   }
-  
-  // Return original if no matches
-  return normalized;
+  // Add more 'else if' blocks here for other specific criteria you want to standardize
+  // e.g., else if (normalized.toLowerCase().includes('teamwork')) { return 'Teamwork'; }
+
+  return normalized; // Return the trimmed original if no specific rules matched
 };
 
 // Helper function to extract criteria and level from a notification
@@ -61,31 +52,22 @@ function extractCriteriaAndLevel(notification) {
   let criteria = null;
   let level = null;
 
-  // Check for predefined criteria in the notification
+  // Get criteria from notification object and standardize it
   if (notification.criteria) {
     criteria = standardizeCriteria(notification.criteria);
   }
 
-  // Check for level in the notification
+  // Get level directly from notification object
   if (notification.level) {
-    level = notification.level;
+    level = String(notification.level).trim(); // Ensure it's a string and trim
+    if (level === '') level = null; // Treat empty string as null
   }
 
-  // Try to extract from message if not explicitly defined
-  if (!criteria && notification.message) {
-    const criteriaMatch = notification.message.match(/for\s+([^:]+)(?::|$)/i);
-    if (criteriaMatch && criteriaMatch[1]) {
-      criteria = standardizeCriteria(criteriaMatch[1].trim());
-    }
-  }
-
-  // Extract level from reason if available
-  if (!level && notification.reason) {
-    const levelMatch = notification.reason.match(/\b(excellent|good|satisfactory|poor|basic)\b/i);
-    if (levelMatch && levelMatch[1]) {
-      level = levelMatch[1].toLowerCase();
-    }
-  }
+  // Fallback: Try to extract from message if not explicitly defined
+  // This fallback logic can be complex and error-prone; relying on direct fields is better.
+  // For now, we prioritize direct fields. If these are null, criteria/level will be null.
+  // if (!criteria && notification.message) { ... }
+  // if (!level && notification.reason) { ... }
 
   return { criteria, level };
 }
@@ -407,21 +389,18 @@ const NotificationDisplay = () => {
     return null;
   }
 
-  // Extract criteria and level with more comprehensive error handling
   let criteria = null;
   let level = null;
   
   try {
-    // Safety check the notification object before extraction
-    if (activeNotification && typeof activeNotification === 'object') {
+    if (activeNotification) {
       const extracted = extractCriteriaAndLevel(activeNotification);
-      criteria = extracted?.criteria || null;
-      level = extracted?.level || null;
-    } else {
-      // Continue with null values for criteria and level
+      // Ensure that if standardizeCriteria returns '', it's treated as null for rendering logic
+      criteria = extracted.criteria && extracted.criteria !== '' ? extracted.criteria : null;
+      level = extracted.level && extracted.level !== '' ? extracted.level : null;
     }
   } catch (error) {
-    // Continue with null values for criteria and level
+    console.error("Error extracting criteria/level:", error, activeNotification);
   }
 
   const isPointChange = activeNotification.pointsChange !== undefined;
@@ -698,14 +677,16 @@ const NotificationDisplay = () => {
                 mt="1"
                 className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
               >
-                {activeNotification.reason || `For ${activeNotification.house} house`}
+                {/* Ensure reason is displayed if present, otherwise a sensible fallback */}
+                {(activeNotification.reason && String(activeNotification.reason).trim() !== '') ? String(activeNotification.reason).trim() : `For ${activeNotification.house || 'your house'}`}
               </Text>
             </Box>
           </>
         )}
         
+        {/* Render criteria and level badges if criteria is present */}
         {criteria && (
-          <Flex mt={2}>
+          <Flex mt={2} className="criteria-level-badges-container">
             <Badge 
               bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.85)' :
                  activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.85)' :
@@ -724,6 +705,7 @@ const NotificationDisplay = () => {
             >
               {criteria}
             </Badge>
+            {/* Render level badge only if level is also present */}
             {level && (
               <Badge 
                 bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
