@@ -313,7 +313,16 @@ export const SocketProvider = ({ children }) => {
         const pointsMatch = data.message.match(/updated to (\d+)/);
         if (pointsMatch && pointsMatch[1] && user) {
           const newPoints = parseInt(pointsMatch[1], 10);
-          const oldPoints = user.magicPoints || 0;
+          const oldPoints = user.magicPoints || 0; // Get old points BEFORE updating user state
+
+          // Update AuthContext with the new points total from the sync message.
+          // This ensures the client's master state of points is correct for the current session.
+          if (user.magicPoints !== newPoints) {
+            setUser(prevUser => ({ ...prevUser, magicPoints: newPoints }));
+            // For full persistence, AuthContext's setUser or a dedicated function
+            // should also handle updating localStorage.
+          }
+
           const pointsDiff = newPoints - oldPoints;
 
           // Skip if we've recently processed a house points update (within last 5 seconds)
