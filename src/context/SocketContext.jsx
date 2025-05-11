@@ -318,9 +318,13 @@ export const SocketProvider = ({ children }) => {
           // Update AuthContext with the new points total from the sync message.
           // This ensures the client's master state of points is correct for the current session.
           if (user.magicPoints !== newPoints) {
-            setUser(prevUser => ({ ...prevUser, magicPoints: newPoints }));
-            // For full persistence, AuthContext's setUser or a dedicated function
-            // should also handle updating localStorage.
+            if (typeof setUser === 'function') {
+              setUser(prevUser => ({ ...prevUser, magicPoints: newPoints }));
+              // For full persistence, AuthContext's setUser or a dedicated function
+              // should also handle updating localStorage.
+            } else {
+              console.error('[SOCKET] setUser is not a function. Cannot update user points in AuthContext.');
+            }
           }
 
           const pointsDiff = newPoints - oldPoints;
