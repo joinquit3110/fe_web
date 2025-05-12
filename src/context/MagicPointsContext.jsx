@@ -782,8 +782,31 @@ export const MagicPointsProvider = ({ children }) => {
         setMagicPoints(serverPoints);
         localStorage.setItem('magicPoints', serverPoints.toString());
         localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+        setLastSynced(new Date().toISOString());
+        
+        // Dispatch event for UI components to refresh
+        const syncEvent = new CustomEvent('serverSyncCompleted', {
+          detail: { 
+            source: 'serverCheck',
+            timestamp: new Date().toISOString(),
+            points: serverPoints
+          }
+        });
+        window.dispatchEvent(syncEvent);
+        
+        // Also update debug menu display
+        const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+          detail: { 
+            points: serverPoints,
+            source: 'serverCheck',
+            timestamp: new Date().toISOString()
+          }
+        });
+        window.dispatchEvent(uiUpdateEvent);
+      } else if (pendingOperations.length > 0 || pendingChanges) {
+        console.log(`[POINTS] Server points (${serverPoints}) differ from local (${localPoints}), but pending operations exist. Not updating.`);
       } else {
-        console.log(`[POINTS] Points match or have pending changes. Server: ${serverPoints}, Local: ${localPoints}`);
+        console.log(`[POINTS] Points match. Server: ${serverPoints}, Local: ${localPoints}`);
       }
       
       return serverPoints;
@@ -856,35 +879,46 @@ export const MagicPointsProvider = ({ children }) => {
               console.error('[POINTS] Error during admin-triggered sync:', err)
             );
           }
-        } else if (data.type === 'reset_attempts') {
-          // Admin reset attempts for this user
-          console.log('[POINTS] Admin reset attempts notification received');
-          
-          // Clear all revelioAttempts and correctBlanks using the ref to avoid circular dependency
-          if (resetRevelioAttemptsRef.current) {
-            resetRevelioAttemptsRef.current();
-          }
-          
-          // Show notification with alert or toast
-          if (typeof window !== 'undefined') {
-            const resetEvent = new CustomEvent('admin-reset-attempts', {
-              detail: { message: data.message || 'Your attempts have been reset' }
-            });
-            window.dispatchEvent(resetEvent);
-          }
-          
-          // Fetch updated points immediately
-          if (checkServerPointsRef.current) {
-            checkServerPointsRef.current();
-          }
         } else if (data.type === 'user_update') {
           // Direct user update (e.g., house change, points change)
           console.log('[POINTS] Received user update:', data);
 
           // Check if this is a magic points update message
-          if (data.message && data.message.includes('magic points')) {
-            console.log('[POINTS] Detected magic points update message:', data.message);
-            
+          if (data.data?.updatedFields?.magicPoints !== undefined) {
+            const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
+            if (!isNaN(newPoints) && newPoints !== magicPoints) {
+              console.log(`[POINTS] Updating points from socket message to: ${newPoints} (previous: ${magicPoints})`);
+              setMagicPoints(newPoints);
+              localStorage.setItem('magicPoints', newPoints.toString());
+              localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+              setLastSynced(new Date().toISOString());
+              
+              // Clear any pending operations since the server is now the source of truth
+              setPendingOperations([]);
+              localStorage.removeItem('pendingOperations');
+              setPendingChanges(false);
+              
+              // Dispatch event for UI components to refresh
+              const syncEvent = new CustomEvent('serverSyncCompleted', {
+                detail: { 
+                  source: 'socketUpdate',
+                  timestamp: new Date().toISOString(),
+                  points: newPoints
+                }
+              });
+              window.dispatchEvent(syncEvent);
+              
+              // Also update debug menu display
+              const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
+                detail: { 
+                  points: newPoints,
+                  source: 'socketUpdate',
+                  timestamp: new Date().toISOString()
+                }
+              });
+              window.dispatchEvent(uiUpdateEvent);
+            }
+          } else if (data.message && data.message.includes('magic points')) {
             // Parse points value from message
             const pointsMatch = data.message.match(/updated to (\d+)/);
             if (pointsMatch && pointsMatch[1]) {
@@ -920,42 +954,6 @@ export const MagicPointsProvider = ({ children }) => {
                 });
                 window.dispatchEvent(uiUpdateEvent);
               }
-            }
-          }
-          
-          // If magic points were updated in the updatedFields, reflect that change immediately
-          if (data.data?.updatedFields?.magicPoints !== undefined) {
-            const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
-            if (!isNaN(newPoints)) {
-              console.log(`[POINTS] Updating points from server updatedFields to: ${newPoints} (previous: ${magicPoints})`);
-              setMagicPoints(newPoints);
-              localStorage.setItem('magicPoints', newPoints.toString());
-              localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
-              setLastSynced(new Date().toISOString());
-              // Clear any pending operations since the server is now the source of truth
-              setPendingOperations([]);
-              localStorage.removeItem('pendingOperations');
-              setPendingChanges(false);
-              
-              // Dispatch event for UI components to refresh
-              const syncEvent = new CustomEvent('serverSyncCompleted', {
-                detail: { 
-                  source: 'pointsUpdate',
-                  timestamp: new Date().toISOString(),
-                  points: newPoints
-                }
-              });
-              window.dispatchEvent(syncEvent);
-              
-              // Also update debug menu display
-              const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
-                detail: { 
-                  points: newPoints,
-                  source: 'serverUpdate',
-                  timestamp: new Date().toISOString()
-                }
-              });
-              window.dispatchEvent(uiUpdateEvent);
             }
           }
           
@@ -1001,15 +999,57 @@ export const MagicPointsProvider = ({ children }) => {
               }
             }, randomDelay);
           }
+        } else if (event.detail?.type === 'magic_points_direct_update') {
+          // Direct magic points update from socket
+          const data = event.detail.data;
+          console.log('[POINTS] Received direct magic points update from socket:', data);
+          
+          if (data.points !== undefined) {
+            const newPoints = parseInt(data.points, 10);
+            if (!isNaN(newPoints) && newPoints !== magicPoints) {
+              console.log(`[POINTS] Updating points from direct socket update: ${newPoints} (previous: ${magicPoints})`);
+              setMagicPoints(newPoints);
+              localStorage.setItem('magicPoints', newPoints.toString());
+              localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
+              setLastSynced(new Date().toISOString());
+              
+              // Clear any pending operations since the server is now the source of truth
+              setPendingOperations([]);
+              localStorage.removeItem('pendingOperations');
+              setPendingChanges(false);
+              
+              // Dispatch event for UI components to refresh
+              const syncEvent = new CustomEvent('serverSyncCompleted', {
+                detail: { 
+                  source: 'socketDirectUpdate',
+                  timestamp: new Date().toISOString(),
+                  points: newPoints,
+                  reason: data.reason || 'System update'
+                }
+              });
+              window.dispatchEvent(syncEvent);
+            }
+          }
         }
       }
     };
 
     window.addEventListener('magicPointsSocketUpdate', handleSocketUpdate);
+    
+    // Add listener for socket reconnection to trigger immediate sync
+    const handleSocketReconnect = () => {
+      console.log('[POINTS] Socket reconnected, checking for updated points');
+      if (checkServerPointsRef.current) {
+        checkServerPointsRef.current();
+      }
+    };
+    window.addEventListener('socket-reconnected', handleSocketReconnect);
+    
     return () => {
       window.removeEventListener('magicPointsSocketUpdate', handleSocketUpdate);
+      window.removeEventListener('socket-reconnected', handleSocketReconnect);
     };
-  }, [isSyncing]); // Only depend on isSyncing, use refs for all function calls
+  }, [magicPoints, isSyncing]); // Added magicPoints to dependency array
 
   // Add handler for direct "magicPointsUpdated" events from SocketContext
   useEffect(() => {

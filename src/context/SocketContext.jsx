@@ -125,6 +125,13 @@ export const SocketProvider = ({ children }) => {
         if (socketInstance.connected) {
           console.log('[SOCKET] Requesting sync after reconnection');
           socketInstance.emit('request_sync');
+          
+          // Notify other components of reconnection
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('socket-reconnected', {
+              detail: { timestamp: new Date().toISOString() }
+            }));
+          }
         }
       }, 1000);
     });
@@ -299,6 +306,13 @@ export const SocketProvider = ({ children }) => {
     const handleSyncUpdate = (data) => {
       console.log('[SOCKET] Received sync update:', data);
       setLastMessage({ type: 'sync_update', data, timestamp: new Date() });
+
+      // Dispatch a custom event to update magic points context
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('magicPointsSocketUpdate', {
+          detail: { type: 'sync_update', data, timestamp: new Date().toISOString() }
+        }));
+      }
 
       if (data.type === 'user_update' && data.message && data.message.includes('magic points')) {
         console.log('[SOCKET] Converting point update to notification:', data);
@@ -648,6 +662,59 @@ export const SocketProvider = ({ children }) => {
       socket.off('global_announcement', handleGlobalAnnouncement);
     };
   }, [socket, user, addNotification]);
+
+  // Set up socket event listeners with improved event handling
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Add specific event handler for magic points updates
+    socket.on('magic_points_update', (data) => {
+      console.log('[SOCKET] Received magic_points_update event:', data);
+      
+      if (data.points !== undefined && data.userId) {
+        // Check if this update is for the current user
+        if (user && (user.id === data.userId || user._id === data.userId)) {
+          console.log(`[SOCKET] Magic points update for current user: ${data.points}`);
+          
+          // Update user state in AuthContext if available
+          if (typeof setUser === 'function') {
+            setUser(prevUser => ({
+              ...prevUser,
+              magicPoints: data.points
+            }));
+          }
+          
+          // Dispatch event for MagicPointsContext to handle
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('magicPointsSocketUpdate', {
+              detail: {
+                type: 'magic_points_direct_update',
+                data: {
+                  points: data.points,
+                  reason: data.reason || 'System update',
+                  timestamp: new Date().toISOString()
+                }
+              }
+            }));
+            
+            // Also dispatch regular point update event
+            window.dispatchEvent(new CustomEvent('magicPointsUpdated', {
+              detail: {
+                points: data.points,
+                source: 'socketDirectUpdate',
+                reason: data.reason || 'System update',
+                timestamp: new Date().toISOString()
+              }
+            }));
+          }
+        }
+      }
+    });
+    
+    return () => {
+      socket.off('magic_points_update');
+    };
+  }, [socket, user, setUser]);
 
   // Helper to create house points notification
   const createHousePointsNotification = (data) => {

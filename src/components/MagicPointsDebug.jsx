@@ -60,7 +60,8 @@ const MagicPointsDebug = () => {
           reason: event.detail.reason,
           delta: event.detail.delta,
           isHousePointsUpdate: event.detail.isHousePointsUpdate,
-          house: event.detail.house
+          house: event.detail.house,
+          timestamp: event.detail.timestamp
         });
         
         // Special handling for house points updates
@@ -71,7 +72,7 @@ const MagicPointsDebug = () => {
         setDebugData(prevData => ({
           ...prevData,
           magicPoints: event.detail.points,
-          lastUpdate: new Date().toISOString(),
+          lastUpdate: event.detail.timestamp || new Date().toISOString(),
           lastUpdateSource: event.detail.source || 'event',
           lastUpdateOperation: event.detail.operation || 'unknown',
           lastUpdateDelta: event.detail.delta || 0,
@@ -79,7 +80,7 @@ const MagicPointsDebug = () => {
           housePointsUpdate: event.detail.isHousePointsUpdate ? {
             house: event.detail.house,
             points: event.detail.points,
-            timestamp: new Date().toISOString()
+            timestamp: event.detail.timestamp || new Date().toISOString()
           } : prevData.housePointsUpdate
         }));
         
