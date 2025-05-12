@@ -228,107 +228,9 @@ export const SocketProvider = ({ children }) => {
   const batchTimeoutRef = useRef(null);
   const MAX_BATCH_SIZE = 5;
   const BATCH_TIMEOUT = 100; // ms
-
-  // Helper function to create direct DOM notifications - move this outside of any callback
-  const createDirectDOMNotification = (notification) => {
-    try {
-      console.log('[SOCKET] Using direct DOM notification as fallback');
-      const notifContainer = document.createElement('div');
-      notifContainer.id = `direct-notif-${notification.id}`;
-      notifContainer.style.position = 'fixed';
-      notifContainer.style.top = '20px';
-      notifContainer.style.right = '20px';
-      notifContainer.style.backgroundColor = notification.type === 'success' ? 'rgba(0, 128, 0, 0.9)' : 
-                                           notification.type === 'warning' ? 'rgba(255, 140, 0, 0.9)' : 
-                                           'rgba(0, 0, 128, 0.9)';
-      notifContainer.style.color = 'white';
-      notifContainer.style.padding = '15px';
-      notifContainer.style.borderRadius = '8px';
-      notifContainer.style.boxShadow = '0 0 15px rgba(0,0,0,0.5)';
-      notifContainer.style.zIndex = '999999';
-      notifContainer.style.minWidth = '300px';
-      notifContainer.style.maxWidth = '500px';
-      
-      // Add notification title
-      const title = document.createElement('h3');
-      title.textContent = notification.title || 'Notification';
-      title.style.marginBottom = '10px';
-      title.style.fontWeight = 'bold';
-      notifContainer.appendChild(title);
-      
-      // Add notification message
-      const message = document.createElement('p');
-      message.textContent = notification.message || '';
-      notifContainer.appendChild(message);
-      
-      // Add points change if present
-      if (notification.pointsChange) {
-        const points = document.createElement('p');
-        points.style.marginTop = '10px';
-        points.style.fontWeight = 'bold';
-        points.textContent = `Points: ${notification.pointsChange > 0 ? '+' : ''}${notification.pointsChange}`;
-        notifContainer.appendChild(points);
-      }
-      
-      // Add house if present
-      if (notification.house) {
-        const house = document.createElement('p');
-        house.style.marginTop = '5px';
-        house.textContent = `House: ${notification.house}`;
-        notifContainer.appendChild(house);
-      }
-      
-      // Add close button
-      const closeBtn = document.createElement('button');
-      closeBtn.textContent = 'X';
-      closeBtn.style.position = 'absolute';
-      closeBtn.style.top = '5px';
-      closeBtn.style.right = '10px';
-      closeBtn.style.background = 'none';
-      closeBtn.style.border = 'none';
-      closeBtn.style.color = 'white';
-      closeBtn.style.fontSize = '16px';
-      closeBtn.style.cursor = 'pointer';
-      closeBtn.onclick = () => {
-        document.body.removeChild(notifContainer);
-      };
-      notifContainer.appendChild(closeBtn);
-      
-      // Add to document and set a timeout to remove after 10 seconds
-      document.body.appendChild(notifContainer);
-      setTimeout(() => {
-        if (document.body.contains(notifContainer)) {
-          document.body.removeChild(notifContainer);
-        }
-      }, 10000);
-    } catch (err) {
-      console.error('[SOCKET] Error creating fallback notification:', err);
-    }
-  };
-
-  // Debug logging utility function - move outside of any callback
-  const debugNotificationQueue = (queue, label) => {
-    console.log(`[SOCKET DEBUG] ${label || 'Current'} notification queue (${queue.length} items):`);
-    queue.slice(0, 3).forEach((item, index) => {
-      console.log(`[SOCKET DEBUG] Queue item ${index}:`, {
-        id: item.id,
-        type: item.type,
-        title: item.title,
-        house: item.house,
-        pointsChange: item.pointsChange,
-        isHousePointsUpdate: item.isHousePointsUpdate,
-        reason: item.reason
-      });
-    });
-    if (queue.length > 3) {
-      console.log(`[SOCKET DEBUG] ...and ${queue.length - 3} more items`);
-    }
-  };
   
   const processNotificationQueue = useCallback(() => {
-    if (isProcessingQueue || notificationQueue.length === 0) {
-      return;
-    }
+    if (isProcessingQueue || notificationQueue.length === 0) return;
     
     setIsProcessingQueue(true);
     
@@ -370,7 +272,7 @@ export const SocketProvider = ({ children }) => {
     return 0;
   };
 
-  // Method to add notifications with a reliable fallback method
+  // Optimize notification adding with batching and deduplication
   const addNotification = useCallback((notification) => {
     // Validate notification first
     if (!notification || !notification.id) {
@@ -391,16 +293,27 @@ export const SocketProvider = ({ children }) => {
     recentNotifications.current.add(notificationKey);
     console.log('[SOCKET] Adding new notification:', notificationKey);
     
-    // FALLBACK: Create a direct DOM-based notification in case the React component fails
-    // This ensures a notification appears even if there are React rendering issues
-    const showDirectNotification = localStorage.getItem('USE_DIRECT_NOTIFICATIONS') === 'true';
-    if (showDirectNotification) {
-      // Use the standalone helper function to avoid circular references
-      createDirectDOMNotification(notification);
-    }
+    // Debug function to log current notification queue state
+    const debugNotificationQueue = (queue, label) => {
+      console.log(`[SOCKET DEBUG] ${label || 'Current'} notification queue (${queue.length} items):`);
+      queue.slice(0, 3).forEach((item, index) => {
+        console.log(`[SOCKET DEBUG] Queue item ${index}:`, {
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          house: item.house,
+          pointsChange: item.pointsChange,
+          isHousePointsUpdate: item.isHousePointsUpdate,
+          reason: item.reason
+        });
+      });
+      if (queue.length > 3) {
+        console.log(`[SOCKET DEBUG] ...and ${queue.length - 3} more items`);
+      }
+    };
     
-    // Check for duplicates in the current queue and add to notification queue
     setNotificationQueue(prev => {
+      // Check for duplicates in the current queue
       const isDuplicate = prev.some(n => n.id === notification.id);
       if (isDuplicate) {
         console.log('[SOCKET] Skipping duplicate in queue:', notification.id);
@@ -409,7 +322,7 @@ export const SocketProvider = ({ children }) => {
       
       const newQueue = [...prev, notification];
       
-      // Debug the new queue state using the standalone helper function
+      // Debug the new queue state
       debugNotificationQueue(newQueue, 'Updated');
       
       // Clear existing timeout

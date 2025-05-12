@@ -233,13 +233,6 @@ const NotificationDisplay = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Function to enable direct DOM notifications
-  const enableDirectNotifications = () => {
-    localStorage.setItem('USE_DIRECT_NOTIFICATIONS', 'true');
-    console.log('[NOTIFICATION] Enabled direct DOM notifications');
-    alert('Direct DOM notifications enabled. These will bypass React rendering issues. Refresh the page to see the change.');
-  };
-
   // Function to test a notification
   const createTestNotification = () => {
     const testNotification = {
@@ -761,13 +754,6 @@ const NotificationDisplay = () => {
               }}
             >
               Enable Auto Test
-            </Button>
-            <Button
-              size="xs"
-              colorScheme="purple"
-              onClick={enableDirectNotifications}
-            >
-              Use DOM Fallback
             </Button>
           </Flex>
         </Box>
