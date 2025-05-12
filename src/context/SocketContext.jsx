@@ -272,7 +272,7 @@ export const SocketProvider = ({ children }) => {
     return 0;
   };
 
-  // Optimize notification adding with batching and deduplication
+  // Method to add notifications with a reliable fallback method
   const addNotification = useCallback((notification) => {
     // Validate notification first
     if (!notification || !notification.id) {
@@ -292,6 +292,85 @@ export const SocketProvider = ({ children }) => {
     // Track this notification
     recentNotifications.current.add(notificationKey);
     console.log('[SOCKET] Adding new notification:', notificationKey);
+    
+    // FALLBACK: Create a direct DOM-based notification in case the React component fails
+    // This ensures a notification appears even if there are React rendering issues
+    try {
+      const showDirectNotification = localStorage.getItem('USE_DIRECT_NOTIFICATIONS') === 'true';
+      if (showDirectNotification) {
+        console.log('[SOCKET] Using direct DOM notification as fallback');
+        const notifContainer = document.createElement('div');
+        notifContainer.id = `direct-notif-${notification.id}`;
+        notifContainer.style.position = 'fixed';
+        notifContainer.style.top = '20px';
+        notifContainer.style.right = '20px';
+        notifContainer.style.backgroundColor = notification.type === 'success' ? 'rgba(0, 128, 0, 0.9)' : 
+                                              notification.type === 'warning' ? 'rgba(255, 140, 0, 0.9)' : 
+                                              'rgba(0, 0, 128, 0.9)';
+        notifContainer.style.color = 'white';
+        notifContainer.style.padding = '15px';
+        notifContainer.style.borderRadius = '8px';
+        notifContainer.style.boxShadow = '0 0 15px rgba(0,0,0,0.5)';
+        notifContainer.style.zIndex = '999999';
+        notifContainer.style.minWidth = '300px';
+        notifContainer.style.maxWidth = '500px';
+        
+        // Add notification title
+        const title = document.createElement('h3');
+        title.textContent = notification.title || 'Notification';
+        title.style.marginBottom = '10px';
+        title.style.fontWeight = 'bold';
+        notifContainer.appendChild(title);
+        
+        // Add notification message
+        const message = document.createElement('p');
+        message.textContent = notification.message || '';
+        notifContainer.appendChild(message);
+        
+        // Add points change if present
+        if (notification.pointsChange) {
+          const points = document.createElement('p');
+          points.style.marginTop = '10px';
+          points.style.fontWeight = 'bold';
+          points.textContent = `Points: ${notification.pointsChange > 0 ? '+' : ''}${notification.pointsChange}`;
+          notifContainer.appendChild(points);
+        }
+        
+        // Add house if present
+        if (notification.house) {
+          const house = document.createElement('p');
+          house.style.marginTop = '5px';
+          house.textContent = `House: ${notification.house}`;
+          notifContainer.appendChild(house);
+        }
+        
+        // Add close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'X';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '5px';
+        closeBtn.style.right = '10px';
+        closeBtn.style.background = 'none';
+        closeBtn.style.border = 'none';
+        closeBtn.style.color = 'white';
+        closeBtn.style.fontSize = '16px';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.onclick = () => {
+          document.body.removeChild(notifContainer);
+        };
+        notifContainer.appendChild(closeBtn);
+        
+        // Add to document and set a timeout to remove after 10 seconds
+        document.body.appendChild(notifContainer);
+        setTimeout(() => {
+          if (document.body.contains(notifContainer)) {
+            document.body.removeChild(notifContainer);
+          }
+        }, 10000);
+      }
+    } catch (err) {
+      console.error('[SOCKET] Error creating fallback notification:', err);
+    }
     
     // Debug function to log current notification queue state
     const debugNotificationQueue = (queue, label) => {
