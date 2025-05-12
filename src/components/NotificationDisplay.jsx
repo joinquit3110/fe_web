@@ -11,7 +11,8 @@ import {
   Heading,
   Flex,
   Stack,
-  Icon
+  Icon,
+  Button
 } from '@chakra-ui/react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -90,6 +91,9 @@ function extractCriteriaAndLevel(notification) {
   return { criteria, level };
 }
 
+// Check if debug mode is enabled
+const DEBUG_MODE = localStorage.getItem('NOTIF_DEBUG') === 'true';
+
 // Notification display component
 const NotificationDisplay = () => {
   const { notifications, removeNotification } = useSocket();
@@ -100,6 +104,52 @@ const NotificationDisplay = () => {
   const timerRef = useRef(null);
   // Track processed notification IDs to prevent duplicates
   const processedIds = useRef(new Set());
+  
+  // Debug state
+  const [showDebugPanel, setShowDebugPanel] = useState(DEBUG_MODE);
+  const [debugStats, setDebugStats] = useState({
+    queueLength: 0,
+    processedCount: 0,
+    activeNotificationId: null,
+    isProcessing: false,
+    lastUpdate: null
+  });
+
+  // Update debug stats periodically
+  useEffect(() => {
+    if (showDebugPanel) {
+      const updateInterval = setInterval(() => {
+        setDebugStats({
+          queueLength: notificationQueue.current.length,
+          processedCount: processedIds.current.size,
+          activeNotificationId: activeNotification?.id || null,
+          isProcessing: processingQueue.current,
+          lastUpdate: new Date().toISOString()
+        });
+      }, 1000);
+      
+      return () => clearInterval(updateInterval);
+    }
+  }, [showDebugPanel, activeNotification]);
+
+  // Toggle debug mode
+  const toggleDebugMode = () => {
+    const newState = !showDebugPanel;
+    setShowDebugPanel(newState);
+    localStorage.setItem('NOTIF_DEBUG', newState ? 'true' : 'false');
+  };
+
+  // Debug keyboard shortcut (Ctrl+Shift+D)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        toggleDebugMode();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Helper function to get house-specific colors
   const getHouseColors = (house) => {
@@ -337,6 +387,23 @@ const NotificationDisplay = () => {
       });
       
       if (newNotifications.length > 0) {
+        // Log incoming notifications for troubleshooting
+        console.log(`[NOTIFICATION] Processing ${newNotifications.length} new notifications`);
+        newNotifications.forEach((notification, index) => {
+          console.log(`[NOTIFICATION] New notification ${index}:`, {
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            house: notification.house,
+            pointsChange: notification.pointsChange,
+            isHousePointsUpdate: notification.isHousePointsUpdate,
+            reason: notification.reason,
+            criteria: notification.criteria,
+            level: notification.level
+          });
+        });
+        
         // Limit how many notifications we process at once to prevent spamming
         const toProcess = newNotifications.slice(0, 3);
         
@@ -390,14 +457,33 @@ const NotificationDisplay = () => {
               }
             }
           }
+          
+          // Double check house point notifications have required fields
+          if (notification.isHousePointsUpdate) {
+            console.log(`[NOTIFICATION] Processing house points notification:`, {
+              id: fixedNotification.id,
+              house: fixedNotification.house,
+              pointsChange: fixedNotification.pointsChange,
+              reason: fixedNotification.reason,
+              criteria: fixedNotification.criteria,
+              level: fixedNotification.level
+            });
+          }
               
           return fixedNotification;
         });
         
+        // Log the queue status before and after adding new notifications
+        console.log(`[NOTIFICATION] Current queue before update: ${notificationQueue.current.length} items`);
         notificationQueue.current = [...notificationQueue.current, ...validatedNotifications];
+        console.log(`[NOTIFICATION] Updated queue: ${notificationQueue.current.length} items`);
         
         if (!processingQueue.current && !activeNotification) {
+          console.log('[NOTIFICATION] Starting queue processing');
           processQueue();
+        } else {
+          console.log('[NOTIFICATION] Queue processing already in progress or notification active');
+          console.log(`[NOTIFICATION] Queue status: processingQueue=${processingQueue.current}, activeNotification=${activeNotification ? 'present' : 'null'}`);
         }
       }
     }
@@ -435,7 +521,12 @@ const NotificationDisplay = () => {
     console.log('[NOTIFICATION] Displaying points change:', {
       pointsChange: activeNotification.pointsChange,
       displayValue: pointsValue,
-      isIncrease: isPointIncrease
+      isIncrease: isPointIncrease,
+      house: activeNotification.house,
+      isHousePoints: Boolean(activeNotification.isHousePointsUpdate),
+      reason: activeNotification.reason,
+      criteria: activeNotification.criteria,
+      level: activeNotification.level
     });
   }
   
@@ -444,309 +535,386 @@ const NotificationDisplay = () => {
   
   // Get theme colors based on notification house or type
   // Using direct function call instead of useMemo to avoid "cannot access before initialization" errors
-  const houseColors = getHouseColors(activeNotification.house);
+  const houseColors = getHouseColors(activeNotification?.house);
 
   // Determine house class if present
-  const houseClass = activeNotification.house ? `house-${activeNotification.house.toLowerCase()}` : '';
+  const houseClass = activeNotification?.house ? `house-${activeNotification.house.toLowerCase()}` : '';
 
   return (
-    <Box
-      position="fixed"
-      top="20px"
-      right="20px"
-      zIndex="toast" /* Using toast z-index to ensure visibility */
-      width={{ base: "94vw", sm: "500px", md: "550px" }}  /* Increased width for larger image */
-      maxWidth="96vw"
-      className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
-      style={{ pointerEvents: "all" }} /* Ensure clickable */
-    >    <Box
-      borderWidth="5px" /* Increased border width for better visibility */
-      borderRadius="lg" 
-      overflow="hidden"
-      borderColor={isPointChange ? 
-        `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
-        houseColors.borderColor}
-      p={isPointChange ? 0 : 4} /* Removed padding for point change to maximize image size */
-      className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
-      style={{
-        background: isPointChange 
-          ? `url(${pointsImage}) no-repeat center center` /* Changed to center center for balanced positioning */
-          : houseColors.bgColor,
-        backgroundSize: isPointChange ? 'cover' : 'cover', /* Use cover for full image */
-        backgroundPosition: isPointChange ? 'center center' : 'center center',
-        position: 'relative',
-        zIndex: 1,
-        imageRendering: 'high-quality', /* Best image quality */
-        backgroundOrigin: 'padding-box', /* Better for full coverage */
-        minHeight: isPointChange ? '500px' : 'auto', /* Increased height for better image display */
-        boxShadow: isPointChange ? '0 0 30px rgba(0,0,0,0.7)' : 'none' /* Add shadow for depth */
-      }}
-    >
-        {/* Add magical glow bar */}
-        <div className="notification-glow-bar" style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: '4px',
-          height: '100%',
-          background: houseColors.accentColor,
-          boxShadow: `0 0 10px ${houseColors.accentColor}`
-        }}></div>
-        
-        {/* Add magical sparkles */}
-        <div className="magical-sparkle sparkle-1"></div>
-        <div className="magical-sparkle sparkle-2"></div>
-        <div className="magical-sparkle sparkle-3"></div>
-        
-        {/* Removing particles for simplicity and better performance */}
-        
-        <Flex justifyContent="space-between" alignItems="center" mb={2}>
-          <Heading 
-            size="sm" 
-            color={houseColors.textColor} 
-            className="notification-title"
-            letterSpacing={activeNotification.house ? "0.04em" : "normal"}
-            fontFamily="'Cinzel', serif"
+    <>
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <Box
+          position="fixed"
+          bottom="20px"
+          left="20px"
+          zIndex={9999}
+          bg="rgba(0,0,0,0.85)"
+          color="white"
+          p={3}
+          borderRadius="md"
+          maxW="300px"
+          fontSize="sm"
+        >
+          <Heading size="xs" mb={2}>Notification Debug</Heading>
+          <VStack align="start" spacing={1}>
+            <Text>Queue Length: {debugStats.queueLength}</Text>
+            <Text>Processed: {debugStats.processedCount}</Text>
+            <Text>Active: {debugStats.activeNotificationId || 'none'}</Text>
+            <Text>Processing: {debugStats.isProcessing ? 'Yes' : 'No'}</Text>
+            <Text fontSize="xs">Last Update: {debugStats.lastUpdate}</Text>
+          </VStack>
+          <Flex mt={2}>
+            <Button 
+              size="xs" 
+              colorScheme="blue" 
+              onClick={() => {
+                notificationQueue.current = [];
+                processedIds.current.clear();
+                setActiveNotification(null);
+                processingQueue.current = false;
+                if (timerRef.current) clearTimeout(timerRef.current);
+                console.log('[NOTIFICATION] Debug reset of notification system');
+              }}
+            >
+              Reset Queue
+            </Button>
+          </Flex>
+        </Box>
+      )}
+      
+      {activeNotification ? (
+        <Box
+          position="fixed"
+          top="20px"
+          right="20px"
+          zIndex="toast" /* Using toast z-index to ensure visibility */
+          width={{ base: "94vw", sm: "500px", md: "550px" }}  /* Increased width for larger image */
+          maxWidth="96vw"
+          className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
+          style={{ pointerEvents: "all" }} /* Ensure clickable */
+        >
+          <Box
+            borderWidth="5px" /* Increased border width for better visibility */
+            borderRadius="lg" 
+            overflow="hidden"
+            borderColor={isPointChange ? 
+              `rgba(${isPointIncrease ? '255, 215, 0, 0.9' : '255, 100, 100, 0.9'})` : 
+              houseColors.borderColor}
+            p={isPointChange ? 0 : 4} /* Removed padding for point change to maximize image size */
+            className={`magical-notification ${isPointChange ? 'points-background' : ''}`}
             style={{
-              textTransform: activeNotification.house ? "capitalize" : "normal"
+              background: isPointChange 
+                ? `url(${pointsImage}) no-repeat center center` /* Changed to center center for balanced positioning */
+                : houseColors.bgColor,
+              backgroundSize: isPointChange ? 'cover' : 'cover', /* Use cover for full image */
+              backgroundPosition: isPointChange ? 'center center' : 'center center',
+              position: 'relative',
+              zIndex: 1,
+              imageRendering: 'high-quality', /* Best image quality */
+              backgroundOrigin: 'padding-box', /* Better for full coverage */
+              minHeight: isPointChange ? '500px' : 'auto', /* Increased height for better image display */
+              boxShadow: isPointChange ? '0 0 30px rgba(0,0,0,0.7)' : 'none' /* Add shadow for depth */
             }}
           >
-            {activeNotification.title || getNotificationTitle(activeNotification.type)}
-          </Heading>
-          <CloseButton size="sm" color={houseColors.textColor} onClick={handleDismiss} />
-        </Flex>
-        
-        {!isPointChange && (
-          <Text fontSize="sm" mb={2} color={houseColors.textColor}>{activeNotification.message}</Text>
-        )}
-        
-        {activeNotification.house && (
-          <Flex align="center" mb={2} className="notification-house-info" zIndex="10">
-            <Badge 
-              bg={activeNotification.house === 'gryffindor' ? '#740001' : 
-                activeNotification.house === 'slytherin' ? '#1A472A' :
-                activeNotification.house === 'ravenclaw' ? '#0E1A40' : '#FFB81C'} 
-              color={activeNotification.house === 'hufflepuff' ? '#000000' : '#FFFFFF'}
-              mr={2}
-              p={1}
-              fontSize="0.9rem" /* Slightly larger badge text */
-              borderRadius="md"
-              className={`house-badge house-badge-${activeNotification.house.toLowerCase()}`}
-              style={{
-                boxShadow: activeNotification.house === 'gryffindor' ? '0 0 15px rgba(218, 165, 32, 0.8)' : 
-                  activeNotification.house === 'slytherin' ? '0 0 15px rgba(192, 192, 192, 0.8)' :
-                  activeNotification.house === 'ravenclaw' ? '0 0 15px rgba(176, 196, 222, 0.8)' : 
-                  '0 0 15px rgba(255, 217, 102, 0.8)', /* Increased glow */
-                letterSpacing: "0.05em",
-                fontWeight: "bold",
-                border: activeNotification.house === 'gryffindor' ? '1px solid rgba(255, 215, 0, 0.6)' : 
-                  activeNotification.house === 'slytherin' ? '1px solid rgba(192, 192, 192, 0.6)' :
-                  activeNotification.house === 'ravenclaw' ? '1px solid rgba(176, 196, 222, 0.6)' : 
-                  '1px solid rgba(255, 217, 102, 0.6)', /* Add subtle matching border */
-                animation: `badge-pulse 1.5s infinite alternate` /* Add gentle pulsing animation */
-              }}
-            >
-              {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
-            </Badge>
-          </Flex>
-        )}
-        
-        {/* Show reason with more robust handling */}
-        {(() => {
-          // Extract reason using multiple approaches for reliability
-          let displayReason = null;
-          
-          // Extract reason from notification
-          
-          // First priority: Use valid reason from notification object
-          if (activeNotification.reason && 
-              activeNotification.reason !== 'System update' && 
-              activeNotification.reason.trim() !== '') {
-            displayReason = activeNotification.reason;
-          } 
-          // Second priority: Extract from message after colon for points notifications
-          else if (activeNotification.message && activeNotification.message.includes(':')) {
-            const parts = activeNotification.message.split(':');
-            if (parts.length > 1 && parts[1].trim() !== '') {
-              displayReason = parts[1].trim();
-            }
-          }
-          // Third priority: Generate house-specific fallback
-          else if (isHousePoints && activeNotification.house) {
-            displayReason = `${activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)} house points update`;
-          }
-          // Fourth priority: For personal points updates - changed to generic point messages
-          else if (activeNotification.isPersonalPointsUpdate) {
-            displayReason = isPointIncrease ? "Points Achievement" : "Points Deduction";
-          }
-          // Last resort fallback
-          else if (!displayReason) {
-            displayReason = isPointIncrease ? "Points awarded" : "Points deducted";
-          }
-
-          // Use the final display reason
-          
-          return (
-            <Text 
-              fontSize="md" // Increased size for better visibility
-              fontWeight="bold" 
-              color={isPointChange ? "white" : houseColors.accentColor}
-              mb={2} 
-              className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
-              style={{
-                textShadow: "0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8)", /* Enhanced text shadow for better readability */
-                letterSpacing: "0.04em", /* Slightly increased letter spacing */
-                zIndex: 3,
-                position: "relative",
-                padding: isPointChange ? "6px 12px" : "0", /* More padding */
-                background: isPointChange ? "rgba(0,0,0,0.2)" : "transparent", /* Reduced background opacity */
-                borderRadius: "10px", /* More rounded corners */
-                display: "inline-block",
-                border: isPointChange ? "1px solid rgba(255,255,255,0.15)" : "none", /* Subtle border */
-                fontSize: isPointChange ? "1.1em" : "inherit" /* Slightly larger text for point changes */
-              }}
-            >
-              {isPointChange ? displayReason : `Reason: ${displayReason}`}
-            </Text>
-          );
-        })()}
-        
-        {isPointChange && (
-          <>
-            {/* Remove the smaller icon container since we're using full background image */}
+            {/* Add magical glow bar */}
+            <div className="notification-glow-bar" style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: '4px',
+              height: '100%',
+              background: houseColors.accentColor,
+              boxShadow: `0 0 10px ${houseColors.accentColor}`
+            }}></div>
             
-            {/* Enhanced points display for the background version */}
-            {/* Points Display - Larger with icon positioned behind the text */}
-            <Flex 
-              className="points-value-display"
-              fontWeight="bold" 
-              position="absolute"
-              top="40%" /* Positioned in the middle upper area */
-              left="50%"
-              transform="translate(-50%, -50%)" 
-              alignItems="center"
-              justifyContent="center"
-              width="100%" /* Full width */
-              height="70%" /* Takes up most of the upper portion */
-              style={{
-                zIndex: 10,
-                position: "relative",
-                textAlign: "center",
-              }}
-            >
-              {/* ICON BEHIND: Large icon positioned behind the text */}
-              <Icon 
-                as={isPointIncrease ? FaBolt : FaSkull}
-                color={isPointIncrease ? "rgba(74, 222, 128, 0.4)" : "rgba(245, 101, 101, 0.4)"}
-                position="absolute" 
-                zIndex="1" /* Behind the text */
-                boxSize="220px" /* Much larger icon */
-                opacity="0.8"
-                className={isPointIncrease ? "increase-icon-bg" : "decrease-icon-bg"}
-              />
-              
-              {/* Points text overlay that appears on top of the icon */}
-              <Text
-                position="relative"
-                zIndex="2" /* In front of the icon */
-                textShadow={isPointIncrease ? 
-                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(74, 222, 128, 0.7), 0 0 40px rgba(0,0,0,0.8)" : 
-                  "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(245, 101, 101, 0.7), 0 0 40px rgba(0,0,0,0.8)"}
-                color={isPointIncrease ? "#4ADE80" : "#F56565"}
-                letterSpacing="0.05em"
-                fontWeight="900" /* Extra bold */
-                data-testid="points-change-display" 
-                title={`Points ${isPointIncrease ? 'awarded' : 'deducted'}`}
-                textAlign="center"
-                fontSize="140px" /* Extra large text */
+            {/* Add magical sparkles */}
+            <div className="magical-sparkle sparkle-1"></div>
+            <div className="magical-sparkle sparkle-2"></div>
+            <div className="magical-sparkle sparkle-3"></div>
+            
+            {/* Removing particles for simplicity and better performance */}
+            
+            <Flex justifyContent="space-between" alignItems="center" mb={2}>
+              <Heading 
+                size="sm" 
+                color={houseColors.textColor} 
+                className="notification-title"
+                letterSpacing={activeNotification.house ? "0.04em" : "normal"}
+                fontFamily="'Cinzel', serif"
                 style={{
-                  filter: "drop-shadow(0 0 8px rgba(0,0,0,0.9))",
+                  textTransform: activeNotification.house ? "capitalize" : "normal"
                 }}
               >
-                {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
-              </Text>
+                {activeNotification.title || getNotificationTitle(activeNotification.type)}
+              </Heading>
+              <CloseButton size="sm" color={houseColors.textColor} onClick={handleDismiss} />
             </Flex>
             
-            {/* Content area at the bottom of the notification */}
-            <Box
-              position="absolute"
-              bottom="0"
-              left="0"
-              right="0"
-              background="rgba(0,0,0,0.75)" /* Darker background for better text visibility */
-              padding="16px"
-              borderTop={isPointIncrease ? 
-                "4px solid rgba(74, 222, 128, 0.9)" : 
-                "4px solid rgba(245, 101, 101, 0.9)"}
-              textAlign="center"
-              className="points-content-area" /* Added class for specific styling */
-            >
-              <Text 
-                fontSize="22px" /* Larger text */
-                fontWeight="bold"
-                color="#FFFFFF" 
-                textShadow="0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)"
-                mb="1" /* Add margin below */
-              >
-                Points {isPointIncrease ? 'Awarded' : 'Deducted'}
-              </Text>
-              <Text 
-                fontSize="16px" /* Larger reason text */
-                color="#FFFFFF" 
-                fontWeight="medium"
-                opacity="0.9"
-                mt="1"
-                className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
-              >
-                {activeNotification.reason || `For ${activeNotification.house} house`}
-              </Text>
-            </Box>
-          </>
-        )}
-        
-        {criteria && (
-          <Flex mt={2}>
-            <Badge 
-              bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.85)' :
-                 activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.85)' :
-                 activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.85)' :
-                 activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.85)' :
-                 'rgba(128, 90, 213, 0.8)'} 
-              color="white" 
-              mr={2}
-              p={1}
-              boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.5)' :
-                 activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.5)' :
-                 activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.5)' :
-                 activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.5)' :
-                 '0 0 5px rgba(128, 90, 213, 0.5)'}
-              className={`criteria-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
-            >
-              {criteria}
-            </Badge>
-            {level && (
-              <Badge 
-                bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
-                   activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.7)' :
-                   activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.7)' :
-                   activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.7)' :
-                   'rgba(49, 151, 149, 0.8)'}
-                color="white"
-                p={1}
-                boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.4)' :
-                   activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.4)' :
-                   activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.4)' :
-                   activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.4)' :
-                   '0 0 5px rgba(49, 151, 149, 0.5)'}
-                className={`level-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
-              >
-                {level}
-              </Badge>
+            {!isPointChange && (
+              <Text fontSize="sm" mb={2} color={houseColors.textColor}>{activeNotification.message}</Text>
             )}
-          </Flex>
-        )}
-      </Box>
-    </Box>
+            
+            {activeNotification.house && (
+              <Flex align="center" mb={2} className="notification-house-info" zIndex="10">
+                <Badge 
+                  bg={activeNotification.house === 'gryffindor' ? '#740001' : 
+                    activeNotification.house === 'slytherin' ? '#1A472A' :
+                    activeNotification.house === 'ravenclaw' ? '#0E1A40' : '#FFB81C'} 
+                  color={activeNotification.house === 'hufflepuff' ? '#000000' : '#FFFFFF'}
+                  mr={2}
+                  p={1}
+                  fontSize="0.9rem" /* Slightly larger badge text */
+                  borderRadius="md"
+                  className={`house-badge house-badge-${activeNotification.house.toLowerCase()}`}
+                  style={{
+                    boxShadow: activeNotification.house === 'gryffindor' ? '0 0 15px rgba(218, 165, 32, 0.8)' : 
+                      activeNotification.house === 'slytherin' ? '0 0 15px rgba(192, 192, 192, 0.8)' :
+                      activeNotification.house === 'ravenclaw' ? '0 0 15px rgba(176, 196, 222, 0.8)' : 
+                      '0 0 15px rgba(255, 217, 102, 0.8)', /* Increased glow */
+                    letterSpacing: "0.05em",
+                    fontWeight: "bold",
+                    border: activeNotification.house === 'gryffindor' ? '1px solid rgba(255, 215, 0, 0.6)' : 
+                      activeNotification.house === 'slytherin' ? '1px solid rgba(192, 192, 192, 0.6)' :
+                      activeNotification.house === 'ravenclaw' ? '1px solid rgba(176, 196, 222, 0.6)' : 
+                      '1px solid rgba(255, 217, 102, 0.6)', /* Add subtle matching border */
+                    animation: `badge-pulse 1.5s infinite alternate` /* Add gentle pulsing animation */
+                  }}
+                >
+                  {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
+                </Badge>
+              </Flex>
+            )}
+            
+            {/* Show reason with more robust handling */}
+            {(() => {
+              // Extract reason using multiple approaches for reliability
+              let displayReason = null;
+              
+              // Extract reason from notification
+              
+              // First priority: Use valid reason from notification object
+              if (activeNotification.reason && 
+                  activeNotification.reason !== 'System update' && 
+                  activeNotification.reason.trim() !== '') {
+                displayReason = activeNotification.reason;
+              } 
+              // Second priority: Extract from message after colon for points notifications
+              else if (activeNotification.message && activeNotification.message.includes(':')) {
+                const parts = activeNotification.message.split(':');
+                if (parts.length > 1 && parts[1].trim() !== '') {
+                  displayReason = parts[1].trim();
+                }
+              }
+              // Third priority: Generate house-specific fallback
+              else if (isHousePoints && activeNotification.house) {
+                displayReason = `${activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)} house points update`;
+              }
+              // Fourth priority: For personal points updates - changed to generic point messages
+              else if (activeNotification.isPersonalPointsUpdate) {
+                displayReason = isPointIncrease ? "Points Achievement" : "Points Deduction";
+              }
+              // Last resort fallback
+              else if (!displayReason) {
+                displayReason = isPointIncrease ? "Points awarded" : "Points deducted";
+              }
+
+              // Use the final display reason
+              
+              return (
+                <Text 
+                  fontSize="md" // Increased size for better visibility
+                  fontWeight="bold" 
+                  color={isPointChange ? "white" : houseColors.accentColor}
+                  mb={2} 
+                  className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
+                  style={{
+                    textShadow: "0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8)", /* Enhanced text shadow for better readability */
+                    letterSpacing: "0.04em", /* Slightly increased letter spacing */
+                    zIndex: 3,
+                    position: "relative",
+                    padding: isPointChange ? "6px 12px" : "0", /* More padding */
+                    background: isPointChange ? "rgba(0,0,0,0.2)" : "transparent", /* Reduced background opacity */
+                    borderRadius: "10px", /* More rounded corners */
+                    display: "inline-block",
+                    border: isPointChange ? "1px solid rgba(255,255,255,0.15)" : "none", /* Subtle border */
+                    fontSize: isPointChange ? "1.1em" : "inherit" /* Slightly larger text for point changes */
+                  }}
+                >
+                  {isPointChange ? displayReason : `Reason: ${displayReason}`}
+                </Text>
+              );
+            })()}
+            
+            {isPointChange && (
+              <>
+                {/* Enhanced points display for the background version */}
+                {/* Points Display - Larger with icon positioned behind the text */}
+                <Flex 
+                  className="points-value-display"
+                  fontWeight="bold" 
+                  position="absolute"
+                  top="40%" /* Positioned in the middle upper area */
+                  left="50%"
+                  transform="translate(-50%, -50%)" 
+                  alignItems="center"
+                  justifyContent="center"
+                  width="100%" /* Full width */
+                  height="70%" /* Takes up most of the upper portion */
+                  style={{
+                    zIndex: 10,
+                    position: "relative",
+                    textAlign: "center",
+                  }}
+                >
+                  {/* ICON BEHIND: Large icon positioned behind the text */}
+                  <Icon 
+                    as={isPointIncrease ? FaBolt : FaSkull}
+                    color={isPointIncrease ? "rgba(74, 222, 128, 0.4)" : "rgba(245, 101, 101, 0.4)"}
+                    position="absolute" 
+                    zIndex="1" /* Behind the text */
+                    boxSize="220px" /* Much larger icon */
+                    opacity="0.8"
+                    className={isPointIncrease ? "increase-icon-bg" : "decrease-icon-bg"}
+                  />
+                  
+                  {/* Points text overlay that appears on top of the icon */}
+                  <Text
+                    position="relative"
+                    zIndex="2" /* In front of the icon */
+                    textShadow={isPointIncrease ? 
+                      "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(74, 222, 128, 0.7), 0 0 40px rgba(0,0,0,0.8)" : 
+                      "0 0 15px rgba(0,0,0,0.9), 0 0 25px rgba(245, 101, 101, 0.7), 0 0 40px rgba(0,0,0,0.8)"}
+                    color={isPointIncrease ? "#4ADE80" : "#F56565"}
+                    letterSpacing="0.05em"
+                    fontWeight="900" /* Extra bold */
+                    data-testid="points-change-display" 
+                    title={`Points ${isPointIncrease ? 'awarded' : 'deducted'}`}
+                    textAlign="center"
+                    fontSize="140px" /* Extra large text */
+                    style={{
+                      filter: "drop-shadow(0 0 8px rgba(0,0,0,0.9))",
+                    }}
+                  >
+                    {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
+                  </Text>
+                </Flex>
+                
+                {/* Content area at the bottom of the notification */}
+                <Box
+                  position="absolute"
+                  bottom="0"
+                  left="0"
+                  right="0"
+                  background="rgba(0,0,0,0.75)" /* Darker background for better text visibility */
+                  padding="16px"
+                  borderTop={isPointIncrease ? 
+                    "4px solid rgba(74, 222, 128, 0.9)" : 
+                    "4px solid rgba(245, 101, 101, 0.9)"}
+                  textAlign="center"
+                  className="points-content-area" /* Added class for specific styling */
+                >
+                  <Text 
+                    fontSize="22px" /* Larger text */
+                    fontWeight="bold"
+                    color="#FFFFFF" 
+                    textShadow="0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)"
+                    mb="1" /* Add margin below */
+                  >
+                    {isHousePoints ? 
+                      `House Points ${isPointIncrease ? 'Awarded' : 'Deducted'}` : 
+                      `Points ${isPointIncrease ? 'Awarded' : 'Deducted'}`}
+                  </Text>
+                  <Text 
+                    fontSize="16px" /* Larger reason text */
+                    color="#FFFFFF" 
+                    fontWeight="medium"
+                    opacity="0.9"
+                    mt="1"
+                    className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
+                  >
+                    {activeNotification.reason || `For ${activeNotification.house || ''} house`}
+                  </Text>
+                  
+                  {/* Add criteria and level display for house points */}
+                  {isHousePoints && (activeNotification.criteria || activeNotification.level) && (
+                    <Flex mt={2} justifyContent="center" gap={2}>
+                      {activeNotification.criteria && (
+                        <Badge 
+                          bg={`rgba(255, 255, 255, 0.2)`}
+                          color="white" 
+                          px={2}
+                          py={1}
+                          borderRadius="md"
+                          boxShadow="0 0 5px rgba(255, 255, 255, 0.3)"
+                        >
+                          Criteria: {activeNotification.criteria}
+                        </Badge>
+                      )}
+                      
+                      {activeNotification.level && (
+                        <Badge 
+                          bg={`rgba(255, 255, 255, 0.2)`}
+                          color="white" 
+                          px={2}
+                          py={1}
+                          borderRadius="md"
+                          boxShadow="0 0 5px rgba(255, 255, 255, 0.3)"
+                        >
+                          Level: {activeNotification.level}
+                        </Badge>
+                      )}
+                    </Flex>
+                  )}
+                </Box>
+              </>
+            )}
+            
+            {criteria && (
+              <Flex mt={2}>
+                <Badge 
+                  bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.85)' :
+                     activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.85)' :
+                     activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.85)' :
+                     activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.85)' :
+                     'rgba(128, 90, 213, 0.8)'} 
+                  color="white" 
+                  mr={2}
+                  p={1}
+                  boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.5)' :
+                     activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.5)' :
+                     activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.5)' :
+                     activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.5)' :
+                     '0 0 5px rgba(128, 90, 213, 0.5)'}
+                  className={`criteria-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
+                >
+                  {criteria}
+                </Badge>
+                {level && (
+                  <Badge 
+                    bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
+                       activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.7)' :
+                       activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.7)' :
+                       activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.7)' :
+                       'rgba(49, 151, 149, 0.8)'}
+                    color="white"
+                    p={1}
+                    boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.4)' :
+                       activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.4)' :
+                       activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.4)' :
+                       activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.4)' :
+                       '0 0 5px rgba(49, 151, 149, 0.5)'}
+                    className={`level-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
+                  >
+                    {level}
+                  </Badge>
+                )}
+              </Flex>
+            )}
+          </Box>
+        </Box>
+      ) : null}
+    </>
   );
 };
 

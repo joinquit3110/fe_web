@@ -275,6 +275,25 @@ export const SocketProvider = ({ children }) => {
     recentNotifications.current.add(notificationKey);
     console.log('[SOCKET] Adding new notification:', notificationKey);
     
+    // Debug function to log current notification queue state
+    const debugNotificationQueue = (queue, label) => {
+      console.log(`[SOCKET DEBUG] ${label || 'Current'} notification queue (${queue.length} items):`);
+      queue.slice(0, 3).forEach((item, index) => {
+        console.log(`[SOCKET DEBUG] Queue item ${index}:`, {
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          house: item.house,
+          pointsChange: item.pointsChange,
+          isHousePointsUpdate: item.isHousePointsUpdate,
+          reason: item.reason
+        });
+      });
+      if (queue.length > 3) {
+        console.log(`[SOCKET DEBUG] ...and ${queue.length - 3} more items`);
+      }
+    };
+    
     setNotificationQueue(prev => {
       // Check for duplicates in the current queue
       const isDuplicate = prev.some(n => n.id === notification.id);
@@ -284,6 +303,9 @@ export const SocketProvider = ({ children }) => {
       }
       
       const newQueue = [...prev, notification];
+      
+      // Debug the new queue state
+      debugNotificationQueue(newQueue, 'Updated');
       
       // Clear existing timeout
       if (batchTimeoutRef.current) {
@@ -551,6 +573,9 @@ export const SocketProvider = ({ children }) => {
         // Add more explicit flags to help the notification system
         isPersonalPointsUpdate: false
       };
+
+      // Add a debug log to verify notification object before adding to queue
+      console.log('[SOCKET] Final house points notification to be displayed:', notification);
         
       addNotification(notification);
     };
