@@ -46,3 +46,247 @@
     text-shadow: 0 0 25px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.3), 0 0 50px rgba(255,255,255,0.2);
   }
 }
+
+/* Enhanced notification animations */
+
+@keyframes float {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-15px);
+    opacity: 0.8;
+  }
+}
+
+@keyframes float-down {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(15px) rotate(5deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes pulse-glow {
+  0% {
+    opacity: 0.2;
+    filter: blur(15px);
+  }
+  50% {
+    opacity: 0.4;
+    filter: blur(20px);
+  }
+  100% {
+    opacity: 0.2;
+    filter: blur(15px);
+  }
+}
+
+@keyframes glow-pulse {
+  0% {
+    opacity: 0.5;
+    box-shadow: 0 0 10px currentColor;
+    height: 70%;
+    top: 15%;
+  }
+  100% {
+    opacity: 0.8;
+    box-shadow: 0 0 20px currentColor;
+    height: 90%;
+    top: 5%;
+  }
+}
+
+@keyframes badge-pulse {
+  0% {
+    box-shadow: 0 0 8px currentColor;
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 15px currentColor; 
+    transform: scale(1.05);
+  }
+}
+
+@keyframes notification-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+  30% {
+    transform: translateY(10px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes reason-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(255,255,255,0.2);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(255,255,255,0.4);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-grow {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.5));
+  }
+  100% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.7));
+  }
+}
+
+@keyframes pulse-shrink {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(245, 101, 101, 0.5));
+  }
+  100% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 20px rgba(245, 101, 101, 0.7));
+  }
+}
+
+@keyframes title-glow-green {
+  0% {
+    text-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8), 0 0 30px rgba(74, 222, 128, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8), 0 0 30px rgba(74, 222, 128, 0.7);
+  }
+}
+
+@keyframes title-glow-red {
+  0% {
+    text-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8), 0 0 30px rgba(245, 101, 101, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8), 0 0 30px rgba(245, 101, 101, 0.7);
+  }
+}
+
+/* Magical sparkle animations */
+.magical-sparkle {
+  position: absolute;
+  border-radius: 50%;
+  animation-delay: var(--delay, 0ms);
+  pointer-events: none;
+}
+
+.sparkle-1 {
+  width: 8px;
+  height: 8px;
+  --delay: 0ms;
+}
+
+.sparkle-2 {
+  width: 12px;
+  height: 12px;
+  --delay: 500ms;
+}
+
+.sparkle-3 {
+  width: 6px;
+  height: 6px;
+  --delay: 1000ms;
+}
+
+/* Notification container transitions */
+.notification-container {
+  transform-origin: center right;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              opacity 0.4s ease-out;
+}
+
+.notification-container.dismissing {
+  opacity: 0;
+  transform: translateX(30px) scale(0.95);
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+/* House-specific styling enhancements */
+.house-gryffindor .notification-reason {
+  border-left: 3px solid rgba(255, 215, 0, 0.7);
+}
+
+.house-slytherin .notification-reason {
+  border-left: 3px solid rgba(192, 192, 192, 0.7);
+}
+
+.house-ravenclaw .notification-reason {
+  border-left: 3px solid rgba(176, 196, 222, 0.7);
+}
+
+.house-hufflepuff .notification-reason {
+  border-left: 3px solid rgba(255, 217, 102, 0.7);
+}
+
+/* Make notification title more magical */
+.notification-title {
+  background-size: 200% 100%;
+}
+
+/* Points display animations */
+.points-value-display {
+  transition: all 0.3s ease-out;
+}
+
+.increase-icon-bg,
+.decrease-icon-bg {
+  transition: all 0.3s ease-out;
+}
+
+/* Enhanced badge styling */
+.criteria-badge, .level-badge {
+  transition: all 0.3s ease;
+}
+
+.criteria-badge:hover, 
+.level-badge:hover {
+  transform: scale(1.1);
+}
+
+/* Enhanced close button */
+.notification-container .chakra-close-button {
+  transition: all 0.2s ease;
+  backdrop-filter: blur(2px);
+  border-radius: 50%;
+}
+
+.notification-container .chakra-close-button:hover {
+  transform: rotate(90deg);
+}

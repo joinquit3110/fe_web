@@ -16,7 +16,7 @@ import {
 } from '@chakra-ui/react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
-import { FaBolt, FaSkull } from 'react-icons/fa';
+import { FaBolt, FaSkull, FaMagic, FaStar, FaGem } from 'react-icons/fa';
 import '../styles/notification.css';
 import '../styles/HarryPotter.css';
 import '../styles/notification_animations.css';
@@ -27,9 +27,6 @@ import '../styles/notification_animations_enhanced.css'; // Import enhanced anim
 // Import images for point change animations
 import increasePointImg from '../asset/IncreasePoint.png';
 import decreasePointImg from '../asset/DecreasePoint.png';
-
-// Don't preload images here - this causes issues with SSR or bundling
-// We'll let React handle the image loading when it's actually used in the component
 
 // Helper function to standardize criteria text
 const standardizeCriteria = (criteria) => {
@@ -94,6 +91,57 @@ function extractCriteriaAndLevel(notification) {
 // Check if debug mode is enabled
 const DEBUG_MODE = localStorage.getItem('NOTIF_DEBUG') === 'true';
 
+// Enhanced house colors with more vibrant and magical palettes
+const getHouseColors = (house) => {
+  switch(house?.toLowerCase()) {
+    case 'gryffindor':
+      return {
+        bgColor: 'linear-gradient(135deg, rgba(174, 0, 1, 0.92), rgba(122, 10, 10, 0.92) 40%, rgba(90, 5, 5, 0.95))',
+        borderColor: 'rgba(255, 215, 0, 0.8)',
+        textColor: '#F8F8F8',
+        accentColor: 'rgba(255, 215, 0, 0.9)',  // Brighter gold
+        glowColor: 'rgba(255, 215, 0, 0.7)',    // Gold glow
+        secondaryColor: 'rgba(255, 215, 0, 0.6)'
+      };
+    case 'slytherin':
+      return {
+        bgColor: 'linear-gradient(135deg, rgba(26, 135, 65, 0.92), rgba(5, 77, 35, 0.92) 40%, rgba(3, 50, 23, 0.95))',
+        borderColor: 'rgba(222, 222, 222, 0.8)',
+        textColor: '#F8F8F8',
+        accentColor: 'rgba(222, 222, 222, 0.9)',  // Brighter silver
+        glowColor: 'rgba(222, 222, 222, 0.7)',    // Silver glow
+        secondaryColor: 'rgba(222, 222, 222, 0.6)'
+      };
+    case 'ravenclaw':
+      return {
+        bgColor: 'linear-gradient(135deg, rgba(29, 66, 138, 0.92), rgba(10, 30, 90, 0.92) 40%, rgba(5, 15, 50, 0.95))',
+        borderColor: 'rgba(203, 166, 126, 0.8)',
+        textColor: '#F8F8F8',
+        accentColor: 'rgba(203, 166, 126, 0.9)',  // Brighter bronze
+        glowColor: 'rgba(173, 136, 96, 0.7)',     // Bronze glow
+        secondaryColor: 'rgba(173, 136, 96, 0.6)'
+      };
+    case 'hufflepuff':
+      return {
+        bgColor: 'linear-gradient(135deg, rgba(236, 185, 27, 0.92), rgba(136, 106, 22, 0.92) 40%, rgba(70, 60, 5, 0.95))',
+        borderColor: 'rgba(40, 40, 40, 0.8)',
+        textColor: '#F8F8F8',
+        accentColor: 'rgba(40, 40, 40, 0.9)',    // Black
+        glowColor: 'rgba(255, 217, 102, 0.7)',   // Yellow glow
+        secondaryColor: 'rgba(40, 40, 40, 0.6)'
+      };
+    default:
+      return {
+        bgColor: 'linear-gradient(135deg, rgba(80, 80, 160, 0.92), rgba(40, 40, 90, 0.92) 40%, rgba(30, 30, 70, 0.95))',
+        borderColor: 'rgba(211, 166, 37, 0.8)',
+        textColor: '#F8F8F8',
+        accentColor: 'rgba(211, 166, 37, 0.9)',  // Default gold accent
+        glowColor: 'rgba(211, 166, 37, 0.7)',    // Gold glow
+        secondaryColor: 'rgba(211, 166, 37, 0.6)'
+      };
+  }
+};
+
 // Notification display component
 const NotificationDisplay = () => {
   const { notifications, removeNotification } = useSocket();
@@ -150,47 +198,6 @@ const NotificationDisplay = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  // Helper function to get house-specific colors
-  const getHouseColors = (house) => {
-    switch(house?.toLowerCase()) {
-      case 'gryffindor':
-        return {
-          bgColor: 'linear-gradient(to bottom, rgba(122, 10, 10, 0.92), rgba(80, 5, 5, 0.95))',
-          borderColor: 'rgba(218, 165, 32, 0.7)',
-          textColor: '#F8F8F8',
-          accentColor: '#DAA520',  // Gold
-        };
-      case 'slytherin':
-        return {
-          bgColor: 'linear-gradient(to bottom, rgba(5, 77, 35, 0.92), rgba(3, 50, 23, 0.95))',
-          borderColor: 'rgba(192, 192, 192, 0.7)',
-          textColor: '#F8F8F8',
-          accentColor: '#C0C0C0',  // Silver
-        };
-      case 'ravenclaw':
-        return {
-          bgColor: 'linear-gradient(to bottom, rgba(10, 30, 90, 0.92), rgba(5, 15, 50, 0.95))',
-          borderColor: 'rgba(176, 196, 222, 0.7)',
-          textColor: '#F8F8F8',
-          accentColor: '#B0C4DE',  // Bronze
-        };
-      case 'hufflepuff':
-        return {
-          bgColor: 'linear-gradient(to bottom, rgba(100, 85, 10, 0.92), rgba(70, 60, 5, 0.95))',
-          borderColor: 'rgba(50, 50, 50, 0.7)',
-          textColor: '#F8F8F8',
-          accentColor: '#333333',  // Black
-        };
-      default:
-        return {
-          bgColor: 'linear-gradient(to bottom, rgba(40, 40, 90, 0.92), rgba(30, 30, 70, 0.95))',
-          borderColor: 'rgba(211, 166, 37, 0.7)',
-          textColor: '#F8F8F8',
-          accentColor: '#D3A625',  // Default gold accent
-        };
-    }
-  };
 
   const getNotificationTitle = (type) => {
     switch (type) {
@@ -524,9 +531,11 @@ const NotificationDisplay = () => {
       isIncrease: isPointIncrease,
       house: activeNotification.house,
       isHousePoints: Boolean(activeNotification.isHousePointsUpdate),
+      isPersonalPointsUpdate: Boolean(activeNotification.isPersonalPointsUpdate),
       reason: activeNotification.reason,
       criteria: activeNotification.criteria,
-      level: activeNotification.level
+      level: activeNotification.level,
+      message: activeNotification.message
     });
   }
   
@@ -555,6 +564,8 @@ const NotificationDisplay = () => {
           borderRadius="md"
           maxW="300px"
           fontSize="sm"
+          boxShadow="0 0 20px rgba(0,0,0,0.5)"
+          border="1px solid rgba(255,255,255,0.1)"
         >
           <Heading size="xs" mb={2}>Notification Debug</Heading>
           <VStack align="start" spacing={1}>
@@ -593,6 +604,20 @@ const NotificationDisplay = () => {
           maxWidth="96vw"
           className={`notification-container ${activeNotification.type || 'default'} ${houseClass}`}
           style={{ pointerEvents: "all" }} /* Ensure clickable */
+          transform="perspective(1000px)"
+          _before={{
+            content: '""',
+            position: 'absolute',
+            top: '-10px',
+            left: '-10px',
+            right: '-10px',
+            bottom: '-10px',
+            background: `radial-gradient(circle at center, ${houseColors.glowColor} 0%, transparent 70%)`,
+            opacity: '0.4',
+            filter: 'blur(15px)',
+            zIndex: '-1',
+            animation: 'pulse-glow 3s infinite ease-in-out'
+          }}
         >
           <Box
             borderWidth="5px" /* Increased border width for better visibility */
@@ -614,7 +639,22 @@ const NotificationDisplay = () => {
               imageRendering: 'high-quality', /* Best image quality */
               backgroundOrigin: 'padding-box', /* Better for full coverage */
               minHeight: isPointChange ? '500px' : 'auto', /* Increased height for better image display */
-              boxShadow: isPointChange ? '0 0 30px rgba(0,0,0,0.7)' : 'none' /* Add shadow for depth */
+              boxShadow: isPointChange ? 
+                '0 0 30px rgba(0,0,0,0.7), inset 0 0 60px rgba(0,0,0,0.3)' : 
+                'inset 0 0 40px rgba(0,0,0,0.4)', /* Enhanced shadow for depth */
+              transform: 'translateZ(0)',
+              transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              animation: 'notification-appear 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }}
+            _after={{
+              content: '""',
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              right: '0',
+              bottom: '0',
+              background: `radial-gradient(circle at top right, ${houseColors.glowColor}20, transparent 70%)`,
+              pointerEvents: 'none'
             }}
           >
             {/* Add magical glow bar */}
@@ -624,64 +664,147 @@ const NotificationDisplay = () => {
               top: 0,
               width: '4px',
               height: '100%',
+              background: `linear-gradient(to bottom, transparent, ${houseColors.accentColor}, transparent)`,
+              boxShadow: `0 0 15px ${houseColors.accentColor}`,
+              animation: 'glow-pulse 2s infinite alternate'
+            }}></div>
+
+            {/* Add magical sparkles */}
+            <div className="magical-sparkle sparkle-1" style={{
+              position: 'absolute',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
               background: houseColors.accentColor,
-              boxShadow: `0 0 10px ${houseColors.accentColor}`
+              boxShadow: `0 0 10px ${houseColors.accentColor}`,
+              animation: 'float 4s infinite ease-in-out',
+              top: '15%',
+              left: '10%',
+              opacity: '0.8'
+            }}></div>
+            <div className="magical-sparkle sparkle-2" style={{
+              position: 'absolute',
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: houseColors.secondaryColor,
+              boxShadow: `0 0 15px ${houseColors.secondaryColor}`,
+              animation: 'float 5s infinite ease-in-out',
+              top: '35%',
+              right: '15%',
+              opacity: '0.7'
+            }}></div>
+            <div className="magical-sparkle sparkle-3" style={{
+              position: 'absolute',
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: houseColors.accentColor,
+              boxShadow: `0 0 8px ${houseColors.accentColor}`,
+              animation: 'float 3s infinite ease-in-out',
+              bottom: '20%',
+              right: '30%',
+              opacity: '0.9'
             }}></div>
             
-            {/* Add magical sparkles */}
-            <div className="magical-sparkle sparkle-1"></div>
-            <div className="magical-sparkle sparkle-2"></div>
-            <div className="magical-sparkle sparkle-3"></div>
-            
-            {/* Removing particles for simplicity and better performance */}
-            
-            <Flex justifyContent="space-between" alignItems="center" mb={2}>
+            <Flex justifyContent="space-between" alignItems="center" mb={3} className="notification-header">
               <Heading 
                 size="sm" 
                 color={houseColors.textColor} 
                 className="notification-title"
-                letterSpacing={activeNotification.house ? "0.04em" : "normal"}
+                letterSpacing={activeNotification.house ? "0.06em" : "0.04em"}
                 fontFamily="'Cinzel', serif"
+                textTransform="uppercase"
+                fontWeight="bold"
                 style={{
-                  textTransform: activeNotification.house ? "capitalize" : "normal"
+                  textShadow: `0 2px 4px rgba(0,0,0,0.8), 0 0 8px ${houseColors.glowColor}`,
+                  background: `linear-gradient(90deg, ${houseColors.textColor}, ${houseColors.accentColor} 50%, ${houseColors.textColor})`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  animation: 'shimmer 3s infinite linear'
                 }}
               >
                 {activeNotification.title || getNotificationTitle(activeNotification.type)}
               </Heading>
-              <CloseButton size="sm" color={houseColors.textColor} onClick={handleDismiss} />
+              <CloseButton 
+                size="sm" 
+                color={houseColors.accentColor} 
+                onClick={handleDismiss} 
+                _hover={{
+                  background: `rgba(255,255,255,0.2)`,
+                  boxShadow: `0 0 10px ${houseColors.accentColor}`
+                }}
+              />
             </Flex>
             
             {!isPointChange && (
-              <Text fontSize="sm" mb={2} color={houseColors.textColor}>{activeNotification.message}</Text>
+              <Text 
+                fontSize="sm" 
+                mb={2} 
+                color={houseColors.textColor}
+                style={{
+                  textShadow: '0 2px 4px rgba(0,0,0,0.7)',
+                  padding: '8px 12px',
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '8px',
+                  borderLeft: `3px solid ${houseColors.accentColor}`,
+                  lineHeight: '1.5'
+                }}
+              >
+                {activeNotification.message}
+              </Text>
             )}
             
             {activeNotification.house && (
-              <Flex align="center" mb={2} className="notification-house-info" zIndex="10">
+              <Flex align="center" mb={3} mt={2} className="notification-house-info" zIndex="10">
                 <Badge 
-                  bg={activeNotification.house === 'gryffindor' ? '#740001' : 
-                    activeNotification.house === 'slytherin' ? '#1A472A' :
-                    activeNotification.house === 'ravenclaw' ? '#0E1A40' : '#FFB81C'} 
+                  bg={
+                    activeNotification.house === 'gryffindor' ? 'linear-gradient(135deg, #740001, #ae0001)' : 
+                    activeNotification.house === 'slytherin' ? 'linear-gradient(135deg, #1A472A, #2a623d)' :
+                    activeNotification.house === 'ravenclaw' ? 'linear-gradient(135deg, #0E1A40, #222f5b)' : 
+                    'linear-gradient(135deg, #ecb91b, #FFB81C)'
+                  }
                   color={activeNotification.house === 'hufflepuff' ? '#000000' : '#FFFFFF'}
                   mr={2}
-                  p={1}
-                  fontSize="0.9rem" /* Slightly larger badge text */
+                  p={2}
+                  fontSize="1rem" /* Larger badge text */
                   borderRadius="md"
                   className={`house-badge house-badge-${activeNotification.house.toLowerCase()}`}
                   style={{
-                    boxShadow: activeNotification.house === 'gryffindor' ? '0 0 15px rgba(218, 165, 32, 0.8)' : 
-                      activeNotification.house === 'slytherin' ? '0 0 15px rgba(192, 192, 192, 0.8)' :
-                      activeNotification.house === 'ravenclaw' ? '0 0 15px rgba(176, 196, 222, 0.8)' : 
-                      '0 0 15px rgba(255, 217, 102, 0.8)', /* Increased glow */
+                    boxShadow: 
+                      activeNotification.house === 'gryffindor' ? '0 0 15px rgba(218, 165, 32, 0.8), inset 0 0 10px rgba(255,255,255,0.3)' : 
+                      activeNotification.house === 'slytherin' ? '0 0 15px rgba(192, 192, 192, 0.8), inset 0 0 10px rgba(255,255,255,0.3)' :
+                      activeNotification.house === 'ravenclaw' ? '0 0 15px rgba(176, 196, 222, 0.8), inset 0 0 10px rgba(255,255,255,0.3)' : 
+                      '0 0 15px rgba(255, 217, 102, 0.8), inset 0 0 10px rgba(255,255,255,0.3)', /* Enhanced glow with inner highlight */
                     letterSpacing: "0.05em",
                     fontWeight: "bold",
-                    border: activeNotification.house === 'gryffindor' ? '1px solid rgba(255, 215, 0, 0.6)' : 
+                    border: 
+                      activeNotification.house === 'gryffindor' ? '1px solid rgba(255, 215, 0, 0.6)' : 
                       activeNotification.house === 'slytherin' ? '1px solid rgba(192, 192, 192, 0.6)' :
                       activeNotification.house === 'ravenclaw' ? '1px solid rgba(176, 196, 222, 0.6)' : 
                       '1px solid rgba(255, 217, 102, 0.6)', /* Add subtle matching border */
                     animation: `badge-pulse 1.5s infinite alternate` /* Add gentle pulsing animation */
                   }}
                 >
-                  {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
+                  <Flex align="center">
+                    <Icon
+                      as={
+                        activeNotification.house === 'gryffindor' ? FaGem :
+                        activeNotification.house === 'slytherin' ? FaGem :
+                        activeNotification.house === 'ravenclaw' ? FaGem :
+                        FaGem
+                      }
+                      mr={2}
+                      boxSize="14px"
+                      color={
+                        activeNotification.house === 'gryffindor' ? 'gold' :
+                        activeNotification.house === 'slytherin' ? 'silver' :
+                        activeNotification.house === 'ravenclaw' ? '#CBA67E' :
+                        'black'
+                      }
+                    />
+                    {activeNotification.house.charAt(0).toUpperCase() + activeNotification.house.slice(1)}
+                  </Flex>
                 </Badge>
               </Flex>
             )}
@@ -726,21 +849,39 @@ const NotificationDisplay = () => {
                   fontSize="md" // Increased size for better visibility
                   fontWeight="bold" 
                   color={isPointChange ? "white" : houseColors.accentColor}
-                  mb={2} 
+                  mb={3} 
                   className={`notification-reason ${activeNotification.house ? `house-reason-${activeNotification.house.toLowerCase()}` : ''}`}
                   style={{
-                    textShadow: "0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8)", /* Enhanced text shadow for better readability */
-                    letterSpacing: "0.04em", /* Slightly increased letter spacing */
+                    textShadow: `0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px ${isPointChange ? (isPointIncrease ? 'rgba(74, 222, 128, 0.5)' : 'rgba(245, 101, 101, 0.5)') : houseColors.glowColor}`,
+                    letterSpacing: "0.05em", /* Slightly increased letter spacing */
                     zIndex: 3,
                     position: "relative",
-                    padding: isPointChange ? "6px 12px" : "0", /* More padding */
-                    background: isPointChange ? "rgba(0,0,0,0.2)" : "transparent", /* Reduced background opacity */
+                    padding: isPointChange ? "8px 16px" : "8px 12px", /* More padding */
+                    background: isPointChange ? 
+                      `linear-gradient(to right, rgba(0,0,0,0.1), rgba(0,0,0,0.3), rgba(0,0,0,0.1))` : 
+                      `linear-gradient(to right, rgba(0,0,0,0.1), rgba(0,0,0,0.3), rgba(0,0,0,0.1))`,
                     borderRadius: "10px", /* More rounded corners */
                     display: "inline-block",
-                    border: isPointChange ? "1px solid rgba(255,255,255,0.15)" : "none", /* Subtle border */
-                    fontSize: isPointChange ? "1.1em" : "inherit" /* Slightly larger text for point changes */
+                    border: isPointChange ? 
+                      `1px solid rgba(255,255,255,0.25)` : 
+                      `1px solid ${houseColors.borderColor}`,
+                    fontSize: isPointChange ? "1.1em" : "inherit", /* Slightly larger text for point changes */
+                    animation: "reason-glow 3s infinite alternate",
+                    backdropFilter: "blur(3px)"
                   }}
                 >
+                  <Icon
+                    as={isPointChange ? 
+                      (isPointIncrease ? FaMagic : FaSkull) : 
+                      FaStar
+                    }
+                    mr={2}
+                    color={isPointIncrease ? 
+                      "rgba(74, 222, 128, 1)" : 
+                      isPointChange ? "rgba(245, 101, 101, 1)" : 
+                      houseColors.accentColor
+                    }
+                  />
                   {isPointChange ? displayReason : `Reason: ${displayReason}`}
                 </Text>
               );
@@ -776,6 +917,10 @@ const NotificationDisplay = () => {
                     boxSize="220px" /* Much larger icon */
                     opacity="0.8"
                     className={isPointIncrease ? "increase-icon-bg" : "decrease-icon-bg"}
+                    style={{
+                      filter: `drop-shadow(0 0 30px ${isPointIncrease ? 'rgba(74, 222, 128, 0.8)' : 'rgba(245, 101, 101, 0.8)'})`,
+                      animation: isPointIncrease ? 'float-up 3s infinite alternate' : 'float-down 3s infinite alternate'
+                    }}
                   />
                   
                   {/* Points text overlay that appears on top of the icon */}
@@ -794,6 +939,12 @@ const NotificationDisplay = () => {
                     fontSize="140px" /* Extra large text */
                     style={{
                       filter: "drop-shadow(0 0 8px rgba(0,0,0,0.9))",
+                      background: `linear-gradient(to bottom, 
+                        ${isPointIncrease ? '#4ADE80' : '#F56565'}, 
+                        ${isPointIncrease ? '#22c55e' : '#ef4444'})`,
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      animation: isPointIncrease ? 'pulse-grow 2s infinite alternate' : 'pulse-shrink 2s infinite alternate'
                     }}
                   >
                     {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
@@ -806,62 +957,94 @@ const NotificationDisplay = () => {
                   bottom="0"
                   left="0"
                   right="0"
-                  background="rgba(0,0,0,0.75)" /* Darker background for better text visibility */
-                  padding="16px"
+                  background={isPointIncrease ? 
+                    "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.7), rgba(0,0,0,0))" : 
+                    "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.7), rgba(0,0,0,0))"}
+                  padding="20px"
                   borderTop={isPointIncrease ? 
-                    "4px solid rgba(74, 222, 128, 0.9)" : 
-                    "4px solid rgba(245, 101, 101, 0.9)"}
+                    `4px solid rgba(74, 222, 128, 0.9)` : 
+                    `4px solid rgba(245, 101, 101, 0.9)`}
                   textAlign="center"
                   className="points-content-area" /* Added class for specific styling */
                 >
                   <Text 
-                    fontSize="22px" /* Larger text */
+                    fontSize="24px" /* Larger text */
                     fontWeight="bold"
                     color="#FFFFFF" 
-                    textShadow="0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)"
-                    mb="1" /* Add margin below */
+                    textShadow={`0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8), 0 0 30px ${isPointIncrease ? 'rgba(74, 222, 128, 0.7)' : 'rgba(245, 101, 101, 0.7)'}`}
+                    mb="2" /* Add margin below */
+                    letterSpacing="0.05em"
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      animation: isPointIncrease ? 'title-glow-green 3s infinite alternate' : 'title-glow-red 3s infinite alternate'
+                    }}
                   >
                     {isHousePoints ? 
                       `House Points ${isPointIncrease ? 'Awarded' : 'Deducted'}` : 
                       `Points ${isPointIncrease ? 'Awarded' : 'Deducted'}`}
                   </Text>
                   <Text 
-                    fontSize="16px" /* Larger reason text */
+                    fontSize="18px" /* Larger reason text */
                     color="#FFFFFF" 
                     fontWeight="medium"
                     opacity="0.9"
-                    mt="1"
+                    mt="2"
                     className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
+                    style={{
+                      textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                      padding: '4px 12px',
+                      background: 'rgba(255,255,255,0.1)',
+                      borderRadius: '20px',
+                      display: 'inline-block',
+                      backdropFilter: 'blur(2px)',
+                      border: `1px solid ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`
+                    }}
                   >
                     {activeNotification.reason || `For ${activeNotification.house || ''} house`}
                   </Text>
                   
                   {/* Add criteria and level display for house points */}
                   {isHousePoints && (activeNotification.criteria || activeNotification.level) && (
-                    <Flex mt={2} justifyContent="center" gap={2}>
+                    <Flex mt={3} justifyContent="center" gap={3}>
                       {activeNotification.criteria && (
                         <Badge 
-                          bg={`rgba(255, 255, 255, 0.2)`}
+                          bg={`rgba(255, 255, 255, 0.15)`}
                           color="white" 
-                          px={2}
-                          py={1}
-                          borderRadius="md"
-                          boxShadow="0 0 5px rgba(255, 255, 255, 0.3)"
+                          px={3}
+                          py={1.5}
+                          borderRadius="full"
+                          boxShadow={`0 0 10px ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`}
+                          fontSize="0.9rem"
+                          style={{
+                            backdropFilter: 'blur(3px)',
+                            border: `1px solid ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`
+                          }}
                         >
-                          Criteria: {activeNotification.criteria}
+                          <Flex align="center">
+                            <Icon as={FaStar} mr={2} color={isPointIncrease ? '#4ADE80' : '#F56565'} />
+                            Criteria: {activeNotification.criteria}
+                          </Flex>
                         </Badge>
                       )}
                       
                       {activeNotification.level && (
                         <Badge 
-                          bg={`rgba(255, 255, 255, 0.2)`}
+                          bg={`rgba(255, 255, 255, 0.15)`}
                           color="white" 
-                          px={2}
-                          py={1}
-                          borderRadius="md"
-                          boxShadow="0 0 5px rgba(255, 255, 255, 0.3)"
+                          px={3}
+                          py={1.5}
+                          borderRadius="full"
+                          boxShadow={`0 0 10px ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`}
+                          fontSize="0.9rem"
+                          style={{
+                            backdropFilter: 'blur(3px)',
+                            border: `1px solid ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`
+                          }}
                         >
-                          Level: {activeNotification.level}
+                          <Flex align="center">
+                            <Icon as={FaMagic} mr={2} color={isPointIncrease ? '#4ADE80' : '#F56565'} />
+                            Level: {activeNotification.level}
+                          </Flex>
                         </Badge>
                       )}
                     </Flex>
@@ -870,42 +1053,64 @@ const NotificationDisplay = () => {
               </>
             )}
             
-            {criteria && (
-              <Flex mt={2}>
-                <Badge 
-                  bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.85)' :
-                     activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.85)' :
-                     activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.85)' :
-                     activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.85)' :
-                     'rgba(128, 90, 213, 0.8)'} 
-                  color="white" 
-                  mr={2}
-                  p={1}
-                  boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.5)' :
-                     activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.5)' :
-                     activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.5)' :
-                     activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.5)' :
-                     '0 0 5px rgba(128, 90, 213, 0.5)'}
-                  className={`criteria-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
-                >
-                  {criteria}
-                </Badge>
-                {level && (
+            {criteria && !isPointChange && (
+              <Flex mt={3} flexWrap="wrap" justifyContent="center" gap={2}>
+                {criteria && (
                   <Badge 
                     bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
                        activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.7)' :
                        activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.7)' :
                        activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.7)' :
-                       'rgba(49, 151, 149, 0.8)'}
-                    color="white"
-                    p={1}
-                    boxShadow={activeNotification.house === 'gryffindor' ? '0 0 5px rgba(218, 165, 32, 0.4)' :
-                       activeNotification.house === 'slytherin' ? '0 0 5px rgba(192, 192, 192, 0.4)' :
-                       activeNotification.house === 'ravenclaw' ? '0 0 5px rgba(176, 196, 222, 0.4)' :
-                       activeNotification.house === 'hufflepuff' ? '0 0 5px rgba(255, 217, 102, 0.4)' :
-                       '0 0 5px rgba(49, 151, 149, 0.5)'}
-                    className={`level-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
+                       'rgba(128, 90, 213, 0.7)'} 
+                    color="white" 
+                    mr={2}
+                    p={2}
+                    boxShadow={activeNotification.house === 'gryffindor' ? '0 0 10px rgba(218, 165, 32, 0.6)' :
+                       activeNotification.house === 'slytherin' ? '0 0 10px rgba(192, 192, 192, 0.6)' :
+                       activeNotification.house === 'ravenclaw' ? '0 0 10px rgba(176, 196, 222, 0.6)' :
+                       activeNotification.house === 'hufflepuff' ? '0 0 10px rgba(255, 217, 102, 0.6)' :
+                       '0 0 10px rgba(128, 90, 213, 0.6)'}
+                    className={`criteria-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
+                    borderRadius="full"
+                    fontSize="0.9rem"
+                    style={{
+                      backdropFilter: 'blur(2px)',
+                      border: `1px solid ${houseColors.borderColor}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
                   >
+                    <Icon as={FaStar} />
+                    {criteria}
+                  </Badge>
+                )}
+                {level && (
+                  <Badge 
+                    bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.6)' :
+                       activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.6)' :
+                       activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.6)' :
+                       activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.6)' :
+                       'rgba(49, 151, 149, 0.6)'}
+                    color="white"
+                    p={2}
+                    boxShadow={activeNotification.house === 'gryffindor' ? '0 0 10px rgba(218, 165, 32, 0.5)' :
+                       activeNotification.house === 'slytherin' ? '0 0 10px rgba(192, 192, 192, 0.5)' :
+                       activeNotification.house === 'ravenclaw' ? '0 0 10px rgba(176, 196, 222, 0.5)' :
+                       activeNotification.house === 'hufflepuff' ? '0 0 10px rgba(255, 217, 102, 0.5)' :
+                       '0 0 10px rgba(49, 151, 149, 0.5)'}
+                    className={`level-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
+                    borderRadius="full"
+                    fontSize="0.9rem"
+                    style={{
+                      backdropFilter: 'blur(2px)',
+                      border: `1px solid ${houseColors.borderColor}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Icon as={FaMagic} />
                     {level}
                   </Badge>
                 )}

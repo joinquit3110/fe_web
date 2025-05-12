@@ -381,6 +381,7 @@ export const SocketProvider = ({ children }) => {
             const level = data.level || data.data?.level || null;
 
             console.log('[SOCKET] Extracted point update reason:', reason);
+            console.log('[SOCKET] Personal points change delta:', pointsDiff, '(from', oldPoints, 'to', newPoints, ')');
 
             // Generate unique ID that includes user ID to prevent duplicates
             const notificationId = `points_update_${Date.now()}_${user.id}`;
@@ -392,7 +393,7 @@ export const SocketProvider = ({ children }) => {
               title: pointsDiff > 0 ? 'POINTS AWARDED!' : 'POINTS DEDUCTED!',
               message: `Your magic points have ${pointsDiff > 0 ? 'increased' : 'decreased'} by ${Math.abs(pointsDiff)}${reason ? ': ' + reason : ''}`,
               timestamp: new Date(),
-              pointsChange: pointsDiff,
+              pointsChange: pointsDiff, // Use pointsDiff instead of newPoints to show the change amount
               reason: reason,
               criteria: criteria,
               level: level,
@@ -400,6 +401,9 @@ export const SocketProvider = ({ children }) => {
               isPersonalPointsUpdate: true,
               isHousePointsUpdate: false
             };
+
+            // Log the final notification to be displayed
+            console.log('[SOCKET] Final personal points notification to be displayed:', notification);
 
             addNotification(notification);
           }
@@ -571,7 +575,9 @@ export const SocketProvider = ({ children }) => {
         house: data.house,
         isHousePointsUpdate: true, // Mark as house points notification
         // Add more explicit flags to help the notification system
-        isPersonalPointsUpdate: false
+        isPersonalPointsUpdate: false,
+        // Include delta property which should match pointsChange
+        delta: data.points
       };
 
       // Add a debug log to verify notification object before adding to queue

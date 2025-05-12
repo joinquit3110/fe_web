@@ -778,7 +778,9 @@ export const MagicPointsProvider = ({ children }) => {
       
       // Only update if different and we have no pending operations
       if (serverPoints !== localPoints && pendingOperations.length === 0 && !pendingChanges) {
-        console.log(`[POINTS] Server points (${serverPoints}) differ from local (${localPoints}), updating local`);
+        // Calculate the delta explicitly
+        const pointsDelta = serverPoints - localPoints;
+        console.log(`[POINTS] Server points (${serverPoints}) differ from local (${localPoints}), updating local (delta: ${pointsDelta})`);
         setMagicPoints(serverPoints);
         localStorage.setItem('magicPoints', serverPoints.toString());
         localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
@@ -789,7 +791,8 @@ export const MagicPointsProvider = ({ children }) => {
           detail: { 
             source: 'serverCheck',
             timestamp: new Date().toISOString(),
-            points: serverPoints
+            points: serverPoints,
+            delta: pointsDelta
           }
         });
         window.dispatchEvent(syncEvent);
@@ -799,7 +802,8 @@ export const MagicPointsProvider = ({ children }) => {
           detail: { 
             points: serverPoints,
             source: 'serverCheck',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            delta: pointsDelta
           }
         });
         window.dispatchEvent(uiUpdateEvent);
@@ -887,7 +891,9 @@ export const MagicPointsProvider = ({ children }) => {
           if (data.data?.updatedFields?.magicPoints !== undefined) {
             const newPoints = parseInt(data.data.updatedFields.magicPoints, 10);
             if (!isNaN(newPoints) && newPoints !== magicPoints) {
-              console.log(`[POINTS] Updating points from socket message to: ${newPoints} (previous: ${magicPoints})`);
+              // Calculate the delta explicitly
+              const pointsDelta = newPoints - magicPoints;
+              console.log(`[POINTS] Updating points from socket message to: ${newPoints} (previous: ${magicPoints}, delta: ${pointsDelta})`);
               setMagicPoints(newPoints);
               localStorage.setItem('magicPoints', newPoints.toString());
               localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
@@ -903,7 +909,8 @@ export const MagicPointsProvider = ({ children }) => {
                 detail: { 
                   source: 'socketUpdate',
                   timestamp: new Date().toISOString(),
-                  points: newPoints
+                  points: newPoints,
+                  delta: pointsDelta // Include the delta value
                 }
               });
               window.dispatchEvent(syncEvent);
@@ -913,7 +920,8 @@ export const MagicPointsProvider = ({ children }) => {
                 detail: { 
                   points: newPoints,
                   source: 'socketUpdate',
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
+                  delta: pointsDelta // Include the delta value
                 }
               });
               window.dispatchEvent(uiUpdateEvent);
@@ -924,7 +932,9 @@ export const MagicPointsProvider = ({ children }) => {
             if (pointsMatch && pointsMatch[1]) {
               const newPoints = parseInt(pointsMatch[1], 10);
               if (!isNaN(newPoints)) {
-                console.log(`[POINTS] Updating points from server message to: ${newPoints} (previous: ${magicPoints})`);
+                // Calculate the delta explicitly
+                const pointsDelta = newPoints - magicPoints;
+                console.log(`[POINTS] Updating points from server message to: ${newPoints} (previous: ${magicPoints}, delta: ${pointsDelta})`);
                 setMagicPoints(newPoints);
                 localStorage.setItem('magicPoints', newPoints.toString());
                 localStorage.setItem('magicPointsTimestamp', new Date().toISOString());
@@ -939,7 +949,8 @@ export const MagicPointsProvider = ({ children }) => {
                   detail: { 
                     source: 'pointsUpdate',
                     timestamp: new Date().toISOString(),
-                    points: newPoints
+                    points: newPoints,
+                    delta: pointsDelta // Include the delta value
                   }
                 });
                 window.dispatchEvent(syncEvent);
@@ -949,7 +960,8 @@ export const MagicPointsProvider = ({ children }) => {
                   detail: { 
                     points: newPoints,
                     source: 'serverUpdate',
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    delta: pointsDelta // Include the delta value
                   }
                 });
                 window.dispatchEvent(uiUpdateEvent);
@@ -1054,16 +1066,19 @@ export const MagicPointsProvider = ({ children }) => {
   // Add handler for direct "magicPointsUpdated" events from SocketContext
   useEffect(() => {
     const handleDirectPointsUpdate = (event) => {
-      const { points, source, immediate, isReset } = event.detail;
+      const { points, source, immediate, isReset, delta } = event.detail;
       
       if (points !== undefined && (source === 'serverSync' || source === 'adminUpdate')) {
-        console.log(`[POINTS] Received direct points update from server: ${points} (immediate: ${immediate}, isReset: ${isReset})`);
+        // Get pointsDelta from event directly or calculate it
+        const pointsDelta = delta !== undefined ? delta : (points - magicPoints);
+        
+        console.log(`[POINTS] Received direct points update from server: ${points} (delta: ${pointsDelta}, immediate: ${immediate}, isReset: ${isReset})`);
         
         // Always update immediately if it's a reset or flagged as immediate
         const shouldForceUpdate = immediate === true || isReset === true;
         
         // Check if this is a significant points change (more than 20 points or a reset)
-        const isSignificantChange = isReset || Math.abs(points - magicPoints) >= 20;
+        const isSignificantChange = isReset || Math.abs(pointsDelta) >= 20;
         
         // Only update if points are different from current state or it's a forced update
         if (points !== magicPoints || shouldForceUpdate) {
@@ -1121,6 +1136,7 @@ export const MagicPointsProvider = ({ children }) => {
           const uiUpdateEvent = new CustomEvent('magicPointsUIUpdate', {
             detail: { 
               points: points,
+              delta: pointsDelta,
               source: isReset ? 'adminReset' : 'serverUpdate',
               isSignificantChange,
               timestamp: new Date().toISOString()
