@@ -503,18 +503,39 @@ const NotificationDisplay = () => {
   // Extract criteria and level with more comprehensive error handling
   let criteria = null;
   let level = null;
+  let reason = null;
   
   try {
     // Safety check the notification object before extraction
     if (activeNotification && typeof activeNotification === 'object') {
+      // First, extract the reason cleanly
+      if (activeNotification.reason && activeNotification.reason !== 'System update') {
+        reason = activeNotification.reason;
+      } else if (activeNotification.message && activeNotification.message.includes(':')) {
+        const parts = activeNotification.message.split(':');
+        if (parts.length > 1 && parts[1].trim()) {
+          reason = parts[1].trim(); 
+        }
+      }
+      
+      // Extract criteria and level
       const extracted = extractCriteriaAndLevel(activeNotification);
       criteria = extracted?.criteria || null;
       level = extracted?.level || null;
-    } else {
-      // Continue with null values for criteria and level
+      
+      // Log what we've found for debugging
+      console.log('[NOTIFICATION] Extracted data:', { 
+        reason, 
+        criteria, 
+        level,
+        isPointChange: activeNotification.pointsChange !== undefined,
+        pointsChange: activeNotification.pointsChange,
+        isHousePoints: activeNotification.isHousePointsUpdate
+      });
     }
   } catch (error) {
-    // Continue with null values for criteria and level
+    console.error('[NOTIFICATION] Error extracting notification data:', error);
+    // Continue with null values
   }
 
   const isPointChange = activeNotification.pointsChange !== undefined;
@@ -947,6 +968,7 @@ const NotificationDisplay = () => {
                       animation: isPointIncrease ? 'pulse-grow 2s infinite alternate' : 'pulse-shrink 2s infinite alternate'
                     }}
                   >
+                    {/* Explicitly use the delta value (pointsChange) */}
                     {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
                   </Text>
                 </Flex>
@@ -982,29 +1004,43 @@ const NotificationDisplay = () => {
                     {isHousePoints ? 
                       `House Points ${isPointIncrease ? 'Awarded' : 'Deducted'}` : 
                       `Points ${isPointIncrease ? 'Awarded' : 'Deducted'}`}
-                  </Text>
-                  <Text 
-                    fontSize="18px" /* Larger reason text */
-                    color="#FFFFFF" 
-                    fontWeight="medium"
-                    opacity="0.9"
-                    mt="2"
-                    className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
-                    style={{
-                      textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                      padding: '4px 12px',
-                      background: 'rgba(255,255,255,0.1)',
-                      borderRadius: '20px',
-                      display: 'inline-block',
-                      backdropFilter: 'blur(2px)',
-                      border: `1px solid ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`
-                    }}
-                  >
-                    {activeNotification.reason || `For ${activeNotification.house || ''} house`}
+                    <Text
+                      as="span"
+                      fontSize="18px"
+                      ml={2}
+                      opacity={0.9}
+                      fontWeight="medium"
+                    >
+                      ({isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`})
+                    </Text>
                   </Text>
                   
-                  {/* Add criteria and level display for house points */}
-                  {isHousePoints && (activeNotification.criteria || activeNotification.level) && (
+                  {/* Ensure reason is displayed prominently */}
+                  {reason && (
+                    <Text 
+                      fontSize="18px" /* Larger reason text */
+                      color="#FFFFFF" 
+                      fontWeight="medium"
+                      opacity="0.9"
+                      mt="2"
+                      className={`house-reason-${activeNotification.house?.toLowerCase() || 'general'}`}
+                      style={{
+                        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                        padding: '4px 12px',
+                        background: 'rgba(255,255,255,0.1)',
+                        borderRadius: '20px',
+                        display: 'inline-block',
+                        backdropFilter: 'blur(2px)',
+                        border: `1px solid ${isPointIncrease ? 'rgba(74, 222, 128, 0.3)' : 'rgba(245, 101, 101, 0.3)'}`
+                      }}
+                    >
+                      <Icon as={FaStar} mr={2} color={isPointIncrease ? '#4ADE80' : '#F56565'} />
+                      {reason}
+                    </Text>
+                  )}
+                  
+                  {/* Make sure criteria and level badges always display if available */}
+                  {(activeNotification.criteria || activeNotification.level) && (
                     <Flex mt={3} justifyContent="center" gap={3}>
                       {activeNotification.criteria && (
                         <Badge 
