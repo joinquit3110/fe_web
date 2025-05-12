@@ -504,56 +504,96 @@ const NotificationDisplay = () => {
   let criteria = null;
   let level = null;
   let reason = null;
+  let delta = 0;
   
   try {
-    // Safety check the notification object before extraction
-    if (activeNotification && typeof activeNotification === 'object') {
-      // First, extract the reason cleanly
-      if (activeNotification.reason && activeNotification.reason !== 'System update') {
-        reason = activeNotification.reason;
-      } else if (activeNotification.message && activeNotification.message.includes(':')) {
-        const parts = activeNotification.message.split(':');
-        if (parts.length > 1 && parts[1].trim()) {
-          reason = parts[1].trim(); 
+    if (!activeNotification) {
+      return null;
+    }
+
+    // First, explicitly log the complete notification object for debugging
+    console.log('[NOTIFICATION] Processing notification:', {
+      id: activeNotification.id,
+      type: activeNotification.type,
+      title: activeNotification.title,
+      pointsChange: activeNotification.pointsChange,
+      delta: activeNotification.delta, // May be the same as pointsChange
+      house: activeNotification.house,
+      isHousePointsUpdate: activeNotification.isHousePointsUpdate,
+      isPersonalPointsUpdate: activeNotification.isPersonalPointsUpdate,
+      reason: activeNotification.reason,
+      criteria: activeNotification.criteria,
+      level: activeNotification.level,
+      message: activeNotification.message
+    });
+
+    // Extract the delta/pointsChange value
+    // First check delta property, then pointsChange, then try to parse from message
+    if (typeof activeNotification.delta === 'number') {
+      delta = activeNotification.delta;
+    } else if (typeof activeNotification.pointsChange === 'number') {
+      delta = activeNotification.pointsChange;
+    } else if (activeNotification.message) {
+      // Try to extract from message like "Your magic points have increased by 10: Reason"
+      const deltaMatch = activeNotification.message.match(/(increased|decreased) by (\d+)/i);
+      if (deltaMatch && deltaMatch[2]) {
+        delta = parseInt(deltaMatch[2], 10);
+        if (deltaMatch[1].toLowerCase() === 'decreased') {
+          delta = -delta; // Make it negative if "decreased"
         }
       }
-      
-      // Extract criteria and level
-      const extracted = extractCriteriaAndLevel(activeNotification);
-      criteria = extracted?.criteria || activeNotification.criteria || null;
-      level = extracted?.level || activeNotification.level || null;
-      
-      // Extra verification for house points notifications
-      if (activeNotification.isHousePointsUpdate) {
-        console.log('[NOTIFICATION] Processing house points notification:', {
-          house: activeNotification.house,
-          pointsChange: activeNotification.pointsChange,
-          reason,
-          criteria,
-          level,
-          isHousePointsUpdate: true
-        });
-      }
-      
-      // Log what we've found for debugging
-      console.log('[NOTIFICATION] Extracted data:', { 
-        reason, 
-        criteria, 
-        level,
-        isPointChange: activeNotification.pointsChange !== undefined,
-        pointsChange: activeNotification.pointsChange,
-        isHousePoints: activeNotification.isHousePointsUpdate
-      });
     }
+    
+    console.log('[NOTIFICATION] Extracted delta value:', delta);
+    
+    // Extract reason: prioritize the reason field, then try to parse from message
+    if (activeNotification.reason && activeNotification.reason !== 'System update') {
+      reason = activeNotification.reason;
+    } else if (activeNotification.message && activeNotification.message.includes(':')) {
+      const parts = activeNotification.message.split(':');
+      if (parts.length > 1 && parts[1].trim()) {
+        reason = parts[1].trim();
+      }
+    }
+    
+    // If still no reason, use some defaults based on notification type
+    if (!reason) {
+      if (activeNotification.isHousePointsUpdate) {
+        const houseName = activeNotification.house?.charAt(0).toUpperCase() + activeNotification.house?.slice(1) || '';
+        reason = delta > 0 ? `${houseName} achievement` : `${houseName} penalty`;
+      } else if (activeNotification.isPersonalPointsUpdate) {
+        reason = delta > 0 ? 'Point achievement' : 'Point deduction';
+      }
+    }
+    
+    // Extract criteria and level - use direct properties first
+    criteria = activeNotification.criteria || null;
+    level = activeNotification.level || null;
+    
+    // If not available directly, try the extractor function
+    if (!criteria || !level) {
+      const extracted = extractCriteriaAndLevel(activeNotification);
+      criteria = criteria || extracted?.criteria || null;
+      level = level || extracted?.level || null;
+    }
+    
+    console.log('[NOTIFICATION] Extracted data:', {
+      delta,
+      reason,
+      criteria,
+      level,
+      isHousePoints: activeNotification.isHousePointsUpdate,
+      isPersonalPoints: activeNotification.isPersonalPointsUpdate
+    });
+    
   } catch (error) {
-    console.error('[NOTIFICATION] Error extracting notification data:', error);
-    // Continue with null values
+    console.error('[NOTIFICATION] Error processing notification:', error);
   }
 
-  const isPointChange = activeNotification.pointsChange !== undefined;
-  // Make sure we're using the points delta (change), not the total points
-  const pointsValue = isPointChange ? Math.abs(activeNotification.pointsChange) : 0;
-  const isPointIncrease = isPointChange && activeNotification.pointsChange > 0;
+  // Determine if this is a point change notification and if it's positive or negative
+  const isPointChange = delta !== 0 || activeNotification.pointsChange !== undefined;
+  const pointsValue = Math.abs(delta || activeNotification.pointsChange || 0);
+  const isPointIncrease = (delta || activeNotification.pointsChange || 0) > 0;
   const pointsImage = isPointIncrease ? increasePointImg : decreasePointImg;
   
   // Debug log to verify we're using the correct value
@@ -980,8 +1020,8 @@ const NotificationDisplay = () => {
                       animation: isPointIncrease ? 'pulse-grow 2s infinite alternate' : 'pulse-shrink 2s infinite alternate'
                     }}
                   >
-                    {/* Explicitly use the delta value (pointsChange) */}
-                    {isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`}
+                    {/* Explicitly check if we should use a + or - sign */}
+                    {delta > 0 ? `+${pointsValue}` : `-${pointsValue}`}
                   </Text>
                 </Flex>
                 
@@ -1013,7 +1053,7 @@ const NotificationDisplay = () => {
                       animation: isPointIncrease ? 'title-glow-green 3s infinite alternate' : 'title-glow-red 3s infinite alternate'
                     }}
                   >
-                    {isHousePoints ? 
+                    {activeNotification.isHousePointsUpdate ? 
                       `House Points ${isPointIncrease ? 'Awarded' : 'Deducted'}` : 
                       `Points ${isPointIncrease ? 'Awarded' : 'Deducted'}`}
                     <Text
@@ -1023,7 +1063,8 @@ const NotificationDisplay = () => {
                       opacity={0.9}
                       fontWeight="medium"
                     >
-                      ({isPointIncrease ? `+${pointsValue}` : `-${pointsValue}`})
+                      {/* Make sure we show the correct sign */}
+                      ({delta > 0 ? `+${pointsValue}` : `-${pointsValue}`})
                     </Text>
                   </Text>
                   

@@ -349,7 +349,7 @@ export const SocketProvider = ({ children }) => {
         const pointsMatch = data.message.match(/updated to (\d+)/);
         if (pointsMatch && pointsMatch[1] && user) {
           const newPoints = parseInt(pointsMatch[1], 10);
-          const oldPoints = user.magicPoints || 0; // Get old points BEFORE updating user state
+          const oldPoints = user.magicPoints || 0;
 
           // Update AuthContext with the new points total from the sync message.
           // This ensures the client's master state of points is correct for the current session.
@@ -399,7 +399,8 @@ export const SocketProvider = ({ children }) => {
               level: level,
               house: user.house,
               isPersonalPointsUpdate: true,
-              isHousePointsUpdate: false
+              isHousePointsUpdate: false,
+              delta: pointsDiff // Redundant but explicit for debugging
             };
 
             // Log the final notification to be displayed
