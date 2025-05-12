@@ -567,8 +567,7 @@ export const SocketProvider = ({ children }) => {
         timestamp: new Date(),
         // Make sure we're using the points delta, not newTotal
         pointsChange: data.points, // This is the change in points, not the total
-        // Store newTotal separately if needed, but don't use it for the pointsChange display
-        totalPoints: data.newTotal,
+        // Remove totalPoints/newTotal from notification data as it's not needed for display
         reason: cleanReason, // Always set reason, never null or 'System update'
         criteria: data.criteria || null,
         level: data.level || null,

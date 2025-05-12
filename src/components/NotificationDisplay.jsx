@@ -520,8 +520,20 @@ const NotificationDisplay = () => {
       
       // Extract criteria and level
       const extracted = extractCriteriaAndLevel(activeNotification);
-      criteria = extracted?.criteria || null;
-      level = extracted?.level || null;
+      criteria = extracted?.criteria || activeNotification.criteria || null;
+      level = extracted?.level || activeNotification.level || null;
+      
+      // Extra verification for house points notifications
+      if (activeNotification.isHousePointsUpdate) {
+        console.log('[NOTIFICATION] Processing house points notification:', {
+          house: activeNotification.house,
+          pointsChange: activeNotification.pointsChange,
+          reason,
+          criteria,
+          level,
+          isHousePointsUpdate: true
+        });
+      }
       
       // Log what we've found for debugging
       console.log('[NOTIFICATION] Extracted data:', { 
@@ -1040,9 +1052,9 @@ const NotificationDisplay = () => {
                   )}
                   
                   {/* Make sure criteria and level badges always display if available */}
-                  {(activeNotification.criteria || activeNotification.level) && (
-                    <Flex mt={3} justifyContent="center" gap={3}>
-                      {activeNotification.criteria && (
+                  {(criteria || level || activeNotification.criteria || activeNotification.level) && (
+                    <Flex mt={3} justifyContent="center" gap={3} flexWrap="wrap">
+                      {(criteria || activeNotification.criteria) && (
                         <Badge 
                           bg={`rgba(255, 255, 255, 0.15)`}
                           color="white" 
@@ -1058,12 +1070,12 @@ const NotificationDisplay = () => {
                         >
                           <Flex align="center">
                             <Icon as={FaStar} mr={2} color={isPointIncrease ? '#4ADE80' : '#F56565'} />
-                            Criteria: {activeNotification.criteria}
+                            Criteria: {criteria || activeNotification.criteria}
                           </Flex>
                         </Badge>
                       )}
                       
-                      {activeNotification.level && (
+                      {(level || activeNotification.level) && (
                         <Badge 
                           bg={`rgba(255, 255, 255, 0.15)`}
                           color="white" 
@@ -1079,7 +1091,7 @@ const NotificationDisplay = () => {
                         >
                           <Flex align="center">
                             <Icon as={FaMagic} mr={2} color={isPointIncrease ? '#4ADE80' : '#F56565'} />
-                            Level: {activeNotification.level}
+                            Level: {level || activeNotification.level}
                           </Flex>
                         </Badge>
                       )}
@@ -1087,70 +1099,6 @@ const NotificationDisplay = () => {
                   )}
                 </Box>
               </>
-            )}
-            
-            {criteria && !isPointChange && (
-              <Flex mt={3} flexWrap="wrap" justifyContent="center" gap={2}>
-                {criteria && (
-                  <Badge 
-                    bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.7)' :
-                       activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.7)' :
-                       activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.7)' :
-                       activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.7)' :
-                       'rgba(128, 90, 213, 0.7)'} 
-                    color="white" 
-                    mr={2}
-                    p={2}
-                    boxShadow={activeNotification.house === 'gryffindor' ? '0 0 10px rgba(218, 165, 32, 0.6)' :
-                       activeNotification.house === 'slytherin' ? '0 0 10px rgba(192, 192, 192, 0.6)' :
-                       activeNotification.house === 'ravenclaw' ? '0 0 10px rgba(176, 196, 222, 0.6)' :
-                       activeNotification.house === 'hufflepuff' ? '0 0 10px rgba(255, 217, 102, 0.6)' :
-                       '0 0 10px rgba(128, 90, 213, 0.6)'}
-                    className={`criteria-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
-                    borderRadius="full"
-                    fontSize="0.9rem"
-                    style={{
-                      backdropFilter: 'blur(2px)',
-                      border: `1px solid ${houseColors.borderColor}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    <Icon as={FaStar} />
-                    {criteria}
-                  </Badge>
-                )}
-                {level && (
-                  <Badge 
-                    bg={activeNotification.house === 'gryffindor' ? 'rgba(157, 23, 23, 0.6)' :
-                       activeNotification.house === 'slytherin' ? 'rgba(8, 98, 45, 0.6)' :
-                       activeNotification.house === 'ravenclaw' ? 'rgba(14, 38, 109, 0.6)' :
-                       activeNotification.house === 'hufflepuff' ? 'rgba(128, 109, 16, 0.6)' :
-                       'rgba(49, 151, 149, 0.6)'}
-                    color="white"
-                    p={2}
-                    boxShadow={activeNotification.house === 'gryffindor' ? '0 0 10px rgba(218, 165, 32, 0.5)' :
-                       activeNotification.house === 'slytherin' ? '0 0 10px rgba(192, 192, 192, 0.5)' :
-                       activeNotification.house === 'ravenclaw' ? '0 0 10px rgba(176, 196, 222, 0.5)' :
-                       activeNotification.house === 'hufflepuff' ? '0 0 10px rgba(255, 217, 102, 0.5)' :
-                       '0 0 10px rgba(49, 151, 149, 0.5)'}
-                    className={`level-badge ${activeNotification.house ? `house-badge-${activeNotification.house.toLowerCase()}` : ''}`}
-                    borderRadius="full"
-                    fontSize="0.9rem"
-                    style={{
-                      backdropFilter: 'blur(2px)',
-                      border: `1px solid ${houseColors.borderColor}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    <Icon as={FaMagic} />
-                    {level}
-                  </Badge>
-                )}
-              </Flex>
             )}
           </Box>
         </Box>
