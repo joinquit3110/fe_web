@@ -1,5 +1,14 @@
 /* Override styles for the point notifications to make the image larger and icons behind text */
 
+/* Make sure notifications appear on top of everything */
+.notification-container {
+  z-index: 99999 !important; /* Extremely high z-index to ensure visibility */
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  pointer-events: auto !important;
+}
+
 /* Make the points background image larger and fit the container */
 .points-background {
   background-position: center center !important;
