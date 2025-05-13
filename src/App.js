@@ -19,7 +19,6 @@ import MagicPointsDebug from './components/MagicPointsDebug';
 import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
-import NotificationDisplay from './components/NotificationDisplay';
 import { SocketProvider } from './context/SocketContext';
 // Import NotificationManager
 import NotificationManager from './components/Notifications/NotificationManager';
@@ -252,9 +251,6 @@ const AppContent = () => {
               <div className="hogwarts-app">
                 {/* UserProfile component */}
                 <UserProfile user={user || (window.location.hostname === 'localhost' ? localUser : null)} />
-                
-                {/* Notification display */}
-                <NotificationDisplay />
                 
                 <header className="hogwarts-header">
                   <img src={hogwartsLogoImg} alt="Hogwarts Logo" className="hogwarts-logo" />
