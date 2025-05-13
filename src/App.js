@@ -21,6 +21,8 @@ import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import NotificationDisplay from './components/NotificationDisplay';
 import { SocketProvider } from './context/SocketContext';
+// Import NotificationManager
+import NotificationManager from './components/Notifications/NotificationManager';
 // Import the Hogwarts logo image
 import hogwartsLogoImg from './asset/Hogwarts logo.png';
 
@@ -477,7 +479,9 @@ const App = () => {
       <AuthProvider>
         <AdminProvider>
           <SocketProvider>
-            <AppContent />
+            <NotificationManager>
+              <AppContent />
+            </NotificationManager>
           </SocketProvider>
         </AdminProvider>
       </AuthProvider>

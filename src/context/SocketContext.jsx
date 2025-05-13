@@ -678,21 +678,84 @@ export const SocketProvider = ({ children }) => {
       addNotification(notification);
     };
 
-    // Register event handlers
-    socket.on('sync_update', handleSyncUpdate);
-    socket.on('house_points_update', handleHousePointsUpdate);
-    socket.on('admin_notification', handleAdminNotification);
-    socket.on('house_assessment_update', handleHouseAssessmentUpdate);
-    socket.on('global_announcement', handleGlobalAnnouncement);
-
-    return () => {
-      socket.off('sync_update', handleSyncUpdate);
-      socket.off('house_points_update', handleHousePointsUpdate);
-      socket.off('admin_notification', handleAdminNotification);
-      socket.off('house_assessment_update', handleHouseAssessmentUpdate);
-      socket.off('global_announcement', handleGlobalAnnouncement);
+    // Handle standard notification format
+    const handleNotification = (data) => {
+      try {
+        console.log('[SOCKET] Received notification:', data);
+        
+        // Skip if this notification should be skipped for admin
+        if (data.skipAdmin && isAdminUser.current) {
+          console.log('[SOCKET] Skipping notification for admin user');
+          return;
+        }
+        
+        // Add to notification queue for processing
+        setNotificationQueue(prev => [...prev, data]);
+        
+        // Schedule batch processing
+        if (batchTimeoutRef.current) {
+          clearTimeout(batchTimeoutRef.current);
+        }
+        
+        batchTimeoutRef.current = setTimeout(() => {
+          processNotificationQueue();
+        }, BATCH_TIMEOUT);
+        
+        // Notify other components (for immediate reaction if needed)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('notification-received', {
+            detail: { notification: data }
+          }));
+        }
+        
+        setLastMessage({ type: 'notification', data, timestamp: new Date() });
+      } catch (error) {
+        console.error('[SOCKET] Error handling notification:', error);
+      }
     };
-  }, [socket, user, addNotification]);
+
+    // Helper to handle error notifications
+    const handleErrorNotification = (data) => {
+      const notification = {
+        id: Date.now(),
+        type: 'error',
+        message: data.message || 'An error occurred',
+        timestamp: new Date()
+      };
+      
+      addNotification(notification);
+    };
+
+    // Set up listeners for socket events
+    const onSyncUpdate = (data) => handleSyncUpdate(data);
+    const onHousePointsUpdate = (data) => handleHousePointsUpdate(data);
+    const onAdminNotification = (data) => handleAdminNotification(data);
+    const onHouseAssessmentUpdate = (data) => handleHouseAssessmentUpdate(data);
+    const onGlobalAnnouncement = (data) => handleGlobalAnnouncement(data);
+    const onNotification = (data) => handleNotification(data);
+    const onErrorNotification = (data) => handleErrorNotification(data);
+    
+    // Register listeners
+    socket.on('sync_update', onSyncUpdate);
+    socket.on('house_points_update', onHousePointsUpdate);
+    socket.on('admin_notification', onAdminNotification);
+    socket.on('house_assessment_update', onHouseAssessmentUpdate);
+    socket.on('global_announcement', onGlobalAnnouncement);
+    socket.on('notification', onNotification);
+    socket.on('error_notification', onErrorNotification);
+    
+    // Clean up listeners on unmount
+    return () => {
+      console.log('[SOCKET] Cleaning up message listeners');
+      socket.off('sync_update', onSyncUpdate);
+      socket.off('house_points_update', onHousePointsUpdate);
+      socket.off('admin_notification', onAdminNotification);
+      socket.off('house_assessment_update', onHouseAssessmentUpdate);
+      socket.off('global_announcement', onGlobalAnnouncement);
+      socket.off('notification', onNotification);
+      socket.off('error_notification', onErrorNotification);
+    };
+  }, [socket, isConnected, user, addNotification, processNotificationQueue]);
 
   // Set up socket event listeners with improved event handling
   useEffect(() => {
