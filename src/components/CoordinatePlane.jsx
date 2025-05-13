@@ -8,7 +8,8 @@ import '../styles/CoordinatePlane.css';
 const CANVAS_CONFIG = {
   width: 800,
   height: 800,
-  minZoom: 20,
+  minZoom: 10,
+  maxZoom: 100,
   defaultZoom: 25
 };
 
@@ -108,6 +109,16 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
   
+  // Calculate number spacing based on zoom level
+  let spacing = 1;
+  if (zoom < 15) {
+    spacing = 5;
+  } else if (zoom < 30) {
+    spacing = 2;
+  } else if (zoom > 60) {
+    spacing = 0.5;
+  }
+  
   // Draw grid
   ctx.strokeStyle = "rgba(14, 26, 64, 0.1)";
   ctx.lineWidth = 0.5;
@@ -195,23 +206,25 @@ const drawGridAndAxes = (ctx, width, height, zoom, origin) => {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
-  // X-axis numbers
-  for (let i = -Math.floor(width/(2*zoom)); i <= Math.floor(width/(2*zoom)); i++) {
-    if (i === 0) continue; // Skip zero
+  // X-axis numbers - use spacing based on zoom level
+  for (let i = -Math.floor(width/(2*zoom)); i <= Math.floor(width/(2*zoom)); i += spacing) {
+    if (Math.abs(i) < 0.01) continue; // Skip zero
     const x = origin.x + i * zoom;
     if (x >= 0 && x <= width) {
-      ctx.fillText(i.toString(), x, origin.y + 5);
+      const numText = spacing < 1 ? i.toFixed(1) : i.toString();
+      ctx.fillText(numText, x, origin.y + 5);
     }
   }
 
-  // Y-axis numbers
+  // Y-axis numbers - use spacing based on zoom level
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  for (let i = -Math.floor(height/(2*zoom)); i <= Math.floor(height/(2*zoom)); i++) {
-    if (i === 0) continue; // Skip zero
+  for (let i = -Math.floor(height/(2*zoom)); i <= Math.floor(height/(2*zoom)); i += spacing) {
+    if (Math.abs(i) < 0.01) continue; // Skip zero
     const y = origin.y - i * zoom;
     if (y >= 0 && y <= height) {
-      ctx.fillText(i.toString(), origin.x - 5, y);
+      const numText = spacing < 1 ? i.toFixed(1) : i.toString();
+      ctx.fillText(numText, origin.x - 5, y);
     }
   }
 };
@@ -1472,9 +1485,20 @@ const CoordinatePlane = forwardRef((props, ref) => {
   const handleWheel = useCallback((e) => {
     if (e.target === canvasRef.current) {
       e.preventDefault(); // Prevent scroll only when on canvas
-      setZoom(prev => Math.max(CANVAS_CONFIG.minZoom, prev + (e.deltaY > 0 ? -2 : 2)));
+      
+      // Determine the direction and calculate new zoom value with variable speed
+      const direction = e.deltaY > 0 ? -1 : 1;
+      const zoomSpeed = zoom < 30 ? 1 : (zoom < 60 ? 2 : 5); // Faster zooming at higher zoom levels
+      
+      setZoom(prev => {
+        const newZoom = Math.max(
+          CANVAS_CONFIG.minZoom, 
+          Math.min(CANVAS_CONFIG.maxZoom, prev + direction * zoomSpeed)
+        );
+        return newZoom;
+      });
     }
-  }, []);
+  }, [zoom]);
 
   useEffect(() => {
     // Add wheel event listener to canvas only
@@ -1891,13 +1915,37 @@ const CoordinatePlane = forwardRef((props, ref) => {
     setShowSpellInput(false);
   }, [redraw, setQuizMessage, setActiveInequality, setActivePoint]);
 
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      setOrigin({ x: canvasWidth / 2, y: canvasHeight / 2 });
+      setZoom(CANVAS_CONFIG.defaultZoom);
+      setIntersectionPoints([]);
+      setActivePoint(null);
+      setInputCoords({ x: '', y: '' });
+      setShowInputValidation(false);
+      setRelatedInequalities([]);
+      redraw();
+    },
+    zoomIn: () => {
+      setZoom(prev => Math.min(CANVAS_CONFIG.maxZoom, prev + 5));
+    },
+    zoomOut: () => {
+      setZoom(prev => Math.max(CANVAS_CONFIG.minZoom, prev - 5));
+    },
+    setDefaultZoom: () => {
+      setZoom(CANVAS_CONFIG.defaultZoom);
+    }
+  }), [canvasWidth, canvasHeight, redraw]);
+
   // Draw button function (moved outside of component)
   return (
-    <div ref={containerRef} className="coordinate-plane-wrapper">
+    <div className="canvas-container" ref={containerRef}>
       <canvas
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
+        className="coordinate-canvas"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -1905,53 +1953,65 @@ const CoordinatePlane = forwardRef((props, ref) => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={handleCanvasClick}
-        style={{ touchAction: 'manipulation' }} /* Allow pinch zoom while blocking page scroll */
       />
       
-      {activePoint && (
-        <div className="coordinate-input-container">
-          <div className="coordinate-input-box">
-            <div className="coordinate-input-title">Enter Intersection Point Coordinates:</div>
-            <div className="coordinate-input-form">
-          <span>(</span>
-            <input 
-              type="text"
-              value={inputCoords.x}
-              onChange={e => setInputCoords(prev => ({ ...prev, x: e.target.value }))}
-              className={
-                  !showInputValidation ? '' :
-                  (inputCoords.x !== '' && Number(inputCoords.x).toFixed(1) === activePoint.correct.x.toFixed(1))
-                  ? 'correct' 
-                  : 'incorrect'
-              }
+      <div className="zoom-controls">
+        <button 
+          className="zoom-button" 
+          onClick={() => setZoom(prev => Math.min(CANVAS_CONFIG.maxZoom, prev + 5))}
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button 
+          className="zoom-button" 
+          onClick={() => setZoom(CANVAS_CONFIG.defaultZoom)}
+          aria-label="Reset zoom"
+        >
+          ↺
+        </button>
+        <button 
+          className="zoom-button" 
+          onClick={() => setZoom(prev => Math.max(CANVAS_CONFIG.minZoom, prev - 5))}
+          aria-label="Zoom out"
+        >
+          -
+        </button>
+      </div>
+      
+      <div className="zoom-level">
+        {Math.round(zoom / CANVAS_CONFIG.defaultZoom * 100)}%
+      </div>
+      
+      {isPointMode && (
+        <div className="coordinates-input">
+          <div>
+            x: <input 
+              type="text" 
+              value={inputCoords.x} 
+              onChange={e => handleCoordinateInput('x', e.target.value)}
+              className={`coordinate-input ${coordValidation.x ? 'valid' : ''} ${showInputValidation && !coordValidation.x ? 'invalid' : ''}`}
+              onKeyDown={handleInputKeyDown}
             />
-              <span>,</span>
-            <input 
-              type="text"
-              value={inputCoords.y}
-              onChange={e => setInputCoords(prev => ({ ...prev, y: e.target.value }))}
-              className={
-                  !showInputValidation ? '' :
-                  (inputCoords.y !== '' && Number(inputCoords.y).toFixed(1) === activePoint.correct.y.toFixed(1))
-                  ? 'correct' 
-                  : 'incorrect'
-              }
-            />
-          <span>)</span>
-            </div>
-            <button className="check-button" onClick={handleCheckCoordinates}>
-              Check
-            </button>
           </div>
+          <div>
+            y: <input 
+              type="text" 
+              value={inputCoords.y} 
+              onChange={e => handleCoordinateInput('y', e.target.value)}
+              className={`coordinate-input ${coordValidation.y ? 'valid' : ''} ${showInputValidation && !coordValidation.y ? 'invalid' : ''}`}
+              onKeyDown={handleInputKeyDown}
+            />
+          </div>
+          <button onClick={handleCoordinatesSubmit} className="submit-button">Submit</button>
         </div>
       )}
-      {showSpellInput && (
-        <div className="spell-input-container">
-          <button onClick={handleCastSpell} disabled={!spellInput}>Cast Spell</button>
-          <button onClick={handleFiniteIncantatem} className="finite-incantatem-btn">Avada Kedavra</button>
-        </div>
-      )}
+      
+      {/* Keep the existing reset button */}
+      <div className="reset-button" onClick={() => {
+        setOrigin({ x: canvasWidth / 2, y: canvasHeight / 2 });
+        setZoom(CANVAS_CONFIG.defaultZoom);
+      }}>Reset View</div>
     </div>
   );
 });

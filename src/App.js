@@ -20,7 +20,7 @@ import { MagicPointsProvider } from './context/MagicPointsContext';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import AdminHousePoints from './components/AdminHousePoints';
 import NotificationDisplay from './components/NotificationDisplay';
-import { SocketProvider, useSocket } from './context/SocketContext';
+import { SocketProvider } from './context/SocketContext';
 // Import the Hogwarts logo image
 import hogwartsLogoImg from './asset/Hogwarts logo.png';
 
@@ -82,7 +82,6 @@ const renderLatex = (latex) => {
 
 const AppContent = () => {
   const { user, isAuthenticated } = useAuth();
-  const { sendMessage } = useSocket();
   const [activeTab, setActiveTab] = useState('activity1'); // Default to Activity 1 instead of Activity 2
   const [inequalities, setInequalities] = useState([]);
   const [message, setMessage] = useState({ 
@@ -95,51 +94,6 @@ const AppContent = () => {
   const coordinatePlaneRef = useRef(null);
   const inequalityListRef = useRef(null);
   const [relatedToIntersection, setRelatedToIntersection] = useState([]);
-  
-  // Debug function to test notifications
-  useEffect(() => {
-    // Only run if TEST_NOTIFICATION flag is set to true
-    const testNotifications = localStorage.getItem('TEST_NOTIFICATION') === 'true';
-    
-    if (testNotifications) {
-      console.log('[DEBUG] Test notification flag is enabled, will send test notification');
-      
-      // Wait for everything to load properly
-      const timer = setTimeout(() => {
-        // Test a direct notification - this avoids the need for socket connection
-        const testEvent = new CustomEvent('test-notification', {
-          detail: {
-            id: `test_${Date.now()}`,
-            type: 'success',
-            title: 'TEST NOTIFICATION',
-            message: 'This is a test notification to verify if the notification system is working properly',
-            timestamp: new Date(),
-            house: user?.house || 'gryffindor',
-          }
-        });
-        window.dispatchEvent(testEvent);
-        
-        console.log('[DEBUG] Test notification event dispatched');
-        
-        // Alternatively, try to send a socket message for a house points update
-        if (typeof sendMessage === 'function') {
-          try {
-            sendMessage('house_points_update', {
-              house: user?.house || 'gryffindor',
-              points: 10,
-              reason: 'Test notification',
-              adminAction: true
-            });
-            console.log('[DEBUG] Test house points message sent via socket');
-          } catch (err) {
-            console.error('[DEBUG] Could not send test socket message:', err);
-          }
-        }
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [user, sendMessage]);
   
   const handleAddInequality = (newInequality) => {
     const result = coordinatePlaneRef.current?.handleAddInequality(newInequality);

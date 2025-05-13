@@ -66,23 +66,6 @@ export const SocketProvider = ({ children }) => {
     
     console.log('[SOCKET] Initializing socket connection');
     
-    // Add listener for test notifications
-    const handleTestNotification = (event) => {
-      console.log('[SOCKET] Received test notification event:', event.detail);
-      const notification = event.detail;
-      
-      if (!notification || !notification.id) {
-        console.error('[SOCKET] Invalid test notification data');
-        return;
-      }
-      
-      console.log('[SOCKET] Adding test notification to queue:', notification);
-      addNotification(notification);
-    };
-    
-    // Register the test event listener
-    window.addEventListener('test-notification', handleTestNotification);
-    
     // Create new socket instance with optimized connection settings
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
@@ -184,13 +167,12 @@ export const SocketProvider = ({ children }) => {
     // Cleanup on unmount
     return () => {
       console.log('[SOCKET] Cleaning up socket connection');
-      window.removeEventListener('test-notification', handleTestNotification);
       if (socketInstance) {
         socketInstance.disconnect();
         setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user, addNotification]);
+  }, [isAuthenticated, user]);
   
   // Implement heartbeat mechanism
   useEffect(() => {

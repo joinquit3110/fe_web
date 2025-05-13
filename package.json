@@ -9,8 +9,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "react-scripts start",
-    "rebuild": "node rebuild.js"
+    "dev": "react-scripts start"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.0",

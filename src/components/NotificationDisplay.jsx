@@ -163,33 +163,6 @@ const NotificationDisplay = () => {
     lastUpdate: null
   });
 
-  // Log that component mounted
-  useEffect(() => {
-    console.log('[NOTIFICATION] NotificationDisplay component mounted');
-    
-    // Check for "Force Notification Debug" in localStorage
-    const forceDebug = localStorage.getItem('FORCE_NOTIF_DEBUG') === 'true';
-    if (forceDebug) {
-      setShowDebugPanel(true);
-      console.log('[NOTIFICATION] Forced debug panel enabled');
-    }
-    
-    // Force the queue to check on mount after a brief delay
-    const checkTimer = setTimeout(() => {
-      if (notificationQueue.current.length > 0 && !processingQueue.current) {
-        console.log('[NOTIFICATION] Found items in queue on mount, processing them');
-        processQueue();
-      } else {
-        console.log('[NOTIFICATION] No notifications in queue on mount');
-      }
-    }, 1000);
-    
-    return () => {
-      clearTimeout(checkTimer);
-      console.log('[NOTIFICATION] NotificationDisplay component unmounted');
-    };
-  }, []);
-
   // Update debug stats periodically
   useEffect(() => {
     if (showDebugPanel) {
@@ -217,42 +190,14 @@ const NotificationDisplay = () => {
   // Debug keyboard shortcut (Ctrl+Shift+D)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Original shortcut: Ctrl+Shift+D 
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         toggleDebugMode();
-      }
-      
-      // Additional easier shortcut: Alt+Shift+N
-      if (e.altKey && e.shiftKey && e.key === 'N') {
-        toggleDebugMode();
-        console.log('[NOTIFICATION] Debug panel toggled with Alt+Shift+N');
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  // Function to test a notification
-  const createTestNotification = () => {
-    const testNotification = {
-      id: `test_${Date.now()}`,
-      type: 'success',
-      title: 'TEST NOTIFICATION',
-      message: 'This is a test notification created from the debug panel',
-      timestamp: new Date(),
-      house: user?.house || 'gryffindor',
-      duration: 10000 // 10 seconds
-    };
-    
-    console.log('[NOTIFICATION] Creating test notification from debug panel');
-    
-    // Fire a test notification event
-    const testEvent = new CustomEvent('test-notification', {
-      detail: testNotification
-    });
-    window.dispatchEvent(testEvent);
-  };
 
   const getNotificationTitle = (type) => {
     switch (type) {
@@ -348,7 +293,6 @@ const NotificationDisplay = () => {
       next.message = next.title || 'Notification';
     }
     
-    console.log('[NOTIFICATION] Processing notification from queue:', next.id, next.title);
     setActiveNotification(next);
     
     if (timerRef.current) {
@@ -368,8 +312,6 @@ const NotificationDisplay = () => {
         displayTime = Math.max(displayTime, 10000); // Minimum 10s for house notifications
       }
     };
-    
-    console.log(`[NOTIFICATION] Setting timeout for ${displayTime}ms for notification:`, next.id);
     
     timerRef.current = setTimeout(() => {
       // Add dismissing class for animation
@@ -407,12 +349,11 @@ const NotificationDisplay = () => {
         }
       }
     }, displayTime);
-  }, [timerRef, removeNotification, getDurationByType]);
+  }, [timerRef, removeNotification, setActiveNotification, notificationQueue, getDurationByType]);
 
   useEffect(() => {
     // When activeNotification is null and queue has items, process the next notification
     if (!activeNotification && notificationQueue.current.length > 0 && !processingQueue.current) {
-      console.log('[NOTIFICATION] Auto-processing queue, found items:', notificationQueue.current.length);
       processQueue();
     }
   }, [activeNotification, processQueue]);
@@ -544,19 +485,16 @@ const NotificationDisplay = () => {
         notificationQueue.current = [...notificationQueue.current, ...validatedNotifications];
         console.log(`[NOTIFICATION] Updated queue: ${notificationQueue.current.length} items`);
         
-        // Force process the queue immediately if it's not already processing
         if (!processingQueue.current && !activeNotification) {
-          console.log('[NOTIFICATION] Starting queue processing immediately');
-          setTimeout(() => {
-            processQueue();
-          }, 100);
+          console.log('[NOTIFICATION] Starting queue processing');
+          processQueue();
         } else {
           console.log('[NOTIFICATION] Queue processing already in progress or notification active');
           console.log(`[NOTIFICATION] Queue status: processingQueue=${processingQueue.current}, activeNotification=${activeNotification ? 'present' : 'null'}`);
         }
       }
     }
-  }, [notifications, activeNotification, processQueue, removeNotification]);
+  }, [notifications, activeNotification, removeNotification]);
 
   if (!activeNotification) {
     return null;
@@ -697,33 +635,20 @@ const NotificationDisplay = () => {
           color="white"
           p={3}
           borderRadius="md"
-          maxW="350px"
+          maxW="300px"
           fontSize="sm"
           boxShadow="0 0 20px rgba(0,0,0,0.5)"
           border="1px solid rgba(255,255,255,0.1)"
         >
-          <Heading size="xs" mb={2}>Notification Debug Panel (Alt+Shift+N)</Heading>
+          <Heading size="xs" mb={2}>Notification Debug</Heading>
           <VStack align="start" spacing={1}>
             <Text>Queue Length: {debugStats.queueLength}</Text>
             <Text>Processed: {debugStats.processedCount}</Text>
-            <Text>Active: {debugStats.activeNotificationId ? 
-              debugStats.activeNotificationId.substring(0, 20) + '...' : 
-              'none'}
-            </Text>
+            <Text>Active: {debugStats.activeNotificationId || 'none'}</Text>
             <Text>Processing: {debugStats.isProcessing ? 'Yes' : 'No'}</Text>
             <Text fontSize="xs">Last Update: {debugStats.lastUpdate}</Text>
-            
-            {activeNotification && (
-              <Box mt={2} p={2} bg="rgba(255,255,255,0.1)" borderRadius="md" w="100%">
-                <Text fontWeight="bold">Current Notification:</Text>
-                <Text fontSize="xs">ID: {activeNotification.id?.substring(0, 15)}...</Text>
-                <Text fontSize="xs">Type: {activeNotification.type}</Text>
-                <Text fontSize="xs">House: {activeNotification.house || 'none'}</Text>
-                <Text fontSize="xs">Points: {activeNotification.pointsChange || 'n/a'}</Text>
-              </Box>
-            )}
           </VStack>
-          <Flex mt={2} gap={2} flexWrap="wrap">
+          <Flex mt={2}>
             <Button 
               size="xs" 
               colorScheme="blue" 
@@ -737,23 +662,6 @@ const NotificationDisplay = () => {
               }}
             >
               Reset Queue
-            </Button>
-            <Button
-              size="xs"
-              colorScheme="green"
-              onClick={createTestNotification}
-            >
-              Test Notification
-            </Button>
-            <Button
-              size="xs"
-              colorScheme="red"
-              onClick={() => {
-                localStorage.setItem('TEST_NOTIFICATION', 'true');
-                console.log('[NOTIFICATION] Test notification flag enabled');
-              }}
-            >
-              Enable Auto Test
             </Button>
           </Flex>
         </Box>
