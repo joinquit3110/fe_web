@@ -37,7 +37,7 @@ const HousePointsNotification = ({ notification }) => {
     >
       <div className="notification-header" style={{ backgroundColor: displayColor }}>
         <i className={`notification-icon ${legacyIsPositive ? 'fas fa-bolt' : 'fas fa-skull'}`}></i>
-        <h3 className="notification-title">{notification.title}</h3>
+        <h3 className="notification-title">POINTS {legacyIsPositive ? 'AWARDED!' : 'DEDUCTED!'}</h3>
       </div>
       
       <div className="notification-content">
@@ -57,20 +57,30 @@ const HousePointsNotification = ({ notification }) => {
         </div>
         
         <div className="notification-details">
-          <p className="notification-message" style={{ color: displayColor }}>
+          <p className="notification-message" style={{ color: displayColor, marginBottom: '12px', fontWeight: 'bold' }}>
             House {houseName} has {legacyIsPositive ? 'gained' : 'lost'} {legacyPoints} points!
           </p>
           
-          {legacyReason && (
-            <p className="notification-reason">Reason: {legacyReason}</p>
-          )}
-          
-          <div className="notification-extra">
-            {legacyCriteria && (
-              <span className="notification-criteria">Criteria: {legacyCriteria}</span>
+          <div className="notification-metadata-items">
+            {legacyReason && (
+              <div className="notification-metadata-item reason-item">
+                <span className="metadata-item-label">Reason:</span>
+                <span className="metadata-item-value">{legacyReason}</span>
+              </div>
             )}
+            
+            {legacyCriteria && (
+              <div className="notification-metadata-item criteria-item">
+                <span className="metadata-item-label">Criteria:</span>
+                <span className="metadata-item-value">{legacyCriteria}</span>
+              </div>
+            )}
+            
             {legacyLevel && (
-              <span className="notification-level">Level: {legacyLevel}</span>
+              <div className="notification-metadata-item level-item">
+                <span className="metadata-item-label">Level:</span>
+                <span className="metadata-item-value">{legacyLevel}</span>
+              </div>
             )}
           </div>
         </div>

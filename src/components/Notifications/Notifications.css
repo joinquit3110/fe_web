@@ -1135,4 +1135,74 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Metadata items for NotificationItem */
+.notification-metadata-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.notification-metadata-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-left: 3px solid;
+  transition: all 0.3s ease;
+}
+
+.notification-metadata-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metadata-item-label {
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.metadata-item-value {
+  font-size: 0.95rem;
+}
+
+/* Styling for specific metadata items */
+.reason-item {
+  border-left-color: #ff9900;
+  background-color: rgba(255, 153, 0, 0.05);
+}
+
+.reason-item .metadata-item-label {
+  color: #ff9900;
+}
+
+.criteria-item {
+  border-left-color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.05);
+}
+
+.criteria-item .metadata-item-label {
+  color: #4caf50;
+}
+
+.level-item {
+  border-left-color: #3f51b5;
+  background-color: rgba(63, 81, 181, 0.05);
+}
+
+.level-item .metadata-item-label {
+  color: #3f51b5;
+}
+
+.house-points-notification.positive .metadata-item-value {
+  color: #333;
+}
+
+.house-points-notification.negative .metadata-item-value {
+  color: #444;
 } 
