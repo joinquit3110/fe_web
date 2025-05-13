@@ -1953,6 +1953,8 @@ const CoordinatePlane = forwardRef((props, ref) => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={handleCanvasClick}
+        style={{ touchAction: 'manipulation' }} /* Allow pinch zoom while blocking page scroll */
       />
       
       <div className="zoom-controls">
@@ -1983,31 +1985,52 @@ const CoordinatePlane = forwardRef((props, ref) => {
         {Math.round(zoom / CANVAS_CONFIG.defaultZoom * 100)}%
       </div>
       
-      {isPointMode && (
-        <div className="coordinates-input">
-          <div>
-            x: <input 
+      {activePoint && (
+        <div className="coordinate-input-container">
+          <div className="coordinate-input-box">
+            <div className="coordinate-input-title">Enter Intersection Point Coordinates:</div>
+            <div className="coordinate-input-form">
+          <span>(</span>
+            <input 
               type="text" 
               value={inputCoords.x} 
-              onChange={e => handleCoordinateInput('x', e.target.value)}
-              className={`coordinate-input ${coordValidation.x ? 'valid' : ''} ${showInputValidation && !coordValidation.x ? 'invalid' : ''}`}
-              onKeyDown={handleInputKeyDown}
+              onChange={e => setInputCoords(prev => ({ ...prev, x: e.target.value }))}
+              className={
+                  !showInputValidation ? '' :
+                  (inputCoords.x !== '' && Number(inputCoords.x).toFixed(1) === activePoint.correct.x.toFixed(1))
+                  ? 'correct' 
+                  : 'incorrect'
+              }
             />
-          </div>
-          <div>
-            y: <input 
+              <span>,</span>
+            <input 
               type="text" 
               value={inputCoords.y} 
-              onChange={e => handleCoordinateInput('y', e.target.value)}
-              className={`coordinate-input ${coordValidation.y ? 'valid' : ''} ${showInputValidation && !coordValidation.y ? 'invalid' : ''}`}
-              onKeyDown={handleInputKeyDown}
+              onChange={e => setInputCoords(prev => ({ ...prev, y: e.target.value }))}
+              className={
+                  !showInputValidation ? '' :
+                  (inputCoords.y !== '' && Number(inputCoords.y).toFixed(1) === activePoint.correct.y.toFixed(1))
+                  ? 'correct' 
+                  : 'incorrect'
+              }
             />
+          <span>)</span>
           </div>
-          <button onClick={handleCoordinatesSubmit} className="submit-button">Submit</button>
+            <button className="check-button" onClick={handleCheckCoordinates}>
+              Check
+            </button>
+          </div>
         </div>
       )}
       
-      {/* Keep the existing reset button */}
+      {showSpellInput && (
+        <div className="spell-input-container">
+          <button onClick={handleCastSpell} disabled={!spellInput}>Cast Spell</button>
+          <button onClick={handleFiniteIncantatem} className="finite-incantatem-btn">Avada Kedavra</button>
+        </div>
+      )}
+      
+      {/* Reset button */}
       <div className="reset-button" onClick={() => {
         setOrigin({ x: canvasWidth / 2, y: canvasHeight / 2 });
         setZoom(CANVAS_CONFIG.defaultZoom);
