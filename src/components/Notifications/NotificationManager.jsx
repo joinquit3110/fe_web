@@ -10,7 +10,7 @@ import './Notifications.css';
  */
 const NotificationManager = () => {
   const { socket } = useSocket();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   
@@ -61,6 +61,11 @@ const NotificationManager = () => {
     setNotifications([]);
     setShowNotificationCenter(false);
   };
+  
+  // Only render the notification system if the user is authenticated
+  if (!isAuthenticated || !user) {
+    return null;
+  }
   
   return (
     <>
