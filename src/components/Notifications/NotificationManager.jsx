@@ -235,61 +235,55 @@ const NotificationManager = ({ children }) => {
                 </div>
               )}
               
-              {/* Display interactive metadata cards */}
-              <div className="magical-notification-metadata-container">
-                {/* Points card */}
-                {(activeNotification.points || activeNotification.pointsChange) && (
-                  <div className="magical-metadata-card points-card">
-                    <div className="metadata-card-header">
-                      <div className="metadata-card-icon">⚡</div>
-                      <span className="metadata-card-title">Points</span>
-                    </div>
-                    <div className="metadata-card-value">
-                      {(activeNotification.points || activeNotification.pointsChange) > 0 ? '+' : ''}
-                      {activeNotification.points || activeNotification.pointsChange}
-                    </div>
+              {/* Display metadata items separately */}
+              {(activeNotification.points || activeNotification.pointsChange) && (
+                <div className="magical-metadata-item points-item">
+                  <div className="metadata-item-label">
+                    <span className="metadata-icon">⚡</span>
+                    Points:
                   </div>
-                )}
-                
-                {/* Reason card */}
-                {activeNotification.reason && (
-                  <div className="magical-metadata-card reason-card">
-                    <div className="metadata-card-header">
-                      <div className="metadata-card-icon">📜</div>
-                      <span className="metadata-card-title">Reason</span>
-                    </div>
-                    <div className="metadata-card-value">
-                      {activeNotification.reason}
-                    </div>
+                  <div className="metadata-item-value">
+                    {(activeNotification.points || activeNotification.pointsChange) > 0 ? '+' : ''}
+                    {activeNotification.points || activeNotification.pointsChange}
                   </div>
-                )}
-                
-                {/* Criteria card */}
-                {activeNotification.criteria && (
-                  <div className="magical-metadata-card criteria-card">
-                    <div className="metadata-card-header">
-                      <div className="metadata-card-icon">🔍</div>
-                      <span className="metadata-card-title">Criteria</span>
-                    </div>
-                    <div className="metadata-card-value">
-                      {activeNotification.criteria}
-                    </div>
+                </div>
+              )}
+              
+              {activeNotification.reason && (
+                <div className="magical-metadata-item reason-item">
+                  <div className="metadata-item-label">
+                    <span className="metadata-icon">📜</span>
+                    Reason:
                   </div>
-                )}
-                
-                {/* Level card */}
-                {activeNotification.level && (
-                  <div className="magical-metadata-card level-card">
-                    <div className="metadata-card-header">
-                      <div className="metadata-card-icon">🪄</div>
-                      <span className="metadata-card-title">Level</span>
-                    </div>
-                    <div className="metadata-card-value">
-                      {activeNotification.level}
-                    </div>
+                  <div className="metadata-item-value">
+                    {activeNotification.reason}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+              
+              {activeNotification.criteria && (
+                <div className="magical-metadata-item criteria-item">
+                  <div className="metadata-item-label">
+                    <span className="metadata-icon">🔍</span>
+                    Criteria:
+                  </div>
+                  <div className="metadata-item-value">
+                    {activeNotification.criteria}
+                  </div>
+                </div>
+              )}
+              
+              {activeNotification.level && (
+                <div className="magical-metadata-item level-item">
+                  <div className="metadata-item-label">
+                    <span className="metadata-icon">🪄</span>
+                    Level:
+                  </div>
+                  <div className="metadata-item-value">
+                    {activeNotification.level}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           

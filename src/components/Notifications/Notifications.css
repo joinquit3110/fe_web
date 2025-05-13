@@ -943,6 +943,7 @@
 /* Notification text content */
 .magical-notification-text {
   margin: 15px 0;
+  width: 100%;
 }
 
 .magical-notification-title {
@@ -1004,5 +1005,134 @@
   100% {
     transform: translateY(0) scale(1);
     filter: drop-shadow(0 5px 15px rgba(255, 255, 255, 0.3));
+  }
+}
+
+/* Metadata items - new style */
+.magical-metadata-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 5px solid;
+  animation: fade-in-up 0.5s forwards;
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.magical-metadata-item:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+  transform: translateY(-4px);
+  transition: all 0.3s ease;
+}
+
+.metadata-item-label {
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffd700;
+}
+
+.metadata-icon {
+  margin-right: 10px;
+  font-size: 1.2rem;
+  display: inline-block;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.metadata-item-value {
+  font-size: 1.1rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+/* Points styles */
+.points-item {
+  border-left-color: #ffd700;
+  --index: 0;
+}
+
+.points-item .metadata-item-label {
+  color: #ffd700;
+}
+
+.points-item .metadata-item-value {
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+/* Reason styles */
+.reason-item {
+  border-left-color: #00ffcc;
+  --index: 1;
+}
+
+.reason-item .metadata-item-label {
+  color: #00ffcc;
+}
+
+.reason-item .metadata-item-value {
+  color: #b8fff9;
+  font-style: italic;
+}
+
+/* Criteria styles */
+.criteria-item {
+  border-left-color: #4caf50;
+  --index: 2;
+}
+
+.criteria-item .metadata-item-label {
+  color: #4caf50;
+}
+
+.criteria-item .metadata-item-value {
+  color: #a5d6a7;
+}
+
+/* Level styles */
+.level-item {
+  border-left-color: #7986cb;
+  --index: 3;
+}
+
+.level-item .metadata-item-label {
+  color: #7986cb;
+}
+
+.level-item .metadata-item-value {
+  color: #c5cae9;
+  font-weight: bold;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 } 
