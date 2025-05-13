@@ -8,7 +8,7 @@ import './Notifications.css';
 /**
  * Component quản lý thông báo từ socket và hiển thị thông báo
  */
-const NotificationManager = () => {
+const NotificationManager = ({ children }) => {
   const { socket } = useSocket();
   const { user, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
@@ -77,12 +77,16 @@ const NotificationManager = () => {
   };
   
   // Only render the notification system if the user is authenticated
-  if (!isAuthenticated || !user) {
-    return null;
+  if (!isAuthenticated || !user || !user.id) {
+    // If not authenticated, just render children without the notification UI
+    return children || null;
   }
   
   return (
     <div className="notification-manager">
+      {/* Children components passed to NotificationManager */}
+      {children}
+      
       {/* Trung tâm thông báo (hiển thị khi click vào biểu tượng) */}
       {showNotificationCenter && (
         <div className="notification-center-overlay">

@@ -53,8 +53,8 @@ export const SocketProvider = ({ children }) => {
 
   // Initialize socket on authentication state change
   useEffect(() => {
-    // Only initialize socket if user is authenticated
-    if (!isAuthenticated) {
+    // Only initialize socket if user is authenticated with a valid ID
+    if (!isAuthenticated || !user || !user.id) {
       if (socket) {
         socket.disconnect();
         setSocket(null);

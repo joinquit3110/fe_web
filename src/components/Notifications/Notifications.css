@@ -234,18 +234,39 @@
 }
 
 /* Notification bell icon */
+.notification-manager {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .notification-icon-container {
   position: fixed;
   top: 20px;
   right: 20px;
   z-index: 999;
   cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(14, 26, 64, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.notification-icon-container:hover {
+  transform: scale(1.1);
+  background-color: rgba(14, 26, 64, 1);
 }
 
 .notification-bell-icon {
   font-size: 24px;
   display: block;
   transition: transform 0.2s;
+  color: #D3A625;
 }
 
 .notification-bell-icon.has-notifications {

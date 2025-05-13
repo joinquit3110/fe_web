@@ -58,11 +58,9 @@ const theme = extendTheme({
 
 // Private Route component for protected routes
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
-  // Allow bypassing auth in development mode
-  if (!isAuthenticated && !isDevelopment) {
+  const { isAuthenticated, user } = useAuth();
+  // Remove development mode bypass for authentication
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
   
@@ -479,9 +477,11 @@ const App = () => {
       <AuthProvider>
         <AdminProvider>
           <SocketProvider>
-            <NotificationManager>
-              <AppContent />
-            </NotificationManager>
+            <div className="app">
+              <NotificationManager>
+                <AppContent />
+              </NotificationManager>
+            </div>
           </SocketProvider>
         </AdminProvider>
       </AuthProvider>
