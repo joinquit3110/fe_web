@@ -494,12 +494,11 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Handle touch start
   const handleTouchStart = (e) => {
-    e.preventDefault(); // Prevent default behaviors like scroll
-    
     const touches = Array.from(e.touches);
     
     // Only handle pinch zoom with 2 fingers
     if (touches.length === 2) {
+      e.preventDefault(); // Only prevent default for pinch-zoom
       setTouchState({
         initialDistance: getDistance(touches[0], touches[1]),
         initialZoom: zoom
@@ -517,13 +516,13 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Handle touch move
   const handleTouchMove = (e) => {
-    e.preventDefault(); // Critical to prevent Safari tab switching
-    e.stopPropagation();
-    
     const touches = Array.from(e.touches);
     
-    // Only support pinch zoom with 2 fingers
+    // Only handle pinch zoom with 2 fingers
     if (touches.length === 2 && touchState.initialDistance > 0) {
+      e.preventDefault(); // Only prevent default for pinch-zoom
+      e.stopPropagation();
+      
       // Calculate new distance between 2 fingers
       const currentDistance = getDistance(touches[0], touches[1]);
       
@@ -542,8 +541,12 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Handle touch end
   const handleTouchEnd = (e) => {
-    // Prevent default to avoid Safari issues
-    e.preventDefault();
+    const touches = Array.from(e.touches);
+    
+    // Only prevent default for two-finger gestures
+    if (touchState.initialDistance > 0 && touches.length < 2) {
+      e.preventDefault();
+    }
     
     // Reset touch state
     setTouchState({
@@ -1961,7 +1964,7 @@ const CoordinatePlane = forwardRef((props, ref) => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleCanvasClick}
-        style={{ touchAction: 'none' }} /* Prevent any browser default touch actions */
+        style={{ touchAction: 'pan-x pan-y' }} /* Allow normal panning but handle zoom ourselves */
       />
       
       <div className="zoom-level">
