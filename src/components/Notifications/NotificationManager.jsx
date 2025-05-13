@@ -13,6 +13,7 @@ const NotificationManager = () => {
   const { user, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [activeToast, setActiveToast] = useState(null);
   
   // Xử lý thông báo từ socket
   useEffect(() => {
@@ -36,6 +37,14 @@ const NotificationManager = () => {
       
       // Thêm thông báo mới vào danh sách
       setNotifications(prev => [notification, ...prev].slice(0, 20)); // Giới hạn 20 thông báo
+      
+      // Show the notification as a toast
+      setActiveToast(notification);
+      
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        setActiveToast(toast => toast?.id === notification.id ? null : toast);
+      }, 5000);
     };
     
     // Lắng nghe các sự kiện thông báo
@@ -54,12 +63,17 @@ const NotificationManager = () => {
   // Hiển thị trung tâm thông báo
   const toggleNotificationCenter = () => {
     setShowNotificationCenter(prev => !prev);
+    // Hide any active toast when showing notification center
+    if (!showNotificationCenter) {
+      setActiveToast(null);
+    }
   };
   
   // Xóa tất cả thông báo
   const clearAllNotifications = () => {
     setNotifications([]);
     setShowNotificationCenter(false);
+    setActiveToast(null);
   };
   
   // Only render the notification system if the user is authenticated
@@ -68,21 +82,25 @@ const NotificationManager = () => {
   }
   
   return (
-    <>
+    <div className="notification-manager">
       {/* Trung tâm thông báo (hiển thị khi click vào biểu tượng) */}
       {showNotificationCenter && (
-        <NotificationList 
-          notifications={notifications} 
-          onClose={() => setShowNotificationCenter(false)}
-        />
+        <div className="notification-center-overlay">
+          <NotificationList 
+            notifications={notifications} 
+            onClose={() => setShowNotificationCenter(false)}
+          />
+        </div>
       )}
       
       {/* Toast thông báo mới nhất */}
-      {notifications.length > 0 && !showNotificationCenter && (
-        <NotificationToast
-          notification={notifications[0]} // Lấy thông báo mới nhất
-          onClose={() => setNotifications(prev => prev.slice(1))}
-        />
+      {activeToast && !showNotificationCenter && (
+        <div className="notification-toast-container">
+          <NotificationToast
+            notification={activeToast}
+            onClose={() => setActiveToast(null)}
+          />
+        </div>
       )}
       
       {/* Biểu tượng thông báo */}
@@ -94,7 +112,7 @@ const NotificationManager = () => {
           <span className="notification-count">{Math.min(notifications.length, 9)}</span>
         )}
       </div>
-    </>
+    </div>
   );
 };
 
