@@ -112,10 +112,11 @@ const NotificationManager = ({ children }) => {
     if (notification.isHousePointsUpdate || notification.type === 'house_points') {
       const isPositive = notification.points > 0 || notification.pointsChange > 0;
       return (
-        <div className="magical-notification-icon">
+        <div className="magical-notification-banner">
           <img 
             src={isPositive ? "/assets/images/IncreasePoint.png" : "/assets/images/DecreasePoint.png"} 
             alt={isPositive ? "Points awarded" : "Points deducted"}
+            className="magical-banner-image"
             onError={(e) => {
               // Fallback icon if image doesn't load
               e.target.style.display = 'none';
@@ -135,7 +136,7 @@ const NotificationManager = ({ children }) => {
       case 'warning': return <div className="magical-notification-icon">⚠️</div>;
       case 'error': return <div className="magical-notification-icon">💫</div>;
       case 'announcement': return <div className="magical-notification-icon">📣</div>;
-      default: return <div className="magical-notification-icon">📜</div>;
+      default: return <div className="magical-notification-icon">��</div>;
     }
   };
   
@@ -178,50 +179,80 @@ const NotificationManager = ({ children }) => {
                 </div>
               )}
               
-              {/* Display metadata panel with reason, criteria, level */}
-              {(activeNotification.reason || activeNotification.criteria || activeNotification.level) && (
-                <div className="magical-notification-metadata">
-                  {activeNotification.reason && (
-                    <div className="magical-metadata-item reason">
-                      <span className="metadata-label">Reason:</span>
-                      <span className="metadata-value">{activeNotification.reason}</span>
+              {/* Display interactive metadata cards */}
+              <div className="magical-notification-metadata-container">
+                {/* Points card */}
+                {(activeNotification.points || activeNotification.pointsChange) && (
+                  <div className="magical-metadata-card points-card">
+                    <div className="metadata-card-header">
+                      <span className="metadata-card-icon">⚡</span>
+                      <span className="metadata-card-title">Points</span>
                     </div>
-                  )}
-                  
-                  {activeNotification.criteria && (
-                    <div className="magical-metadata-item criteria">
-                      <span className="metadata-label">Criteria:</span>
-                      <span className="metadata-value">{activeNotification.criteria}</span>
+                    <div className="metadata-card-value">
+                      {activeNotification.points || activeNotification.pointsChange}
                     </div>
-                  )}
-                  
-                  {activeNotification.level && (
-                    <div className="magical-metadata-item level">
-                      <span className="metadata-label">Level:</span>
-                      <span className="metadata-value">{activeNotification.level}</span>
+                  </div>
+                )}
+                
+                {/* Reason card */}
+                {activeNotification.reason && (
+                  <div className="magical-metadata-card reason-card">
+                    <div className="metadata-card-header">
+                      <span className="metadata-card-icon">📜</span>
+                      <span className="metadata-card-title">Reason</span>
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="metadata-card-value">
+                      {activeNotification.reason}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Criteria card */}
+                {activeNotification.criteria && (
+                  <div className="magical-metadata-card criteria-card">
+                    <div className="metadata-card-header">
+                      <span className="metadata-card-icon">🔍</span>
+                      <span className="metadata-card-title">Criteria</span>
+                    </div>
+                    <div className="metadata-card-value">
+                      {activeNotification.criteria}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Level card */}
+                {activeNotification.level && (
+                  <div className="magical-metadata-card level-card">
+                    <div className="metadata-card-header">
+                      <span className="metadata-card-icon">🪄</span>
+                      <span className="metadata-card-title">Level</span>
+                    </div>
+                    <div className="metadata-card-value">
+                      {activeNotification.level}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
+            {/* Magical particles overlay */}
+            <div className="magical-particles">
+              {[...Array(15)].map((_, i) => (
+                <div key={i} className="magical-particle" style={{
+                  animationDelay: `${Math.random() * 2}s`,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`
+                }} />
+              ))}
+            </div>
+
+            {/* Close button */}
             <div className="magical-notification-close" onClick={(e) => {
               e.stopPropagation();
               dismissNotification();
             }}>
               ×
             </div>
-          </div>
-          
-          {/* Magical particles overlay */}
-          <div className="magical-particles">
-            {[...Array(15)].map((_, i) => (
-              <div key={i} className="magical-particle" style={{
-                animationDelay: `${Math.random() * 2}s`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`
-              }} />
-            ))}
           </div>
         </div>
       )}
