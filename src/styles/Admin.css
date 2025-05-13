@@ -1113,3 +1113,94 @@
   animation: none;
   transform: scale(1.1);
 }
+
+/* Add new styles for the House Cup leaderboard */
+.refresh-icon {
+  transition: all 0.3s ease;
+}
+
+.house-points-card {
+  position: relative;
+  overflow: hidden !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  transform-origin: center center;
+  backdrop-filter: blur(5px);
+}
+
+.house-points-card:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(to bottom, 
+    rgba(255, 255, 255, 0.3) 0%, 
+    rgba(255, 255, 255, 0.1) 30%, 
+    rgba(255, 255, 255, 0) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.house-points-card.gryffindor:hover:before {
+  background: linear-gradient(to bottom, 
+    rgba(255, 215, 0, 0.3) 0%, 
+    rgba(255, 215, 0, 0.1) 30%, 
+    rgba(255, 215, 0, 0) 100%);
+}
+
+.house-points-card.slytherin:hover:before {
+  background: linear-gradient(to bottom, 
+    rgba(172, 172, 172, 0.3) 0%, 
+    rgba(172, 172, 172, 0.1) 30%, 
+    rgba(172, 172, 172, 0) 100%);
+}
+
+.house-points-card.ravenclaw:hover:before {
+  background: linear-gradient(to bottom, 
+    rgba(148, 107, 45, 0.3) 0%, 
+    rgba(148, 107, 45, 0.1) 30%, 
+    rgba(148, 107, 45, 0) 100%);
+}
+
+.house-points-card.hufflepuff:hover:before {
+  background: linear-gradient(to bottom, 
+    rgba(0, 0, 0, 0.3) 0%, 
+    rgba(0, 0, 0, 0.1) 30%, 
+    rgba(0, 0, 0, 0) 100%);
+}
+
+.point-badge {
+  position: relative;
+  z-index: 2;
+}
+
+.point-badge:after {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  right: -10%;
+  bottom: -10%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.house-points-card:hover .point-badge:after {
+  opacity: 1;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .house-points-card {
+    margin-top: 0 !important;
+    transform: scale(1) !important;
+  }
+  
+  .house-points-card:hover {
+    transform: scale(1.02) !important;
+  }
+}

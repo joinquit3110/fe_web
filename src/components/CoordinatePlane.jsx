@@ -517,7 +517,8 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Handle touch move
   const handleTouchMove = (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Critical to prevent Safari tab switching
+    e.stopPropagation();
     
     const touches = Array.from(e.touches);
     
@@ -526,9 +527,12 @@ const CoordinatePlane = forwardRef((props, ref) => {
       // Calculate new distance between 2 fingers
       const currentDistance = getDistance(touches[0], touches[1]);
       
-      // Calculate zoom ratio
+      // Calculate zoom ratio - make it more sensitive
       const scaleFactor = currentDistance / touchState.initialDistance;
-      const newZoom = Math.max(CANVAS_CONFIG.minZoom, Math.min(100, touchState.initialZoom * scaleFactor));
+      const newZoom = Math.max(
+        CANVAS_CONFIG.minZoom, 
+        Math.min(CANVAS_CONFIG.maxZoom, touchState.initialZoom * scaleFactor)
+      );
       
       // Update zoom
       setZoom(newZoom);
@@ -538,6 +542,9 @@ const CoordinatePlane = forwardRef((props, ref) => {
 
   // Handle touch end
   const handleTouchEnd = (e) => {
+    // Prevent default to avoid Safari issues
+    e.preventDefault();
+    
     // Reset touch state
     setTouchState({
       initialDistance: 0,
@@ -1954,32 +1961,8 @@ const CoordinatePlane = forwardRef((props, ref) => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleCanvasClick}
-        style={{ touchAction: 'manipulation' }} /* Allow pinch zoom while blocking page scroll */
+        style={{ touchAction: 'none' }} /* Prevent any browser default touch actions */
       />
-      
-      <div className="zoom-controls">
-        <button 
-          className="zoom-button" 
-          onClick={() => setZoom(prev => Math.min(CANVAS_CONFIG.maxZoom, prev + 5))}
-          aria-label="Zoom in"
-        >
-          +
-        </button>
-        <button 
-          className="zoom-button" 
-          onClick={() => setZoom(CANVAS_CONFIG.defaultZoom)}
-          aria-label="Reset zoom"
-        >
-          ↺
-        </button>
-        <button 
-          className="zoom-button" 
-          onClick={() => setZoom(prev => Math.max(CANVAS_CONFIG.minZoom, prev - 5))}
-          aria-label="Zoom out"
-        >
-          -
-        </button>
-      </div>
       
       <div className="zoom-level">
         {Math.round(zoom / CANVAS_CONFIG.defaultZoom * 100)}%
@@ -2029,12 +2012,6 @@ const CoordinatePlane = forwardRef((props, ref) => {
           <button onClick={handleFiniteIncantatem} className="finite-incantatem-btn">Avada Kedavra</button>
         </div>
       )}
-      
-      {/* Reset button */}
-      <div className="reset-button" onClick={() => {
-        setOrigin({ x: canvasWidth / 2, y: canvasHeight / 2 });
-        setZoom(CANVAS_CONFIG.defaultZoom);
-      }}>Reset View</div>
     </div>
   );
 });

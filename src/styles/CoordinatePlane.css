@@ -5,6 +5,10 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  touch-action: none; /* Prevent browser gestures */
+  -webkit-touch-callout: none; /* Disable iOS callout */
+  -webkit-user-select: none; /* Prevent text selection */
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
 }
 
 .coordinate-canvas:active {
@@ -17,43 +21,7 @@
   overflow: hidden;
   border-radius: 8px;
   background-color: white;
-}
-
-.zoom-controls {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  z-index: 100;
-}
-
-.zoom-button {
-  width: 40px;
-  height: 40px;
-  background-color: #0E1A40;
-  color: #D3A625;
-  border: 2px solid #D3A625;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.zoom-button:hover {
-  background-color: #D3A625;
-  color: #0E1A40;
-  transform: scale(1.05);
-}
-
-.zoom-button:active {
-  transform: scale(0.95);
+  touch-action: none; /* Prevent browser gestures */
 }
 
 .zoom-level {
@@ -71,31 +39,6 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   user-select: none;
   z-index: 100;
-}
-
-.reset-button {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background-color: #740001;
-  color: #D3A625;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 2px solid #D3A625;
-  cursor: pointer;
-  font-family: 'Cinzel', serif;
-  font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
-}
-
-.reset-button:hover {
-  background-color: #D3A625;
-  color: #740001;
-}
-
-.reset-button:active {
-  transform: scale(0.95);
 }
 
 /* Point Styles */
@@ -235,28 +178,11 @@
     min-width: 0;
     border-radius: 6px;
   }
-  .zoom-controls {
-    top: 4px;
-    right: 4px;
-    gap: 2px;
-  }
-  .zoom-button {
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
-  }
   .zoom-level {
     top: 4px;
     left: 4px;
     font-size: 12px;
     padding: 3px 6px;
-  }
-  .reset-button {
-    bottom: 4px;
-    right: 4px;
-    padding: 6px 10px;
-    font-size: 13px;
-    border-radius: 12px;
   }
   .coordinates-input {
     bottom: 4px;

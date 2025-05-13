@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack,
-  useToast, Spinner
+  Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack, Button,
+  useToast, Spinner, Tooltip, keyframes
 } from '@chakra-ui/react';
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
@@ -10,10 +10,34 @@ import ravenclawLogo from '../asset/Ravenclaw.png';
 import gryffindorLogo from '../asset/Gryffindor.png';
 import hufflepuffLogo from '../asset/Hufflepuff.png';
 
+// Define animations
+const pulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+`;
+
+const glow = keyframes`
+  0% { box-shadow: 0 0 15px gold; }
+  50% { box-shadow: 0 0 25px gold, 0 0 40px gold; }
+  100% { box-shadow: 0 0 15px gold; }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+`;
+
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
 const Leaderboard = () => {
   const { users, fetchUsers } = useAdmin();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [houseStats, setHouseStats] = useState({
     gryffindor: { points: 0, users: 0 },
     slytherin: { points: 0, users: 0 },
@@ -29,29 +53,45 @@ const Leaderboard = () => {
     { value: 'hufflepuff', label: 'Hufflepuff', color: 'yellow.500', bgColor: '#ecb939', textColor: '#000000', logo: hufflepuffLogo }
   ];
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setRefreshing(true);
+    } else {
       setLoading(true);
-      try {
-        await fetchUsers();
-      } catch (err) {
+    }
+    
+    try {
+      await fetchUsers();
+      
+      if (isManualRefresh) {
         toast({
-          title: 'Error loading leaderboard data',
-          description: err.message || 'Failed to fetch house data',
-          status: 'error',
-          duration: 3000,
+          title: 'House Cup Updated',
+          description: 'Latest house points have been loaded',
+          status: 'success',
+          duration: 2000,
           isClosable: true,
         });
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      toast({
+        title: 'Error loading leaderboard data',
+        description: err.message || 'Failed to fetch house data',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [fetchUsers, toast]);
 
+  useEffect(() => {
     loadData();
     // Refresh data every 60 seconds
-    const interval = setInterval(loadData, 60000);
+    const interval = setInterval(() => loadData(), 60000);
     return () => clearInterval(interval);
-  }, [fetchUsers, toast]);
+  }, [loadData]);
 
   useEffect(() => {
     if (!users || users.length === 0) return;
@@ -95,32 +135,74 @@ const Leaderboard = () => {
   return (
     <Box className="wizard-panel">
       <VStack spacing={4} align="stretch">
-        <Heading 
-          className="activity-title" 
-          fontFamily="'Cinzel', serif"
-          textAlign="center"
-          position="relative"
-          textShadow="0 0 10px rgba(211, 166, 37, 0.5)"
-          letterSpacing="1px"
-          mb={4}
-        >
-          <span style={{
-            display: "inline-block",
-            padding: "0 30px",
-            position: "relative"
-          }}>
-            Hogwarts House Cup Leaderboard
+        <Flex justify="center" align="center" position="relative">
+          <Heading 
+            className="activity-title" 
+            fontFamily="'Cinzel', serif"
+            textAlign="center"
+            position="relative"
+            textShadow="0 0 10px rgba(211, 166, 37, 0.5)"
+            letterSpacing="1px"
+            mb={4}
+          >
             <span style={{
-              position: "absolute",
-              bottom: "-5px",
-              left: "0",
-              right: "0",
-              height: "2px",
-              background: "linear-gradient(to right, transparent, var(--secondary-color), transparent)",
-              animation: "shimmer 2s infinite"
-            }}></span>
-          </span>
-        </Heading>
+              display: "inline-block",
+              padding: "0 30px",
+              position: "relative"
+            }}>
+              Hogwarts House Cup
+              <span style={{
+                position: "absolute",
+                bottom: "-5px",
+                left: "0",
+                right: "0",
+                height: "2px",
+                background: "linear-gradient(90deg, transparent, var(--secondary-color), transparent)",
+                backgroundSize: "200% 100%",
+                animation: `${shimmer} 2s infinite linear`
+              }}></span>
+            </span>
+          </Heading>
+          
+          <Tooltip label="Refresh House Cup" placement="top">
+            <Button
+              position="absolute"
+              right="5px"
+              top="5px"
+              size="sm"
+              borderRadius="full"
+              width="40px"
+              height="40px"
+              bg="transparent"
+              color="var(--secondary-color)"
+              border="2px solid var(--secondary-color)"
+              _hover={{
+                bg: "rgba(211, 166, 37, 0.1)",
+                transform: "rotate(180deg)",
+                transition: "transform 0.5s"
+              }}
+              _active={{
+                bg: "rgba(211, 166, 37, 0.2)",
+              }}
+              onClick={() => loadData(true)}
+              isLoading={refreshing}
+              css={{
+                "&:focus": {
+                  boxShadow: "0 0 0 3px rgba(211, 166, 37, 0.3)"
+                },
+                transition: "all 0.3s"
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                className="refresh-icon" style={{ animation: refreshing ? `${spin} 1s infinite linear` : 'none' }}>
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+              </svg>
+            </Button>
+          </Tooltip>
+        </Flex>
 
         {loading ? (
           <Flex justify="center" py={10} align="center" height="200px">
@@ -133,16 +215,28 @@ const Leaderboard = () => {
                 key={house.value}
                 className={`house-points-card ${house.value}`}
                 style={{
-                  background: `linear-gradient(135deg, ${house.bgColor}, ${house.bgColor}CC)`,
+                  background: `linear-gradient(135deg, ${house.bgColor} 30%, ${house.bgColor}DD 70%, ${house.bgColor}CC)`,
                   color: house.textColor,
                   position: 'relative',
-                  boxShadow: index === 0 ? '0 0 30px 8px gold, 0 0 10px 2px #fff' : '0 2px 12px rgba(0,0,0,0.3)',
-                  border: index === 0 ? '3px solid gold' : '2px solid #fff',
+                  boxShadow: index === 0 
+                    ? '0 0 30px 8px gold, 0 0 10px 2px #fff' 
+                    : '0 6px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)',
+                  border: index === 0 ? '3px solid gold' : '2px solid rgba(255,255,255,0.6)',
                   borderRadius: '18px',
                   overflow: 'hidden',
                   minHeight: '220px',
                   marginTop: index === 0 ? '-10px' : '0',
-                  zIndex: index === 0 ? 2 : 1
+                  zIndex: index === 0 ? 2 : 1,
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  animation: index === 0 ? `${glow} 3s infinite` : 'none',
+                  transform: index === 0 ? 'scale(1.05)' : 'scale(1)',
+                }}
+                _hover={{
+                  transform: index === 0 ? 'scale(1.08)' : 'scale(1.03)',
+                  boxShadow: index === 0 
+                    ? '0 0 40px 10px gold, 0 0 15px 3px #fff' 
+                    : '0 8px 24px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.2)',
                 }}
               >
                 <Flex direction="column" align="center" justify="center" h="100%">
@@ -150,26 +244,27 @@ const Leaderboard = () => {
                     src={house.logo} 
                     alt={`${house.label} crest`} 
                     style={{
-                      width: '90px',
+                      width: index === 0 ? '110px' : '90px',
                       height: 'auto',
                       marginTop: '18px',
                       marginBottom: '8px',
                       filter: index === 0 ? 'drop-shadow(0 0 16px gold)' : 'drop-shadow(0 0 8px #fff)',
-                      transition: 'filter 0.3s',
-                      zIndex: 2
+                      transition: 'all 0.3s ease',
+                      zIndex: 2,
+                      animation: index === 0 ? `${pulse} 3s infinite ease-in-out` : 'none',
                     }}
                   />
                   <Heading size="lg" mt={2} mb={1} style={{
                     fontFamily: 'Cinzel, serif',
                     letterSpacing: '2px',
                     color: house.textColor,
-                    textShadow: index === 0 ? '0 0 10px gold' : '0 0 6px #fff',
+                    textShadow: index === 0 ? '0 0 10px gold, 0 0 20px gold' : '0 0 6px #fff',
                     fontWeight: 700
                   }}>{house.label}</Heading>
                   <Badge 
                     className="house-badge"
                     style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.18)",
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
                       color: house.textColor,
                       fontSize: '1rem',
                       marginBottom: '6px',
@@ -177,7 +272,8 @@ const Leaderboard = () => {
                       border: '1.5px solid #fff',
                       borderRadius: '12px',
                       padding: '4px 16px',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      backdropFilter: 'blur(2px)',
                     }}
                   >
                     {houseStats[house.value]?.users || 0} students
@@ -186,23 +282,23 @@ const Leaderboard = () => {
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
-                    width="90px"
-                    height="90px"
+                    width={index === 0 ? '110px' : '90px'}
+                    height={index === 0 ? '110px' : '90px'}
                     p={0}
                     borderRadius="full" 
                     bg={index === 0 ? 'gold' : `${house.textColor}DD`}
                     color={index === 0 ? house.bgColor : house.bgColor}
                     fontWeight="bold"
-                    fontSize="2.5rem"
+                    fontSize={index === 0 ? '3rem' : '2.5rem'}
                     className="point-badge"
                     boxShadow={index === 0 ? '0 0 20px gold' : '0 0 8px #fff'}
                     mt={2}
                     mb={2}
                     style={{
-                      minWidth: '90px',
-                      minHeight: '90px',
-                      maxWidth: '90px',
-                      maxHeight: '90px',
+                      minWidth: index === 0 ? '110px' : '90px',
+                      minHeight: index === 0 ? '110px' : '90px',
+                      maxWidth: index === 0 ? '110px' : '90px',
+                      maxHeight: index === 0 ? '110px' : '90px',
                       aspectRatio: '1/1',
                       display: 'flex',
                       alignItems: 'center',
@@ -210,7 +306,8 @@ const Leaderboard = () => {
                       margin: '0 auto',
                       letterSpacing: '1px',
                       border: index === 0 ? '3px solid #fff' : '2px solid #fff',
-                      transition: 'box-shadow 0.3s',
+                      transition: 'all 0.3s ease',
+                      animation: index === 0 ? `${pulse} 3s infinite ease-in-out` : 'none',
                     }}
                   >
                     {houseStats[house.value]?.points || 0}
@@ -223,8 +320,12 @@ const Leaderboard = () => {
                     alignItems="center"
                   >
                     <span style={{
-                      background: index === 0 ? 'linear-gradient(90deg, gold, #fffbe7)' : 'linear-gradient(90deg, #222, #444)',
-                      color: index === 0 ? '#bfa100' : '#fff',
+                      background: index === 0 
+                        ? 'linear-gradient(90deg, #ffd700, #fff6a0, #ffd700)' 
+                        : 'linear-gradient(90deg, #333, #666, #333)',
+                      backgroundSize: '200% 100%',
+                      animation: index === 0 ? `${shimmer} 2s infinite linear` : 'none',
+                      color: index === 0 ? '#8B7700' : '#fff',
                       borderRadius: '16px',
                       padding: '4px 18px',
                       fontWeight: 700,
@@ -236,6 +337,8 @@ const Leaderboard = () => {
                       gap: '6px',
                       border: index === 0 ? '2px solid #fffbe7' : '1.5px solid #fff',
                       marginBottom: '4px',
+                      transition: 'all 0.3s ease',
+                      backdropFilter: 'blur(2px)',
                     }}>
                       {index === 0 ? '👑' : '🏅'}
                       {index === 0 ? 'HOUSE CHAMPION' : `RANK #${index + 1}`}
