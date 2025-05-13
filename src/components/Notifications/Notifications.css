@@ -418,20 +418,27 @@
 /* Banner image for point notifications */
 .magical-notification-banner {
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
   position: relative;
   overflow: hidden;
   border-radius: 10px;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
   text-align: center;
+  max-height: 250px;
+  display: flex;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .magical-banner-image {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   height: auto;
+  max-height: 250px;
   display: block;
   object-fit: contain;
-  animation: spell-cast 0.8s ease-out, float 3s infinite ease-in-out alternate;
+  animation: image-appear 0.8s ease-out, image-float 5s infinite ease-in-out alternate;
+  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
 }
 
 .magical-notification-icon {
@@ -443,41 +450,28 @@
 
 /* Metadata cards */
 .magical-notification-metadata-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 20px;
 }
 
 .magical-metadata-card {
   border-radius: 8px;
   padding: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   animation: card-appear 0.5s ease-out forwards;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   transform-origin: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   overflow: hidden;
   position: relative;
+  border-left: 5px solid;
 }
 
 .magical-metadata-card:hover {
   transform: translateY(-5px) scale(1.02);
   box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
-}
-
-.magical-metadata-card::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
-  background: linear-gradient(45deg, transparent 65%, rgba(255, 255, 255, 0.2) 70%, transparent 75%);
-  background-size: 200% 200%;
-  animation: shimmer 3s infinite linear;
-  z-index: 1;
-  pointer-events: none;
 }
 
 .metadata-card-header {
@@ -496,43 +490,66 @@
 }
 
 .metadata-card-title {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: bold;
   letter-spacing: 1px;
   text-transform: uppercase;
   font-family: 'Harry P', 'Lumos', serif;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
 }
 
 .metadata-card-value {
-  font-size: 1rem;
+  font-size: 1.1rem;
   letter-spacing: 0.5px;
   line-height: 1.4;
   position: relative;
   z-index: 2;
-  padding: 5px;
+  padding: 8px;
   border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 /* Card-specific styles */
 .points-card {
   background: linear-gradient(135deg, #6f0000 0%, #200122 100%);
-  border: 1px solid #700000;
+  border-color: #ff9900;
+  animation-delay: 0.1s;
+}
+
+.points-card .metadata-card-value {
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 1.2rem;
 }
 
 .reason-card {
   background: linear-gradient(135deg, #0a4c4c 0%, #003545 100%);
-  border: 1px solid #0a7373;
+  border-color: #00ffcc;
+  animation-delay: 0.2s;
+}
+
+.reason-card .metadata-card-value {
+  color: #b8fff9;
 }
 
 .criteria-card {
   background: linear-gradient(135deg, #004d40 0%, #002419 100%);
-  border: 1px solid #00695c;
+  border-color: #4caf50;
+  animation-delay: 0.3s;
+}
+
+.criteria-card .metadata-card-value {
+  color: #a5d6a7;
 }
 
 .level-card {
   background: linear-gradient(135deg, #1a237e 0%, #121658 100%);
-  border: 1px solid #3f51b5;
+  border-color: #7986cb;
+  animation-delay: 0.4s;
+}
+
+.level-card .metadata-card-value {
+  color: #c5cae9;
 }
 
 /* Magical animations */
@@ -871,5 +888,38 @@
   }
   100% {
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.3);
+  }
+}
+
+@keyframes image-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+    filter: brightness(2) blur(10px);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.05);
+    filter: brightness(1.5) blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1) blur(0);
+  }
+}
+
+@keyframes image-float {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 5px 15px rgba(255, 255, 255, 0.3));
+  }
+  50% {
+    transform: translateY(-10px) scale(1.02);
+    filter: drop-shadow(0 15px 20px rgba(255, 255, 255, 0.5));
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 5px 15px rgba(255, 255, 255, 0.3));
   }
 } 

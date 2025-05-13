@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../contexts/AuthContext';
 import './Notifications.css';
@@ -12,6 +12,36 @@ const NotificationManager = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [activeNotification, setActiveNotification] = useState(null);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
+  const increasePointImageRef = useRef(null);
+  const decreasePointImageRef = useRef(null);
+  
+  // Preload images for faster display
+  useEffect(() => {
+    // Create image elements for preloading
+    increasePointImageRef.current = new Image();
+    decreasePointImageRef.current = new Image();
+    
+    // Set sources to start preloading
+    increasePointImageRef.current.src = "/assets/images/IncreasePoint.png";
+    decreasePointImageRef.current.src = "/assets/images/DecreasePoint.png";
+    
+    console.log("Preloading notification images...");
+  }, []);
+  
+  // Vibration helper function for mobile devices
+  const vibrateDevice = useCallback((pattern = [200, 100, 200]) => {
+    // Check if vibration API is supported
+    if (navigator && typeof navigator.vibrate === "function") {
+      try {
+        navigator.vibrate(pattern);
+        console.log("Device vibration activated");
+      } catch (error) {
+        console.log("Vibration failed:", error);
+      }
+    } else {
+      console.log("Vibration API not supported on this device");
+    }
+  }, []);
   
   // Process the notification queue
   useEffect(() => {
@@ -20,6 +50,9 @@ const NotificationManager = ({ children }) => {
       const nextNotification = notifications[0];
       setActiveNotification(nextNotification);
       setIsNotificationVisible(true);
+      
+      // Vibrate the device for mobile users
+      vibrateDevice();
       
       // Auto-dismiss after the specified time
       const dismissalTime = getDismissalTime(nextNotification.type);
@@ -35,7 +68,7 @@ const NotificationManager = ({ children }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [notifications, activeNotification]);
+  }, [notifications, activeNotification, vibrateDevice]);
   
   // Get the appropriate dismissal time based on notification type
   const getDismissalTime = (type) => {
@@ -70,6 +103,9 @@ const NotificationManager = ({ children }) => {
       
       // Add notification to queue
       setNotifications(prev => [...prev, notification]);
+      
+      // Vibrate the device on new notification
+      vibrateDevice();
     };
     
     // Listen for various notification events
@@ -83,7 +119,7 @@ const NotificationManager = ({ children }) => {
       socket.off('house_points_update', handleNotification);
       socket.off('admin_notification', handleNotification);
     };
-  }, [socket, user]);
+  }, [socket, user, vibrateDevice]);
   
   // Force dismiss the current notification
   const dismissNotification = useCallback(() => {
@@ -110,12 +146,14 @@ const NotificationManager = ({ children }) => {
   const renderIcon = (notification) => {
     // If it's a house points notification, use appropriate image
     if (notification.isHousePointsUpdate || notification.type === 'house_points') {
-      const isPositive = notification.points > 0 || notification.pointsChange > 0;
+      const isPointsAwarded = notification.points > 0 || notification.pointsChange > 0;
       return (
         <div className="magical-notification-banner">
           <img 
-            src={isPositive ? "/assets/images/IncreasePoint.png" : "/assets/images/DecreasePoint.png"} 
-            alt={isPositive ? "Points awarded" : "Points deducted"}
+            src={isPointsAwarded 
+              ? (increasePointImageRef.current?.src || "/assets/images/IncreasePoint.png") 
+              : (decreasePointImageRef.current?.src || "/assets/images/DecreasePoint.png")} 
+            alt={isPointsAwarded ? "Points awarded" : "Points deducted"}
             className="magical-banner-image"
             onError={(e) => {
               // Fallback icon if image doesn't load
@@ -124,7 +162,7 @@ const NotificationManager = ({ children }) => {
             }}
           />
           <div className="fallback-icon">
-            {isPositive ? '⬆️' : '⬇️'}
+            {isPointsAwarded ? '⬆️' : '⬇️'}
           </div>
         </div>
       );
@@ -136,7 +174,7 @@ const NotificationManager = ({ children }) => {
       case 'warning': return <div className="magical-notification-icon">⚠️</div>;
       case 'error': return <div className="magical-notification-icon">💫</div>;
       case 'announcement': return <div className="magical-notification-icon">📣</div>;
-      default: return <div className="magical-notification-icon">��</div>;
+      default: return <div className="magical-notification-icon">📜</div>;
     }
   };
   
@@ -150,6 +188,12 @@ const NotificationManager = ({ children }) => {
     <div className="hogwarts-notification-manager">
       {/* Children components */}
       {children}
+      
+      {/* Hidden preload elements */}
+      <div style={{ display: 'none' }}>
+        <img src="/assets/images/IncreasePoint.png" alt="Preload increase points" />
+        <img src="/assets/images/DecreasePoint.png" alt="Preload decrease points" />
+      </div>
       
       {/* Magical fullscreen notification */}
       {activeNotification && (
@@ -234,25 +278,25 @@ const NotificationManager = ({ children }) => {
                 )}
               </div>
             </div>
-            
-            {/* Magical particles overlay */}
-            <div className="magical-particles">
-              {[...Array(15)].map((_, i) => (
-                <div key={i} className="magical-particle" style={{
-                  animationDelay: `${Math.random() * 2}s`,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`
-                }} />
-              ))}
-            </div>
+          </div>
+          
+          {/* Magical particles overlay */}
+          <div className="magical-particles">
+            {[...Array(15)].map((_, i) => (
+              <div key={i} className="magical-particle" style={{
+                animationDelay: `${Math.random() * 2}s`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`
+              }} />
+            ))}
+          </div>
 
-            {/* Close button */}
-            <div className="magical-notification-close" onClick={(e) => {
-              e.stopPropagation();
-              dismissNotification();
-            }}>
-              ×
-            </div>
+          {/* Close button */}
+          <div className="magical-notification-close" onClick={(e) => {
+            e.stopPropagation();
+            dismissNotification();
+          }}>
+            ×
           </div>
         </div>
       )}
