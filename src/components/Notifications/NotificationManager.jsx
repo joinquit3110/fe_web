@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { useSocket } from '../../contexts/SocketContext';
+import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationList from './NotificationList';
 import NotificationToast from './NotificationToast';
