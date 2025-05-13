@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Heading, SimpleGrid, VStack, Text, Badge, Flex, HStack, Button,
-  useToast, Spinner, Tooltip, keyframes
+  useToast, Spinner, Tooltip
 } from '@chakra-ui/react';
+import { keyframes } from '@emotion/react';
 import { useAdmin } from '../contexts/AdminContext';
 import '../styles/Admin.css';
 import slytherinLogo from '../asset/Slytherin.png';
