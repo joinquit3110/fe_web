@@ -146,22 +146,34 @@ const NotificationManager = ({ children }) => {
   const renderIcon = (notification) => {
     // If it's a house points notification, use appropriate image
     if (notification.isHousePointsUpdate || notification.type === 'house_points') {
-      const isPointsAwarded = notification.points > 0 || notification.pointsChange > 0;
+      // Check if points are awarded (positive value)
+      const pointsValue = notification.points || notification.pointsChange || 0;
+      const isPointsAwarded = pointsValue > 0;
+      
+      console.log('Point notification details:', { 
+        points: notification.points,
+        pointsChange: notification.pointsChange,
+        isPointsAwarded: isPointsAwarded
+      });
+      
+      // IMPORTANT: We found that only DecreasePoint.png exists in the assets folder
+      // Using the same image for both cases as a temporary solution until IncreasePoint.png is added
+      const imageUrl = "/assets/images/DecreasePoint.png";
+        
       return (
         <div className="magical-notification-banner">
           <img 
-            src={isPointsAwarded 
-              ? (increasePointImageRef.current?.src || "/assets/images/IncreasePoint.png") 
-              : (decreasePointImageRef.current?.src || "/assets/images/DecreasePoint.png")} 
+            src={imageUrl}
             alt={isPointsAwarded ? "Points awarded" : "Points deducted"}
-            className="magical-banner-image"
+            className={`magical-banner-image ${isPointsAwarded ? 'increase-points' : 'decrease-points'}`}
             onError={(e) => {
+              console.error(`Failed to load image: ${e.target.src}`);
               // Fallback icon if image doesn't load
               e.target.style.display = 'none';
               e.target.nextElementSibling.style.display = 'block';
             }}
           />
-          <div className="fallback-icon">
+          <div className="fallback-icon" style={{ display: 'none' }}>
             {isPointsAwarded ? '⬆️' : '⬇️'}
           </div>
         </div>
@@ -229,10 +241,11 @@ const NotificationManager = ({ children }) => {
                 {(activeNotification.points || activeNotification.pointsChange) && (
                   <div className="magical-metadata-card points-card">
                     <div className="metadata-card-header">
-                      <span className="metadata-card-icon">⚡</span>
+                      <div className="metadata-card-icon">⚡</div>
                       <span className="metadata-card-title">Points</span>
                     </div>
                     <div className="metadata-card-value">
+                      {(activeNotification.points || activeNotification.pointsChange) > 0 ? '+' : ''}
                       {activeNotification.points || activeNotification.pointsChange}
                     </div>
                   </div>
@@ -242,7 +255,7 @@ const NotificationManager = ({ children }) => {
                 {activeNotification.reason && (
                   <div className="magical-metadata-card reason-card">
                     <div className="metadata-card-header">
-                      <span className="metadata-card-icon">📜</span>
+                      <div className="metadata-card-icon">📜</div>
                       <span className="metadata-card-title">Reason</span>
                     </div>
                     <div className="metadata-card-value">
@@ -255,7 +268,7 @@ const NotificationManager = ({ children }) => {
                 {activeNotification.criteria && (
                   <div className="magical-metadata-card criteria-card">
                     <div className="metadata-card-header">
-                      <span className="metadata-card-icon">🔍</span>
+                      <div className="metadata-card-icon">🔍</div>
                       <span className="metadata-card-title">Criteria</span>
                     </div>
                     <div className="metadata-card-value">
@@ -268,7 +281,7 @@ const NotificationManager = ({ children }) => {
                 {activeNotification.level && (
                   <div className="magical-metadata-card level-card">
                     <div className="metadata-card-header">
-                      <span className="metadata-card-icon">🪄</span>
+                      <div className="metadata-card-icon">🪄</div>
                       <span className="metadata-card-title">Level</span>
                     </div>
                     <div className="metadata-card-value">

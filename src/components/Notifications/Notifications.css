@@ -441,6 +441,38 @@
   filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
 }
 
+/* Special styling for awarded points */
+.magical-banner-image.increase-points {
+  /* Flip the image horizontally to make it look different */
+  transform: scaleX(-1);
+  filter: drop-shadow(0 0 15px rgba(255, 255, 0, 0.8)) hue-rotate(180deg) brightness(1.2);
+}
+
+.magical-banner-image.decrease-points {
+  filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.5));
+}
+
+/* Adjust the animations for increase-points class */
+@keyframes image-float-increase {
+  0% {
+    transform: scaleX(-1) translateY(0) scale(1);
+    filter: drop-shadow(0 5px 15px rgba(255, 255, 0, 0.5)) hue-rotate(180deg) brightness(1.2);
+  }
+  50% {
+    transform: scaleX(-1) translateY(-10px) scale(1.02);
+    filter: drop-shadow(0 15px 20px rgba(255, 255, 0, 0.8)) hue-rotate(180deg) brightness(1.5);
+  }
+  100% {
+    transform: scaleX(-1) translateY(0) scale(1);
+    filter: drop-shadow(0 5px 15px rgba(255, 255, 0, 0.5)) hue-rotate(180deg) brightness(1.2);
+  }
+}
+
+/* Apply special animation for increase-points */
+.magical-banner-image.increase-points {
+  animation: image-appear 0.8s ease-out, image-float-increase 5s infinite ease-in-out alternate;
+}
+
 .magical-notification-icon {
   font-size: 2.5rem;
   text-align: center;
@@ -452,61 +484,88 @@
 .magical-notification-metadata-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 15px;
+  margin-top: 25px;
+  width: 100%;
 }
 
 .magical-metadata-card {
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 15px;
   margin-bottom: 0;
   animation: card-appear 0.5s ease-out forwards;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
   transform-origin: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   overflow: hidden;
   position: relative;
-  border-left: 5px solid;
+  border-left: 8px solid;
+  width: 100%;
+}
+
+.magical-metadata-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent 65%, rgba(255, 255, 255, 0.2) 70%, transparent 75%);
+  background-size: 200% 200%;
+  animation: shimmer 3s infinite linear;
+  pointer-events: none;
 }
 
 .magical-metadata-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
 }
 
 .metadata-card-header {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   position: relative;
   z-index: 2;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 8px;
 }
 
 .metadata-card-icon {
-  font-size: 1.2rem;
-  margin-right: 8px;
+  font-size: 1.5rem;
+  margin-right: 12px;
   display: inline-block;
   animation: bounce 1s infinite alternate;
+  background: rgba(0, 0, 0, 0.3);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .metadata-card-title {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: bold;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   font-family: 'Harry P', 'Lumos', serif;
-  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
 }
 
 .metadata-card-value {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   letter-spacing: 0.5px;
-  line-height: 1.4;
+  line-height: 1.5;
   position: relative;
   z-index: 2;
-  padding: 8px;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.25);
+  margin-top: 5px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Card-specific styles */
@@ -514,28 +573,49 @@
   background: linear-gradient(135deg, #6f0000 0%, #200122 100%);
   border-color: #ff9900;
   animation-delay: 0.1s;
+  box-shadow: 0 5px 15px rgba(111, 0, 0, 0.4);
+}
+
+.points-card .metadata-card-icon {
+  color: #ffcc00;
+  text-shadow: 0 0 10px #ffcc00;
 }
 
 .points-card .metadata-card-value {
   color: #ffd700;
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .reason-card {
   background: linear-gradient(135deg, #0a4c4c 0%, #003545 100%);
   border-color: #00ffcc;
   animation-delay: 0.2s;
+  box-shadow: 0 5px 15px rgba(10, 76, 76, 0.4);
+}
+
+.reason-card .metadata-card-icon {
+  color: #00ffcc;
+  text-shadow: 0 0 10px #00ffcc;
 }
 
 .reason-card .metadata-card-value {
   color: #b8fff9;
+  font-style: italic;
 }
 
 .criteria-card {
   background: linear-gradient(135deg, #004d40 0%, #002419 100%);
   border-color: #4caf50;
   animation-delay: 0.3s;
+  box-shadow: 0 5px 15px rgba(0, 77, 64, 0.4);
+}
+
+.criteria-card .metadata-card-icon {
+  color: #4caf50;
+  text-shadow: 0 0 10px #4caf50;
 }
 
 .criteria-card .metadata-card-value {
@@ -546,10 +626,17 @@
   background: linear-gradient(135deg, #1a237e 0%, #121658 100%);
   border-color: #7986cb;
   animation-delay: 0.4s;
+  box-shadow: 0 5px 15px rgba(26, 35, 126, 0.4);
+}
+
+.level-card .metadata-card-icon {
+  color: #7986cb;
+  text-shadow: 0 0 10px #7986cb;
 }
 
 .level-card .metadata-card-value {
   color: #c5cae9;
+  font-weight: bold;
 }
 
 /* Magical animations */
@@ -624,12 +711,8 @@
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes card-appear {
